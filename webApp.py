@@ -1,5 +1,6 @@
 from flask import Flask
 
+from buffer_manager import BufferManager
 from cam_capture import CamCapture
 from cam_config import CamConfig
 from event_log import EventLog
@@ -23,10 +24,16 @@ def create_app() -> Flask:
         config
     )
 
+    buffer_manager = BufferManager(
+        config=config,
+        event_log=event_log
+    )
+
     services = WebServices(
         config=config,
         capture=capture,
         preview_server=preview_server,
+        buffer_manager=buffer_manager,
         event_log=event_log
     )
 

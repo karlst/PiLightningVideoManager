@@ -27,3 +27,5 @@ class CamConfig:
     hls_time_seconds = 0.5
     hls_list_size: int = 2
     hls_directory: Path = Path.home() / "Documents" / "videoManager" / "hls"
+
+    buffer_seconds: int = 2

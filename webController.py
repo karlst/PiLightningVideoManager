@@ -5,6 +5,7 @@ from flask import jsonify
 from flask import render_template
 from flask import send_from_directory
 
+from buffer_manager import BufferManager
 from cam_capture import CamCapture
 from cam_config import CamConfig
 from event_log import EventLog
@@ -16,6 +17,7 @@ class WebServices:
     config: CamConfig
     capture: CamCapture
     preview_server: PreviewServer
+    buffer_manager: BufferManager
     event_log: EventLog
 
 
@@ -152,17 +154,16 @@ def register_routes(
         methods=["POST"]
     )
     def buffer_start():
-        message = "STUB: buffer_start called"
-
-        services.event_log.add(
-            message
+        success, message = (
+            services.buffer_manager.start()
         )
 
         return jsonify(
             {
-                "success": False,
-                "implemented": False,
-                "running": False,
+                "success": success,
+                "implemented": True,
+                "running":
+                    services.buffer_manager.is_running(),
                 "message": message
             }
         )
@@ -172,17 +173,16 @@ def register_routes(
         methods=["POST"]
     )
     def buffer_stop():
-        message = "STUB: buffer_stop called"
-
-        services.event_log.add(
-            message
+        success, message = (
+            services.buffer_manager.stop()
         )
 
         return jsonify(
             {
-                "success": False,
-                "implemented": False,
-                "running": False,
+                "success": success,
+                "implemented": True,
+                "running":
+                    services.buffer_manager.is_running(),
                 "message": message
             }
         )
@@ -192,15 +192,13 @@ def register_routes(
         methods=["POST"]
     )
     def buffer_capture():
-        message = "STUB: buffer_capture called"
-
-        services.event_log.add(
-            message
+        success, message = (
+            services.buffer_manager.capture()
         )
 
         return jsonify(
             {
-                "success": False,
+                "success": success,
                 "implemented": False,
                 "message": message
             }
@@ -210,16 +208,27 @@ def register_routes(
         "/buffer_status"
     )
     def buffer_status():
-        message = "STUB: buffer_status called"
+        status = (
+            services.buffer_manager.get_status()
+        )
+
+        return jsonify(
+            status
+        )
+
+    @app.route(
+        "/buffer_clear",
+        methods=["POST"]
+    )
+    def buffer_clear():
+        success, message = (
+            services.buffer_manager.clear()
+        )
 
         return jsonify(
             {
-                "success": True,
-                "implemented": False,
-                "running": False,
-                "frame_count": 0,
-                "dropped_count": 0,
-                "estimated_fps": 0.0,
+                "success": success,
+                "implemented": True,
                 "message": message
             }
         )
