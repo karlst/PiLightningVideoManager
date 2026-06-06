@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Video Camera Manager</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/css/main.css?v=23">
+</head>
+
+<body>
+
+    <div class="pageGrid">
+
+        <header class="titlePanel">
+            <h1>Video Camera Manager</h1>
+        </header>
+
+        <section class="controlPanel">
+
+            <button class="ccButton" id="preview-start-button" type="button">
+                Start Preview
+            </button>
+
+            <button class="ccButton" id="preview-stop-button" type="button">
+                Stop Preview
+            </button>
+
+            <button class="ccButton" id="capture-button" type="button">
+                Capture 5 Seconds
+            </button>
+
+            <hr>
+
+            <button class="ccButton" id="buffer-start-button" type="button">
+                Start Buffer
+            </button>
+
+            <button class="ccButton" id="buffer-stop-button" type="button">
+                Stop Buffer
+            </button>
+
+            <button class="ccButton" id="buffer-capture-button" type="button">
+                Buffer Capture
+            </button>
+
+            <button class="ccButton" id="buffer-status-button" type="button">
+                Check Buffer
+            </button>
+
+            <button
+                class="ccButton ccButtonSecondary"
+                id="event-log-clear-button"
+                type="button">
+                Clear Event Log
+            </button>
+
+        </section>
+
+        <main class="cameraPanel">
+
+            <section class="cameraGrid">
+
+                <section class="subPanel previewPanel">
+                    <h2>Preview</h2>
+
+                    <video
+                        class="cameraImage"
+                        id="camera-video"
+                        controls
+                        autoplay
+                        muted
+                        playsinline>
+
+                        <source
+                            src="/hls/stream.m3u8"
+                            type="application/vnd.apple.mpegurl">
+
+                    </video>
+                </section>
+
+                <section class="subPanel graphPanel">
+                    <div class="graphHeader">
+                        <h2>Test Graph</h2>
+
+                        <span id="graph-mean-value">
+                            Mean: --
+                        </span>
+
+                        <div class="graphButtonBar">
+                            <button class="graphButton" data-window="1">1 HR</button>
+                            <button class="graphButton" data-window="6">6 HR</button>
+                            <button class="graphButton" data-window="12">12 HR</button>
+                            <button class="graphButton" data-window="24">24 HR</button>
+                        </div>
+                    </div>
+
+                    <canvas
+                        class="historyGraph"
+                        id="history-graph">
+                    </canvas>
+                </section>
+
+                <section class="subPanel eventPanel">
+                    <h2>Event Log</h2>
+
+                    <div
+                        class="eventLog"
+                        id="event-log">
+                    </div>
+                </section>
+
+                <section class="subPanel bufferPanel">
+                    <h2>Buffer Status</h2>
+
+                    <pre
+                        class="statusBlock"
+                        id="buffer-status-value">Not checked</pre>
+                </section>
+
+            </section>
+
+        </main>
+
+        <section class="statusPanel">
+
+            <span class="statusLabel">
+                Status:
+            </span>
+
+            <span id="status-value">
+                Ready
+            </span>
+
+        </section>
+
+    </div>
+
+    <script src="/static/js/app.js?v=23"></script>
+
+</body>
+
+</html>
