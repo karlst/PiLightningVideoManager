@@ -81,6 +81,10 @@
                 result.message
             );
 
+            if (result.success) {
+                showPreview();
+            }
+
             refreshEventLog();
         }
         catch (error)
@@ -108,6 +112,10 @@
             setStatus(
                 result.message
             );
+
+            if (result.success) {
+                hidePreview();
+            }
 
             refreshEventLog();
         }
@@ -550,6 +558,71 @@
         );
     }
 
+
+    function showPreview()
+    {
+        const video =
+            document.getElementById(
+                "camera-video"
+            );
+
+        const placeholder =
+            document.getElementById(
+                "preview-placeholder"
+            );
+
+        placeholder.classList.add(
+            "cameraImageHidden"
+        );
+
+        video.classList.remove(
+            "cameraImageHidden"
+        );
+
+        video.src =
+            "/hls/stream.m3u8";
+
+        video.load();
+
+        video.play().catch(
+            (error) =>
+            {
+                console.error(
+                    error
+                );
+            }
+        );
+    }
+
+
+    function hidePreview()
+    {
+        const video =
+            document.getElementById(
+                "camera-video"
+            );
+
+        const placeholder =
+            document.getElementById(
+                "preview-placeholder"
+            );
+
+        video.pause();
+
+        video.removeAttribute(
+            "src"
+        );
+
+        video.load();
+
+        video.classList.add(
+            "cameraImageHidden"
+        );
+
+        placeholder.classList.remove(
+            "cameraImageHidden"
+        );
+    }
 
     function initializePage()
     {

@@ -89,6 +89,23 @@ body
     background-color: #f5f5f5;
 }
 
+.cameraImageHidden 
+{
+    display: none;
+}
+
+.previewPlaceholder
+{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: calc(100% - 24px);
+    background-color: #f5f5f5;
+    color: #666;
+    font-size: 14px;
+}
+
 .graphHeader
 {
     display: flex;
