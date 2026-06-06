@@ -1,6 +1,6 @@
 from webApp import create_app
 
-
+# this is the videoManager entry point.
 def main() -> int:
     return_code = 0
 
