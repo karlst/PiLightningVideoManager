@@ -10,6 +10,7 @@ from cam_capture import CamCapture
 from cam_config import CamConfig
 from event_log import EventLog
 from previewServer import PreviewServer
+from display_preview import DisplayPreview
 
 
 @dataclass
@@ -18,6 +19,7 @@ class WebServices:
     capture: CamCapture
     preview_server: PreviewServer
     buffer_manager: BufferManager
+    display_preview: DisplayPreview
     event_log: EventLog
 
 
@@ -66,6 +68,8 @@ def register_routes(
             }
         )
 
+    
+    
     @app.route(
         "/preview_start",
         methods=["POST"]
@@ -233,6 +237,49 @@ def register_routes(
             }
         )
 
+    
+    @app.route(
+        "/display_preview_start",
+        methods=["POST"]  
+    )
+
+    def display_preview_start():
+        success, message = (
+            services.display_preview.start()
+        )
+
+        services.event_log.add(
+            message
+        )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message
+            }
+        )
+
+
+    @app.route(
+        "/display_preview_stop",
+        methods=["POST"]
+    )
+    def display_preview_stop():
+        success, message = (
+            services.display_preview.stop()
+        )
+
+        services.event_log.add(
+            message
+        )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message
+            }
+        )
+    
     @app.route(
         "/hls/<path:filename>"
     )

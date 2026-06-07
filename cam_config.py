@@ -7,6 +7,9 @@ class CamConfig:
     video_device: str = "/dev/video0"
     input_format: str = "mjpeg"
 
+    buffer_seconds: int = 5
+    post_trigger_seconds: int = 1
+
     frame_rate_fps: int = 260
     frame_width_pixels: int = 640
     frame_height_pixels: int = 360

@@ -352,6 +352,61 @@
         }
     }
 
+    async function displayPreviewStart()
+    {
+        try
+        {
+            const result =
+                await postJson(
+                    "/display_preview_start"
+                );
+
+            setStatus(
+                result.message
+            );
+
+            refreshEventLog();
+        }
+        catch (error)
+        {
+            setStatus(
+                "Display Preview Start Failed"
+            );
+
+            console.error(
+                error
+            );
+        }
+    }
+
+
+    async function displayPreviewStop()
+    {
+        try
+        {
+            const result =
+                await postJson(
+                    "/display_preview_stop"
+                );
+
+            setStatus(
+                result.message
+            );
+
+            refreshEventLog();
+        }
+        catch (error)
+        {
+            setStatus(
+                "Display Preview Stop Failed"
+            );
+
+            console.error(
+                error
+            );
+        }
+    }
+
 
     function createGraphData(iHours)
     {
@@ -634,6 +689,24 @@
         document.getElementById("buffer-capture-button").addEventListener("click", bufferCapture);
         document.getElementById("buffer-status-button").addEventListener("click", bufferStatus);
         document.getElementById("event-log-clear-button").addEventListener("click", clearEventLog);
+
+        document
+            .getElementById(
+                "display-preview-start-button"
+            )
+            .addEventListener(
+                "click",
+                displayPreviewStart
+            );
+
+        document
+            .getElementById(
+                "display-preview-stop-button"
+            )
+            .addEventListener(
+                "click",
+                displayPreviewStop
+            );
 
         setStatus(
             "Ready"

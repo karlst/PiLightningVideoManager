@@ -7,6 +7,7 @@ from event_log import EventLog
 from previewServer import PreviewServer
 from webController import WebServices
 from webController import register_routes
+from display_preview import DisplayPreview
 
 
 def create_app() -> Flask:
@@ -19,6 +20,10 @@ def create_app() -> Flask:
     capture = CamCapture(
         config
     )
+
+    display_preview = DisplayPreview(
+        config
+    )   
 
     preview_server = PreviewServer(
         config
@@ -34,6 +39,7 @@ def create_app() -> Flask:
         capture=capture,
         preview_server=preview_server,
         buffer_manager=buffer_manager,
+        display_preview=display_preview,
         event_log=event_log
     )
 
