@@ -6,30 +6,27 @@
 
 from cam_config import CamConfig
 from camera_reader import CameraReader
-from event_log import EventLog
 from ring_buffer import RingBuffer
 
 
 class BufferManager:
     """
-    @brief Manages continuous camera buffering.
+    @brief Owns camera buffering components.
     """
 
     def __init__(
         self,
-        config: CamConfig,
-        event_log: EventLog
+        config: CamConfig
     ) -> None:
         self._config = config
-        self._event_log = event_log
 
-        capacity = (
+        self._capacity_frames = (
             config.frame_rate_fps *
             config.buffer_seconds
         )
 
         self._ring_buffer = RingBuffer(
-            capacity=capacity
+            capacity=self._capacity_frames
         )
 
         self._camera_reader = CameraReader(
@@ -38,13 +35,15 @@ class BufferManager:
         )
 
     def start(self) -> tuple[bool, str]:
-        success, message = (
-            self._camera_reader.start()
-        )
+        success = False
+        message = "Buffer already running"
 
-        self._event_log.add(
-            message
-        )
+        if not self.is_running():
+            self._ring_buffer.clear()
+
+            success, message = (
+                self._camera_reader.start()
+            )
 
         return success, message
 
@@ -53,39 +52,22 @@ class BufferManager:
             self._camera_reader.stop()
         )
 
-        self._event_log.add(
-            message
-        )
+        return success, message
+
+    def clear(self) -> tuple[bool, str]:
+        success = False
+        message = "Buffer is running; stop before clearing"
+
+        if not self.is_running():
+            self._ring_buffer.clear()
+
+            success = True
+            message = "Buffer cleared"
 
         return success, message
 
     def is_running(self) -> bool:
         return self._camera_reader.is_running()
-
-    def clear(self) -> tuple[bool, str]:
-        self._ring_buffer.clear()
-
-        message = "Ring buffer cleared"
-
-        self._event_log.add(
-            message
-        )
-
-        return True, message
-
-    def capture(self) -> tuple[bool, str]:
-        frames = self._ring_buffer.snapshot()
-
-        message = (
-            f"STUB: buffer capture requested, "
-            f"{len(frames)} frames available"
-        )
-
-        self._event_log.add(
-            message
-        )
-
-        return False, message
 
     def get_status(self) -> dict:
         reader_status = (
@@ -97,12 +79,20 @@ class BufferManager:
         )
 
         status = {
-            "success": True,
-            "implemented": True,
             "running": reader_status["running"],
-            "reader": reader_status,
-            "buffer": buffer_status,
-            "message": "Buffer status updated"
+            "frame_count": reader_status["frame_count"],
+            "failed_read_count": reader_status["failed_read_count"],
+            "estimated_fps": reader_status["estimated_fps"],
+            "elapsed_seconds": reader_status["elapsed_seconds"],
+            "seconds_since_last_frame": reader_status["seconds_since_last_frame"],
+            "last_error": reader_status["last_error"],
+            "buffer_capacity": buffer_status["capacity"],
+            "buffer_count": buffer_status["count"],
+            "buffer_full": buffer_status["full"],
+            "buffer_total_pushed": buffer_status["total_pushed"],
+            "buffer_overwrite_count": buffer_status["overwrite_count"],
+            "oldest_sequence_number": buffer_status["oldest_sequence_number"],
+            "newest_sequence_number": buffer_status["newest_sequence_number"]
         }
 
         return status
