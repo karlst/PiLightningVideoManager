@@ -211,20 +211,37 @@ def register_routes(
         methods=["POST"]
     )
     def buffer_capture():
-        message = "STUB: buffer_capture called"
-
-        services.event_log.add(
-            message
+        success, message, capture_status = (
+            services.buffer_manager.capture()
         )
+
+        if success:
+            services.event_log.add(
+                (
+                    f"Capture saved: "
+                    f"{capture_status['frames_written']} frames, "
+                    f"{capture_status['duration_seconds']:.2f} sec, "
+                    f"seq {capture_status['first_sequence_number']}-"
+                    f"{capture_status['last_sequence_number']}, "
+                    f"{capture_status['first_timestamp_utc']} to "
+                    f"{capture_status['last_timestamp_utc']}, "
+                    f"{capture_status['output_directory']}"
+                )
+            )
+        else:
+            services.event_log.add(
+                message,
+                "error"
+            )
 
         return jsonify(
             {
-                "success": False,
-                "implemented": False,
-                "message": message
+                "success": success,
+                "implemented": True,
+                "message": message,
+                "capture_status": capture_status
             }
         )
-
     @app.route(
         "/buffer_clear",
         methods=["POST"]
@@ -266,6 +283,14 @@ def register_routes(
     @app.route(
         "/hls/<path:filename>"
     )
+
+    def hls_file(
+        filename: str
+    ):
+        return send_from_directory(
+            services.config.hls_directory,
+            filename
+        )
 
     @app.route(
         "/system_status"

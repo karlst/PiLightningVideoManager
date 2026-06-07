@@ -1,11 +1,14 @@
 """
 @file buffer_manager.py
 
-@brief Coordinates CameraReader and RingBuffer.
+@brief Coordinates CameraReader, RingBuffer, and ClipWriter.
 """
+
+from pathlib import Path
 
 from cam_config import CamConfig
 from camera_reader import CameraReader
+from clip_writer import ClipWriter
 from ring_buffer import RingBuffer
 
 
@@ -32,6 +35,15 @@ class BufferManager:
         self._camera_reader = CameraReader(
             config,
             on_frame=self._ring_buffer.push
+        )
+
+        self._clip_writer = ClipWriter(
+            output_directory=(
+                Path.home() /
+                "Documents" /
+                "videoManager" /
+                "captures"
+            )
         )
 
     def start(self) -> tuple[bool, str]:
@@ -65,6 +77,50 @@ class BufferManager:
             message = "Buffer cleared"
 
         return success, message
+
+    def capture(self) -> tuple[bool, str, dict]:
+        frames = (
+            self._ring_buffer.snapshot()
+        )
+
+        success, message, writer_status = (
+            self._clip_writer.write_frames(
+                frames
+            )
+        )
+
+        capture_status = {
+            "buffer_count": len(
+                frames
+            ),
+            **writer_status
+        }
+
+        if len(frames) > 0:
+            first_frame = frames[0]
+            last_frame = frames[-1]
+
+            duration_seconds = (
+                last_frame.timestamp_monotonic -
+                first_frame.timestamp_monotonic
+            )
+
+            capture_status.update(
+                {
+                    "first_sequence_number":
+                        first_frame.sequence_number,
+                    "last_sequence_number":
+                        last_frame.sequence_number,
+                    "first_timestamp_utc":
+                        first_frame.timestamp_utc,
+                    "last_timestamp_utc":
+                        last_frame.timestamp_utc,
+                    "duration_seconds":
+                        duration_seconds
+                }
+            )
+
+        return success, message, capture_status
 
     def is_running(self) -> bool:
         return self._camera_reader.is_running()

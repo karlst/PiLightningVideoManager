@@ -3,8 +3,10 @@ __pycache__/
 
 .vscode/
 
+
 hls/
 video/
+captures/
 
 *.mkv
 *.mp4

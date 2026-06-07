@@ -7,10 +7,15 @@ from event_log import EventLog
 from previewServer import PreviewServer
 from webController import WebServices
 from webController import register_routes
+import logging
 
 
 def create_app() -> Flask:
     config = CamConfig()
+
+    log = logging.getLogger("werkzeug")
+
+    log.setLevel(logging.ERROR)
 
     event_log = EventLog(
         max_entries=200
