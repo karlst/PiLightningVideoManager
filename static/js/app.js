@@ -407,6 +407,37 @@
         }
     }
 
+    async function updateSystemStatus()
+    {
+        try
+        {
+            const result =
+                await getJson(
+                    "/system_status"
+                );
+
+            const heartbeatValue =
+                document.getElementById(
+                    "heartbeat-value"
+                );
+
+            heartbeatValue.textContent =
+                `| Server: ${result.server_time_utc} ` +
+                `| Preview: ${result.preview_running ? "on" : "off"} ` +
+                `| Buffer: ${result.buffer_running ? "on" : "off"} ` +
+                `| FPS: ${result.camera_fps.toFixed(1)} ` +
+                `| Frames: ${result.camera_frames} ` +
+                `| Buffer: ${result.buffer_count}/${result.buffer_capacity} ` +
+                `| RAM: ${result.memory_mb.toFixed(0)} MB`;
+        }
+        catch (error)
+        {
+            console.error(
+                error
+            );
+        }
+    }
+
 
     function createGraphData(iHours)
     {
@@ -718,6 +749,13 @@
 
         setInterval(
             refreshEventLog,
+            1000
+        );
+
+        updateSystemStatus();
+
+        setInterval(
+            updateSystemStatus,
             1000
         );
     }
