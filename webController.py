@@ -225,7 +225,7 @@ def register_routes(
                     f"{capture_status['last_sequence_number']}, "
                     f"{capture_status['first_timestamp_utc']} to "
                     f"{capture_status['last_timestamp_utc']}, "
-                    f"{capture_status['output_directory']}"
+                    f"{capture_status.get('output_file', '')}"
                 )
             )
         else:
@@ -340,6 +340,24 @@ def register_routes(
             }
         )       
 
+    @app.route(
+        "/metrics_history"
+    )
+    def metrics_history():
+        metrics = (
+            services.buffer_manager.get_metrics_history()
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "count": len(
+                    metrics
+                ),
+                "metrics": metrics
+            }
+        )    
+    
     def hls_file(
         filename: str
     ):

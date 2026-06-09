@@ -33,6 +33,10 @@ def create_app() -> Flask:
         config
     )
 
+    success, message = (
+        buffer_manager.start()
+    )
+
     services = WebServices(
         config=config,
         capture=capture,
@@ -52,6 +56,10 @@ def create_app() -> Flask:
 
     event_log.add(
         "Application started"
+    )
+
+    event_log.add(
+        message
     )
 
     return app

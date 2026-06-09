@@ -13,7 +13,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=23">
+        href="/static/css/main.css?v=31">
 </head>
 
 <body>
@@ -38,17 +38,11 @@
                 Capture 5 Seconds
             </button>
 
-            <button
-                class="ccButton"
-                id="display-preview-start-button"
-                type="button">
+            <button class="ccButton" id="pi-preview-start-button" type="button">
                 Start Pi Display Preview
             </button>
 
-            <button
-                class="ccButton"
-                id="display-preview-stop-button"
-                type="button">
+            <button class="ccButton" id="pi-preview-stop-button" type="button">
                 Stop Pi Display Preview
             </button>
 
@@ -83,64 +77,153 @@
 
             <section class="cameraGrid">
 
-                <section class="subPanel previewPanel">
-                    <h2>Preview</h2>
+                <section class="leftColumn">
 
-                    <div class="previewPlaceholder" id="preview-placeholder">
-                        Preview stopped
-                    </div>
-                    
-                    <video
-                        class="cameraImage cameraImageHidden"
-                        id="camera-video"
-                        controls
-                        muted
-                        playsinline>
+                    <section class="subPanel previewPanel">
+                        <h2>Preview</h2>
 
-                        <source
-                            src="/hls/stream.m3u8"
-                            type="application/vnd.apple.mpegurl">
+                        <div
+                            class="previewPlaceholder"
+                            id="preview-placeholder">
+                            Preview stopped
+                        </div>
 
-                    </video>
+                        <video
+                            class="cameraImage cameraImageHidden"
+                            id="camera-video"
+                            controls
+                            muted
+                            playsinline>
+                        </video>
+                    </section>
+
+                    <section class="subPanel eventPanel">
+                        <h2>Event Log</h2>
+
+                        <div
+                            class="eventLog"
+                            id="event-log">
+                        </div>
+                    </section>
+
+                    <section class="subPanel bufferPanel">
+                        <h2>Buffer Status</h2>
+
+                        <pre
+                            class="statusBlock"
+                            id="buffer-status-value">Not checked</pre>
+                    </section>
+
                 </section>
 
-                <section class="subPanel graphPanel">
-                    <div class="graphHeader">
-                        <h2>Test Graph</h2>
+                <section class="subPanel metricsPanel">
+
+                    <div class="metricsToolbar">
+
+                        <h2>Metrics</h2>
 
                         <span id="graph-mean-value">
                             Mean: --
                         </span>
 
                         <div class="graphButtonBar">
-                            <button class="graphButton" data-window="1">1 HR</button>
-                            <button class="graphButton" data-window="6">6 HR</button>
-                            <button class="graphButton" data-window="12">12 HR</button>
-                            <button class="graphButton" data-window="24">24 HR</button>
+
+                            <button
+                                class="graphButton"
+                                data-window="0.0833">
+                                5 MIN
+                            </button>
+                            
+                            <button
+                                class="graphButton"
+                                data-window="1">
+                                1 HR
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="6">
+                                6 HR
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="12">
+                                12 HR
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="24">
+                                1 D
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="120">
+                                5 D
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="240">
+                                10 D
+                            </button>
+
+                            <button
+                                class="graphButton"
+                                data-window="720">
+                                30 D
+                            </button>
+
                         </div>
+
                     </div>
 
-                    <canvas
-                        class="historyGraph"
-                        id="history-graph">
-                    </canvas>
-                </section>
+                    <div class="metricGraph">
+                        <div class="metricGraphTitle">
+                            Brightness
+                        </div>
 
-                <section class="subPanel eventPanel">
-                    <h2>Event Log</h2>
-
-                    <div
-                        class="eventLog"
-                        id="event-log">
+                        <canvas
+                            class="historyGraph"
+                            id="brightness-graph">
+                        </canvas>
                     </div>
-                </section>
 
-                <section class="subPanel bufferPanel">
-                    <h2>Buffer Status</h2>
+                    <div class="metricGraph">
+                        <div class="metricGraphTitle">
+                            Brightness Delta
+                        </div>
 
-                    <pre
-                        class="statusBlock"
-                        id="buffer-status-value">Not checked</pre>
+                        <canvas
+                            class="historyGraph"
+                            id="brightness-delta-graph">
+                        </canvas>
+                    </div>
+
+                    <div class="metricGraph">
+                        <div class="metricGraphTitle">
+                            Motion
+                        </div>
+
+                        <canvas
+                            class="historyGraph"
+                            id="motion-graph">
+                        </canvas>
+                    </div>
+
+                    <div class="metricGraph">
+                        <div class="metricGraphTitle">
+                            System
+                        </div>
+
+                        <canvas
+                            class="historyGraph"
+                            id="system-graph">
+                        </canvas>
+                    </div>
+
                 </section>
 
             </section>
@@ -157,7 +240,9 @@
                 Ready
             </span>
 
-            <span class="heartbeatText" id="heartbeat-value">
+            <span
+                class="heartbeatText"
+                id="heartbeat-value">
                 | Server: --
             </span>
 
@@ -165,7 +250,7 @@
 
     </div>
 
-    <script src="/static/js/app.js?v=23"></script>
+    <script type="module" src="/static/js/app.js?v=32"></script>
 
 </body>
 

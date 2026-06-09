@@ -32,3 +32,8 @@ class CamConfig:
     hls_directory: Path = Path.home() / "Documents" / "videoManager" / "hls"
 
     buffer_seconds: int = 2
+
+    brightness_average_frames: int = 100
+    metric_history_seconds: int = 3600
+    metric_history_sample_seconds: float = 1.0
+    motion_changed_pixel_threshold: int = 25

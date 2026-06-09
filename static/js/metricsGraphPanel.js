@@ -1,0 +1,732 @@
+"use strict";
+
+import
+{
+    getJson
+}
+from "./httpClient.js";
+
+
+export class MetricsGraphPanel
+{
+    constructor()
+    {
+        this._iGraphWindowHours = 1;
+        this._aMetricHistory = [];
+        this._aSystemHistory = [];
+    }
+
+    initialize()
+    {
+        document.querySelectorAll(".graphButton").forEach(
+            (button) =>
+            {
+                button.addEventListener(
+                    "click",
+                    () =>
+                    {
+                        this.setGraphWindow(
+                            Number(button.dataset.window)
+                        );
+                    }
+                );
+            }
+        );
+
+        this.setGraphWindow(1);
+
+        window.addEventListener(
+            "resize",
+            () => this.drawAllGraphs()
+        );
+
+        this.updateMetricHistory();
+    }
+
+    addSystemSample(result)
+    {
+        this._aSystemHistory.push(
+            {
+                timestamp: Date.now(),
+                fps: result.camera_fps,
+                memory_mb: result.memory_mb
+            }
+        );
+
+        while (this._aSystemHistory.length > 3600)
+        {
+            this._aSystemHistory.shift();
+        }
+    }
+
+    async updateMetricHistory()
+    {
+        try
+        {
+            const result = await getJson("/metrics_history");
+
+            if (result.success)
+            {
+                this._aMetricHistory = result.metrics;
+                this.drawAllGraphs();
+            }
+        }
+        catch (error)
+        {
+            console.error(error);
+        }
+    }
+
+    setGraphWindow(iHours)
+    {
+        this._iGraphWindowHours = iHours;
+
+        document.querySelectorAll(".graphButton").forEach(
+            (button) =>
+            {
+                button.classList.toggle(
+                    "graphButtonActive",
+                    Number(button.dataset.window) === iHours
+                );
+            }
+        );
+
+        this.drawAllGraphs();
+    }
+
+    drawAllGraphs()
+    {
+        const metrics = this._getVisibleMetrics();
+
+        this._drawTwoSeriesGraph(
+            "brightness-graph",
+            metrics,
+            "mean_brightness",
+            "moving_average_brightness",
+            "Frame brightness",
+            "Moving average"
+        );
+
+        this._drawOneSeriesGraph(
+            "brightness-delta-graph",
+            metrics,
+            "brightness_delta",
+            "Brightness delta"
+        );
+
+        this._drawOneSeriesGraph(
+            "motion-graph",
+            metrics,
+            "changed_pixel_fraction",
+            "Changed pixel fraction"
+        );
+
+        this._drawSystemGraph();
+
+        if (metrics.length > 0)
+        {
+            const latest = metrics[metrics.length - 1];
+
+            document.getElementById("graph-mean-value").textContent =
+                `Mean: ${Number(latest.mean_brightness ?? 0.0).toFixed(1)}`;
+        }
+    }
+
+    _getNewestMetricTime()
+    {
+        let newestTime = 0.0;
+
+        if (this._aMetricHistory.length > 0)
+        {
+            const newestMetric =
+                this._aMetricHistory[
+                    this._aMetricHistory.length - 1
+                ];
+
+            newestTime =
+                Number(newestMetric.timestamp_monotonic ?? 0.0);
+        }
+
+        return newestTime;
+    }
+
+    _getVisibleMetrics()
+    {
+        let visibleMetrics = [];
+
+        if (this._aMetricHistory.length > 0)
+        {
+            const newestTime = this._getNewestMetricTime();
+
+            const minimumTime =
+                newestTime - this._getWindowSeconds();
+
+            visibleMetrics =
+                this._aMetricHistory.filter(
+                    (metric) =>
+                    {
+                        return (
+                            Number(metric.timestamp_monotonic ?? 0.0) >=
+                            minimumTime
+                        );
+                    }
+                );
+        }
+
+        return visibleMetrics;
+    }
+
+    _getVisibleSystemSamples()
+    {
+        let visibleSamples = [];
+
+        if (this._aSystemHistory.length > 0)
+        {
+            const newestSample =
+                this._aSystemHistory[
+                    this._aSystemHistory.length - 1
+                ];
+
+            const newestTime =
+                Number(newestSample.timestamp ?? 0);
+
+            const minimumTime =
+                newestTime - (this._getWindowSeconds() * 1000.0);
+
+            visibleSamples =
+                this._aSystemHistory.filter(
+                    (sample) =>
+                    {
+                        return (
+                            Number(sample.timestamp ?? 0) >= minimumTime
+                        );
+                    }
+                );
+        }
+
+        return visibleSamples;
+    }
+
+    _getWindowSeconds()
+    {
+        return (
+            this._iGraphWindowHours *
+            60.0 *
+            60.0
+        );
+    }
+
+    _resizeCanvas(canvas)
+    {
+        const rect = canvas.getBoundingClientRect();
+
+        canvas.width =
+            Math.max(
+                1,
+                Math.floor(rect.width)
+            );
+
+        canvas.height =
+            Math.max(
+                1,
+                Math.floor(rect.height)
+            );
+    }
+
+    _drawAxes(
+        context,
+        width,
+        height,
+        minValue,
+        maxValue
+    )
+    {
+        const plot =
+        {
+            left: 46,
+            right: width - 8,
+            top: 8,
+            bottom: height - 38
+        };
+
+        context.clearRect(0, 0, width, height);
+
+        context.strokeStyle = "#d0d0d0";
+        context.lineWidth = 1;
+
+        for (let iGrid = 0; iGrid <= 4; iGrid += 1)
+        {
+            const y =
+                plot.top +
+                (
+                    (plot.bottom - plot.top) *
+                    iGrid /
+                    4
+                );
+
+            context.beginPath();
+            context.moveTo(plot.left, y);
+            context.lineTo(plot.right, y);
+            context.stroke();
+        }
+
+        context.strokeStyle = "#888888";
+
+        context.beginPath();
+        context.moveTo(plot.left, plot.top);
+        context.lineTo(plot.left, plot.bottom);
+        context.lineTo(plot.right, plot.bottom);
+        context.stroke();
+
+        this._drawXAxis(
+            context,
+            plot
+        );
+
+        context.fillStyle = "#333333";
+        context.font = "10px Arial";
+        context.textAlign = "left";
+
+        context.fillText(
+            maxValue.toFixed(1),
+            4,
+            plot.top + 8
+        );
+
+        context.fillText(
+            minValue.toFixed(1),
+            4,
+            plot.bottom
+        );
+
+        return plot;
+    }
+
+    _drawXAxis(
+        context,
+        plot
+    )
+    {
+        context.fillStyle = "#333333";
+        context.font = "10px Arial";
+        context.textAlign = "center";
+
+        const tickCount = 4;
+
+        for (let iTick = 0; iTick <= tickCount; iTick += 1)
+        {
+            const fraction =
+                iTick / tickCount;
+
+            const x =
+                plot.left +
+                (
+                    (plot.right - plot.left) *
+                    fraction
+                );
+
+            const ageSeconds =
+                -this._getWindowSeconds() *
+                (1.0 - fraction);
+
+            context.beginPath();
+            context.moveTo(x, plot.bottom);
+            context.lineTo(x, plot.bottom + 4);
+            context.stroke();
+
+            context.fillText(
+                this._formatXAxisLabel(ageSeconds),
+                x,
+                plot.bottom + 22
+            );
+        }
+    }
+
+    _formatXAxisLabel(ageSeconds)
+    {
+        let label = "now";
+
+        const ageMagnitude =
+            Math.abs(ageSeconds);
+
+        if (ageMagnitude >= 24.0 * 60.0 * 60.0)
+        {
+            label =
+                `-${(ageMagnitude / (24.0 * 60.0 * 60.0)).toFixed(0)}d`;
+        }
+        else if (ageMagnitude >= 60.0 * 60.0)
+        {
+            label =
+                `-${(ageMagnitude / (60.0 * 60.0)).toFixed(1)}h`;
+        }
+        else if (ageMagnitude >= 60.0)
+        {
+            label =
+                `-${(ageMagnitude / 60.0).toFixed(0)}m`;
+        }
+        else
+        {
+            label =
+                `-${ageMagnitude.toFixed(0)}s`;
+        }
+
+        return label;
+    }
+
+    _drawLine(
+        context,
+        plot,
+        samples,
+        valueKey,
+        minValue,
+        maxValue,
+        newestTimeSeconds,
+        strokeStyle
+    )
+    {
+        if (samples.length >= 2)
+        {
+            const valueRange =
+                Math.max(
+                    0.000001,
+                    maxValue - minValue
+                );
+
+            context.strokeStyle = strokeStyle;
+            context.lineWidth = 1.5;
+
+            context.beginPath();
+
+            samples.forEach(
+                (sample, index) =>
+                {
+                    const sampleTimeSeconds =
+                        this._getSampleTimeSeconds(sample);
+
+                    const ageSeconds =
+                        sampleTimeSeconds - newestTimeSeconds;
+
+                    const x =
+                        this._xAgeSecondsToPixel(
+                            plot,
+                            ageSeconds
+                        );
+
+                    const value =
+                        Number(sample[valueKey] ?? 0.0);
+
+                    const y =
+                        plot.bottom -
+                        (
+                            (value - minValue) *
+                            (plot.bottom - plot.top) /
+                            valueRange
+                        );
+
+                    if (index === 0)
+                    {
+                        context.moveTo(x, y);
+                    }
+                    else
+                    {
+                        context.lineTo(x, y);
+                    }
+                }
+            );
+
+            context.stroke();
+        }
+    }
+
+    _drawTwoSeriesGraph(
+        canvasId,
+        metrics,
+        keyA,
+        keyB,
+        labelA,
+        labelB
+    )
+    {
+        const canvas =
+            document.getElementById(canvasId);
+
+        if (canvas !== null)
+        {
+            this._resizeCanvas(canvas);
+
+            const context =
+                canvas.getContext("2d");
+
+            const valuesA =
+                metrics.map(
+                    (metric) =>
+                    {
+                        return Number(metric[keyA] ?? 0.0);
+                    }
+                );
+
+            const valuesB =
+                metrics.map(
+                    (metric) =>
+                    {
+                        return Number(metric[keyB] ?? 0.0);
+                    }
+                );
+
+            const limits =
+                this._getValueLimits(
+                    valuesA.concat(valuesB)
+                );
+
+            const plot =
+                this._drawAxes(
+                    context,
+                    canvas.width,
+                    canvas.height,
+                    limits.minValue,
+                    limits.maxValue
+                );
+
+            const newestTimeSeconds =
+                this._getNewestMetricTime();
+
+            this._drawLine(
+                context,
+                plot,
+                metrics,
+                keyA,
+                limits.minValue,
+                limits.maxValue,
+                newestTimeSeconds,
+                "#2f80ed"
+            );
+
+            this._drawLine(
+                context,
+                plot,
+                metrics,
+                keyB,
+                limits.minValue,
+                limits.maxValue,
+                newestTimeSeconds,
+                "#d35400"
+            );
+
+            context.fillStyle = "#2f80ed";
+            context.textAlign = "left";
+
+            context.fillText(
+                labelA,
+                plot.left + 4,
+                plot.top + 12
+            );
+
+            context.fillStyle = "#d35400";
+
+            context.fillText(
+                labelB,
+                plot.left + 90,
+                plot.top + 12
+            );
+        }
+    }
+
+    _drawOneSeriesGraph(
+        canvasId,
+        metrics,
+        key,
+        label
+    )
+    {
+        const canvas =
+            document.getElementById(canvasId);
+
+        if (canvas !== null)
+        {
+            this._resizeCanvas(canvas);
+
+            const context =
+                canvas.getContext("2d");
+
+            const values =
+                metrics.map(
+                    (metric) =>
+                    {
+                        return Number(metric[key] ?? 0.0);
+                    }
+                );
+
+            const limits =
+                this._getValueLimits(values);
+
+            const plot =
+                this._drawAxes(
+                    context,
+                    canvas.width,
+                    canvas.height,
+                    limits.minValue,
+                    limits.maxValue
+                );
+
+            const newestTimeSeconds =
+                this._getNewestMetricTime();
+
+            this._drawLine(
+                context,
+                plot,
+                metrics,
+                key,
+                limits.minValue,
+                limits.maxValue,
+                newestTimeSeconds,
+                "#2f80ed"
+            );
+
+            context.fillStyle = "#2f80ed";
+            context.textAlign = "left";
+
+            context.fillText(
+                label,
+                plot.left + 4,
+                plot.top + 12
+            );
+        }
+    }
+
+    _drawSystemGraph()
+    {
+        const canvas =
+            document.getElementById("system-graph");
+
+        if (canvas !== null)
+        {
+            this._resizeCanvas(canvas);
+
+            const context =
+                canvas.getContext("2d");
+
+            const samples =
+                this._getVisibleSystemSamples();
+
+            const values =
+                samples.map(
+                    (item) =>
+                    {
+                        return Number(item.memory_mb ?? 0.0);
+                    }
+                );
+
+            const limits =
+                this._getValueLimits(values);
+
+            const plot =
+                this._drawAxes(
+                    context,
+                    canvas.width,
+                    canvas.height,
+                    limits.minValue,
+                    limits.maxValue
+                );
+
+            let newestTimeSeconds = 0.0;
+
+            if (this._aSystemHistory.length > 0)
+            {
+                const newestSample =
+                    this._aSystemHistory[
+                        this._aSystemHistory.length - 1
+                    ];
+
+                newestTimeSeconds =
+                    Number(newestSample.timestamp ?? 0) / 1000.0;
+            }
+
+            this._drawLine(
+                context,
+                plot,
+                samples,
+                "memory_mb",
+                limits.minValue,
+                limits.maxValue,
+                newestTimeSeconds,
+                "#2f80ed"
+            );
+
+            context.fillStyle = "#2f80ed";
+            context.textAlign = "left";
+
+            context.fillText(
+                "RAM MB",
+                plot.left + 4,
+                plot.top + 12
+            );
+        }
+    }
+
+    _getSampleTimeSeconds(sample)
+    {
+        let sampleTimeSeconds =
+            Number(sample.timestamp_monotonic ?? 0.0);
+
+        if (sample.timestamp !== undefined)
+        {
+            sampleTimeSeconds =
+                Number(sample.timestamp ?? 0) / 1000.0;
+        }
+
+        return sampleTimeSeconds;
+    }
+
+    _xAgeSecondsToPixel(
+        plot,
+        ageSeconds
+    )
+    {
+        const windowSeconds =
+            this._getWindowSeconds();
+
+        const fraction =
+            (ageSeconds + windowSeconds) /
+            windowSeconds;
+
+        const clippedFraction =
+            Math.max(
+                0.0,
+                Math.min(
+                    1.0,
+                    fraction
+                )
+            );
+
+        return (
+            plot.left +
+            (
+                (plot.right - plot.left) *
+                clippedFraction
+            )
+        );
+    }
+
+    _getValueLimits(values)
+    {
+        let minValue = 0.0;
+        let maxValue = 1.0;
+
+        if (values.length > 0)
+        {
+            minValue = Math.min(...values);
+            maxValue = Math.max(...values);
+
+            if (minValue === maxValue)
+            {
+                minValue -= 1.0;
+                maxValue += 1.0;
+            }
+        }
+
+        return {
+            minValue,
+            maxValue
+        };
+    }
+}

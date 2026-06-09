@@ -7,7 +7,7 @@ body
 .pageGrid
 {
     display: grid;
-    grid-template-columns: minmax(180px, 18%) 1fr;
+    grid-template-columns: minmax(180px, 16%) 1fr;
     grid-template-areas:
         "title title"
         "controls camera"
@@ -57,23 +57,25 @@ body
 {
     grid-area: status;
     min-height: 0;
-}
-
-.heartbeatText
-{
-    margin-left: 12px;
-    font-family: Consolas, monospace;
-    font-size: 12px;
-    color: #444;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .cameraGrid
 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
+    grid-template-columns: 48% 52%;
     gap: 8px;
     height: 100%;
+    min-height: 0;
+}
+
+.leftColumn
+{
+    display: grid;
+    grid-template-rows: 1.15fr 1fr 0.75fr;
+    gap: 8px;
+    min-height: 0;
 }
 
 .subPanel
@@ -84,8 +86,15 @@ body
 
 .subPanel h2
 {
-    margin: 0;
+    margin: 0 0 6px 0;
     font-size: 15px;
+}
+
+.previewPanel,
+.eventPanel,
+.bufferPanel
+{
+    min-height: 0;
 }
 
 .cameraImage
@@ -97,7 +106,7 @@ body
     background-color: #f5f5f5;
 }
 
-.cameraImageHidden 
+.cameraImageHidden
 {
     display: none;
 }
@@ -114,16 +123,26 @@ body
     font-size: 14px;
 }
 
-.graphHeader
+.metricsPanel
+{
+    display: grid;
+    grid-template-rows: 30px repeat(4, 1fr);
+    gap: 6px;
+    min-height: 0;
+}
+
+.metricsToolbar
 {
     display: flex;
     align-items: center;
     gap: 8px;
-    height: 24px;
+    min-width: 0;
 }
 
-.graphHeader h2
+.metricsToolbar h2
 {
+    margin: 0;
+    font-size: 15px;
     flex: 0 0 auto;
 }
 
@@ -139,6 +158,7 @@ body
     display: flex;
     flex: 1 1 auto;
     gap: 4px;
+    min-width: 0;
 }
 
 .graphButton
@@ -151,6 +171,7 @@ body
     border-radius: 3px;
     background-color: #eeeeee;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .graphButtonActive
@@ -160,11 +181,26 @@ body
     border-color: #1f4f8f;
 }
 
+.metricGraph
+{
+    display: grid;
+    grid-template-rows: 16px 1fr;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.metricGraphTitle
+{
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 16px;
+}
+
 .historyGraph
 {
     display: block;
     width: 100%;
-    height: calc(100% - 24px);
+    height: 100%;
     background-color: #f8f8f8;
 }
 
@@ -200,6 +236,14 @@ body
 .statusLabel
 {
     font-weight: 700;
+}
+
+.heartbeatText
+{
+    margin-left: 12px;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    color: #444;
 }
 
 .ccButton
@@ -258,12 +302,22 @@ hr
 
     .cameraPanel
     {
-        height: 700px;
+        height: 900px;
     }
 
     .cameraGrid
     {
         grid-template-columns: 1fr;
-        grid-template-rows: repeat(4, 1fr);
+        grid-template-rows: auto auto;
+    }
+
+    .leftColumn
+    {
+        grid-template-rows: 300px 250px 180px;
+    }
+
+    .metricsPanel
+    {
+        grid-template-rows: 34px repeat(4, 180px);
     }
 }

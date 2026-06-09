@@ -1,20 +1,25 @@
 """
 @file buffer_manager.py
 
-@brief Coordinates CameraReader, RingBuffer, and ClipWriter.
+@brief Coordinates CameraReader, RingBuffer, ClipWriter, and frame analysis.
 """
 
 from pathlib import Path
 
+from brightness_plugin import BrightnessPlugin
 from cam_config import CamConfig
+from camera_reader import CameraFrame
 from camera_reader import CameraReader
 from clip_writer import ClipWriter
+from frame_analyzer import FrameAnalyzer
+from metric_history import MetricHistory
+from motion_plugin import MotionPlugin
 from ring_buffer import RingBuffer
 
 
 class BufferManager:
     """
-    @brief Owns camera buffering components.
+    @brief Owns camera buffering and analysis components.
     """
 
     def __init__(
@@ -28,13 +33,36 @@ class BufferManager:
             config.buffer_seconds
         )
 
+        self._metric_history_capacity = int(
+            config.metric_history_seconds /
+            config.metric_history_sample_seconds
+        )
+
         self._ring_buffer = RingBuffer(
             capacity=self._capacity_frames
         )
 
+        self._metric_history = MetricHistory(
+            capacity=self._metric_history_capacity
+        )
+
+        self._frame_analyzer = FrameAnalyzer()
+
+        self._frame_analyzer.add_plugin(
+            BrightnessPlugin(
+                average_window_frames=config.brightness_average_frames
+            )
+        )
+
+        self._frame_analyzer.add_plugin(
+            MotionPlugin(
+                changed_pixel_threshold=config.motion_changed_pixel_threshold
+            )
+        )
+
         self._camera_reader = CameraReader(
             config,
-            on_frame=self._ring_buffer.push
+            on_frame=self._on_frame
         )
 
         self._clip_writer = ClipWriter(
@@ -43,8 +71,11 @@ class BufferManager:
                 "Documents" /
                 "videoManager" /
                 "captures"
-            )
+            ),
+            frame_rate_fps=config.frame_rate_fps
         )
+
+        self._last_metric_time_monotonic: float = 0.0
 
     def start(self) -> tuple[bool, str]:
         success = False
@@ -52,6 +83,7 @@ class BufferManager:
 
         if not self.is_running():
             self._ring_buffer.clear()
+            self._metric_history.clear()
 
             success, message = (
                 self._camera_reader.start()
@@ -72,6 +104,7 @@ class BufferManager:
 
         if not self.is_running():
             self._ring_buffer.clear()
+            self._metric_history.clear()
 
             success = True
             message = "Buffer cleared"
@@ -125,6 +158,9 @@ class BufferManager:
     def is_running(self) -> bool:
         return self._camera_reader.is_running()
 
+    def get_metrics_history(self) -> list[dict]:
+        return self._metric_history.snapshot()
+
     def get_status(self) -> dict:
         reader_status = (
             self._camera_reader.get_status()
@@ -132,6 +168,10 @@ class BufferManager:
 
         buffer_status = (
             self._ring_buffer.get_status()
+        )
+
+        metric_status = (
+            self._metric_history.get_status()
         )
 
         status = {
@@ -148,7 +188,38 @@ class BufferManager:
             "buffer_total_pushed": buffer_status["total_pushed"],
             "buffer_overwrite_count": buffer_status["overwrite_count"],
             "oldest_sequence_number": buffer_status["oldest_sequence_number"],
-            "newest_sequence_number": buffer_status["newest_sequence_number"]
+            "newest_sequence_number": buffer_status["newest_sequence_number"],
+            "metric_history_capacity": metric_status["capacity"],
+            "metric_history_count": metric_status["count"],
+            "metric_history_overwrite_count": metric_status["overwrite_count"]
         }
 
         return status
+
+    def _on_frame(
+        self,
+        camera_frame: CameraFrame
+    ) -> None:
+        self._ring_buffer.push(
+            camera_frame
+        )
+
+        should_sample_metric = (
+            (
+                camera_frame.timestamp_monotonic -
+                self._last_metric_time_monotonic
+            ) >= self._config.metric_history_sample_seconds
+        )
+
+        if should_sample_metric:
+            metric = self._frame_analyzer.analyze(
+                camera_frame
+            )
+
+            self._metric_history.push(
+                metric
+            )
+
+            self._last_metric_time_monotonic = (
+                camera_frame.timestamp_monotonic
+            )
