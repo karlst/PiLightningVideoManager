@@ -44,3 +44,4 @@ class CamConfig:
     camera_bearing_degrees: float = 0.0
     camera_hfov_degrees: float = 0.0
     camera_vfov_degrees: float = 0.0
+    camera_preview_refresh_seconds: float = 0.2

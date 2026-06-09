@@ -1,0 +1,44 @@
+.ccDialog
+{
+    width: min(620px, calc(100vw - 28px));
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 0;
+}
+
+.ccDialog::backdrop
+{
+    background-color: rgb(0 0 0 / 45%);
+}
+
+.dialogPanel
+{
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 10px;
+    padding: 12px;
+}
+
+.dialogHeader
+{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 8px;
+}
+
+.dialogBody
+{
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.captureListButton
+{
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 6px;
+    text-align: left;
+}

@@ -13,7 +13,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=42">
+        href="/static/css/main.css?v=43">
 </head>
 
 <body>
@@ -32,7 +32,6 @@
             </div>
 
             <div class="liveSummaryBlock">
-                <span>Trigger: <strong id="trigger-state-value">--</strong></span>
                 <span>UTC: <strong id="utc-time-value">--:--:--</strong></span>
             </div>
 
@@ -70,40 +69,40 @@
                 <section class="subPanel mediaPanel">
 
                     <div class="panelHeader">
-                        <h2>Media Viewer</h2>
+                        <h2 id="media-title">Live Camera</h2>
+                    </div>
 
-                        <div class="modeButtons">
-                            <button class="miniButton" type="button">
-                                Live Snapshot
-                            </button>
+                    <div class="mediaViewport">
 
-                            <button class="miniButton" type="button">
-                                Playback
-                            </button>
+                        <div
+                            class="previewPlaceholder"
+                            id="preview-placeholder">
+                            No preview frame
                         </div>
-                    </div>
 
-                    <div
-                        class="previewPlaceholder"
-                        id="preview-placeholder">
-                        Preview stopped
-                    </div>
+                        <img
+                            class="cameraImage cameraImageHidden"
+                            id="camera-image"
+                            alt="Camera preview">
 
-                    <video
-                        class="cameraImage cameraImageHidden"
-                        id="camera-video"
-                        controls
-                        muted
-                        playsinline>
-                    </video>
+                        <video
+                            class="cameraImage cameraImageHidden"
+                            id="camera-video"
+                            controls
+                            muted
+                            playsinline>
+                        </video>
+
+                    </div>
 
                     <div class="mediaFooter">
-                        <span>Refresh:</span>
-                        <button class="miniButton" type="button">Off</button>
-                        <button class="miniButton" type="button">1s</button>
-                        <button class="miniButton" type="button">5s</button>
-                        <button class="miniButton" type="button">15s</button>
-                        <span class="imageAge">Image age: --</span>
+
+                        <button
+                            class="miniButton cameraImageHidden"
+                            id="close-playback-button"
+                            type="button">
+                            Close Playback
+                        </button>
                     </div>
 
                 </section>
@@ -113,15 +112,29 @@
                     <h2>Control</h2>
 
                     <div class="controlRow">
-                        <span>Trigger: Enabled</span>
+                        <span id="trigger-enabled-text">Trigger: Enabled</span>
 
                         <button
                             class="ccButton ccButtonSecondary"
-                            id="buffer-stop-button"
+                            id="trigger-disable-button"
                             type="button">
                             Disable Trigger
                         </button>
+
+                        <button
+                            class="ccButton ccButtonSecondary cameraImageHidden"
+                            id="trigger-enable-button"
+                            type="button">
+                            Enable Trigger
+                        </button>
                     </div>
+
+                    <button
+                        class="ccButton"
+                        id="about-button"
+                        type="button">
+                        About...
+                    </button>
 
                     <button
                         class="ccButton ccButtonDanger"
@@ -130,15 +143,24 @@
                         Manual Trigger
                     </button>
 
-                    <button class="ccButton" type="button">
+                    <button
+                        class="ccButton"
+                        id="trigger-settings-button"
+                        type="button">
                         Trigger Settings...
                     </button>
 
-                    <button class="ccButton" type="button">
+                    <button
+                        class="ccButton"
+                        id="camera-settings-button"
+                        type="button">
                         Camera Settings...
                     </button>
 
-                    <button class="ccButton" type="button">
+                    <button
+                        class="ccButton"
+                        id="browse-captures-button"
+                        type="button">
                         Browse Captures...
                     </button>
 
@@ -223,9 +245,31 @@
 
     </div>
 
+    <dialog class="ccDialog" id="app-dialog">
+        <section class="dialogPanel">
+
+            <header class="dialogHeader">
+                <h2 id="app-dialog-title">Dialog</h2>
+
+                <button
+                    class="miniButton"
+                    id="app-dialog-close-button"
+                    type="button">
+                    X
+                </button>
+            </header>
+
+            <div
+                class="dialogBody"
+                id="app-dialog-body">
+            </div>
+
+        </section>
+    </dialog>
+
     <script
         type="module"
-        src="/static/js/app.js?v=33">
+        src="/static/js/app.js?v=34">
     </script>
 
 </body>

@@ -6,6 +6,8 @@
 
 from pathlib import Path
 
+import cv2
+
 from brightness_plugin import BrightnessPlugin
 from cam_config import CamConfig
 from camera_reader import CameraFrame
@@ -154,6 +156,39 @@ class BufferManager:
             )
 
         return success, message, capture_status
+
+    def get_preview_jpeg(self) -> tuple[bytes | None, dict]:
+        camera_frame = (
+            self._ring_buffer.newest()
+        )
+
+        if camera_frame is None:
+            return None, {
+                "success": False,
+                "message": "No preview frame available"
+            }
+
+        success, jpeg = cv2.imencode(
+            ".jpg",
+            camera_frame.frame,
+            [
+                cv2.IMWRITE_JPEG_QUALITY,
+                75
+            ]
+        )
+
+        if not success:
+            return None, {
+                "success": False,
+                "message": "JPEG encode failed"
+            }
+
+        return jpeg.tobytes(), {
+            "success": True,
+            "sequence_number": camera_frame.sequence_number,
+            "timestamp_utc": camera_frame.timestamp_utc,
+            "timestamp_monotonic": camera_frame.timestamp_monotonic
+        }
 
     def is_running(self) -> bool:
         return self._camera_reader.is_running()

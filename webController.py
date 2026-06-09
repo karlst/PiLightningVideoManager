@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from flask import Flask
 from flask import jsonify
+from flask import make_response
 from flask import render_template
 from flask import send_from_directory
 
@@ -15,6 +16,8 @@ from datetime import datetime
 from datetime import timezone
 import os
 import psutil
+
+from pathlib import Path
 
 
 @dataclass
@@ -72,56 +75,63 @@ def register_routes(
         )
 
     @app.route(
-        "/preview_start",
-        methods=["POST"]
+        "/preview.jpg"
     )
-    def preview_start():
-        success, message = (
-            services.preview_server.start()
+    def preview_jpg():
+        jpeg_bytes, status = (
+            services.buffer_manager.get_preview_jpeg()
         )
 
-        services.event_log.add(
-            message
+        if jpeg_bytes is None:
+            return jsonify(
+                status
+            ), 404
+
+        response = make_response(
+            jpeg_bytes
         )
 
-        return jsonify(
-            {
-                "success": success,
-                "message": message
-            }
+        response.headers.set(
+            "Content-Type",
+            "image/jpeg"
         )
 
-    @app.route(
-        "/preview_stop",
-        methods=["POST"]
-    )
-    def preview_stop():
-        success, message = (
-            services.preview_server.stop()
+        response.headers.set(
+            "Cache-Control",
+            "no-store, no-cache, must-revalidate, max-age=0"
         )
 
-        services.event_log.add(
-            message
+        response.headers.set(
+            "Pragma",
+            "no-cache"
         )
 
-        return jsonify(
-            {
-                "success": success,
-                "message": message
-            }
+        response.headers.set(
+            "X-Frame-Sequence",
+            str(
+                status["sequence_number"]
+            )
         )
+
+        response.headers.set(
+            "X-Frame-Time-UTC",
+            status["timestamp_utc"]
+        )
+
+        return response
 
     @app.route(
         "/preview_status"
     )
     def preview_status():
-        running = (
-            services.preview_server.is_running()
+        buffer_status = (
+            services.buffer_manager.get_status()
         )
 
         return jsonify(
             {
-                "running": running
+                "running": buffer_status["running"],
+                "message": "Snapshot preview uses buffered frames"
             }
         )
 
@@ -242,6 +252,7 @@ def register_routes(
                 "capture_status": capture_status
             }
         )
+
     @app.route(
         "/buffer_clear",
         methods=["POST"]
@@ -281,18 +292,6 @@ def register_routes(
         )
 
     @app.route(
-        "/hls/<path:filename>"
-    )
-
-    def hls_file(
-        filename: str
-    ):
-        return send_from_directory(
-            services.config.hls_directory,
-            filename
-        )
-
-    @app.route(
         "/system_status"
     )
     def system_status():
@@ -320,7 +319,7 @@ def register_routes(
                 ),
 
                 "preview_running":
-                    services.preview_server.is_running(),
+                    buffer_status["running"],
 
                 "buffer_running":
                     buffer_status["running"],
@@ -342,6 +341,9 @@ def register_routes(
 
                 "camera_target_fps":
                     services.config.frame_rate_fps,
+
+                "camera_preview_refresh_seconds":
+                    services.config.camera_preview_refresh_seconds,
 
                 "camera_geometry":
                 {
@@ -385,7 +387,7 @@ def register_routes(
                 "last_error":
                     buffer_status["last_error"]
             }
-        )     
+        )
 
     @app.route(
         "/metrics_history"
@@ -403,12 +405,45 @@ def register_routes(
                 ),
                 "metrics": metrics
             }
-        )    
+        )
     
-    def hls_file(
-        filename: str
-    ):
+    @app.route("/captures")
+    def captures():
+        capture_directory = (
+            Path.home() /
+            "Documents" /
+            "videoManager" /
+            "captures"
+        )
+
+        files = []
+
+        if capture_directory.exists():
+            for path in sorted(
+                capture_directory.glob("*.mp4"),
+                reverse=True
+            ):
+                files.append(
+                    {
+                        "name": path.name,
+                        "url": f"/capture_files/{path.name}"
+                    }
+                )
+
+        return jsonify(
+            {
+                "success": True,
+                "files": files
+            }
+        )
+
+
+    @app.route("/capture_files/<path:filename>")
+    def capture_file(filename: str):
         return send_from_directory(
-            services.config.hls_directory,
+            Path.home() /
+            "Documents" /
+            "videoManager" /
+            "captures",
             filename
         )

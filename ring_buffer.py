@@ -54,6 +54,21 @@ class RingBuffer:
 
             self._total_pushed += 1
 
+    def newest(self) -> Any | None:
+        newest_item = None
+
+        with self._lock:
+            if self._count > 0:
+                newest_index = (
+                    self._next_index - 1
+                ) % self._capacity
+
+                newest_item = self._items[
+                    newest_index
+                ]
+
+        return newest_item
+
     def snapshot(self) -> list[Any]:
         items: list[Any] = []
 

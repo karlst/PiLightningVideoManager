@@ -36,6 +36,18 @@ import
 }
 from "./metricsGraphPanel.js?v=32";
 
+import
+{
+    DialogPanel
+}
+from "./dialogPanel.js?v=32";
+
+import
+{
+    TriggerManager
+}
+from "./triggerManager.js?v=34";
+
 
 function initializePage()
 {
@@ -53,6 +65,12 @@ function initializePage()
             eventLogPanel
         );
 
+    const dialogPanel =
+        new DialogPanel(
+            previewPanel
+        );
+    dialogPanel.initialize();
+
     const bufferPanel =
         new BufferPanel(
             statusPanel,
@@ -65,11 +83,15 @@ function initializePage()
     const cameraPanel =
         new CameraPanel();
 
-    statusPanel.setSystemSampleHandler(
-        (result) => metricsGraphPanel.addSystemSample(
-            result
-        )
-    );
+    const triggerManager =
+        new TriggerManager();
+        
+            statusPanel.setSystemSampleHandler(
+            (result) => metricsGraphPanel.addSystemSample(
+                result
+            )
+        );
+    triggerManager.initialize();
 
     statusPanel.setSystemStatusHandler(
         (result) => cameraPanel.updateFromSystemStatus(

@@ -2,22 +2,29 @@
 {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
-    margin-bottom: 6px;
-}
-
-.modeButtons
-{
-    display: flex;
-    gap: 4px;
 }
 
 .mediaPanel
 {
     display: grid;
-    grid-template-rows: 26px 1fr 28px;
+    grid-template-rows: 26px minmax(0, 1fr) 28px;
     gap: 6px;
+}
+
+.mediaViewport
+{
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    background-color: #111;
+}
+
+.previewPlaceholder,
+.cameraImage
+{
+    position: absolute;
+    inset: 0;
 }
 
 .previewPlaceholder
@@ -25,10 +32,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #111;
     color: #ddd;
     font-size: 15px;
-    min-height: 0;
 }
 
 .cameraImage

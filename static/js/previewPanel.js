@@ -17,6 +17,18 @@ export class PreviewPanel
 
         this._eventLogPanel =
             eventLogPanel;
+
+        this._previewTimerId =
+            null;
+
+        this._lastImageLoadTimeMs =
+            null;
+
+        this._previewRefreshMs =
+            1000;
+
+        this._mode =
+            "preview";
     }
 
 
@@ -28,16 +40,36 @@ export class PreviewPanel
         );
 
         this._bindClick(
-            "preview-start-button",
-            () => this.startPreview()
+            "close-playback-button",
+            () => this.closePlayback()
         );
 
-        this._bindClick(
-            "preview-stop-button",
-            () => this.stopPreview()
-        );
+        this._loadPreviewConfig();
+    }
 
-        this.updatePreviewStatus();
+    async _loadPreviewConfig()
+    {
+        try
+        {
+            const result =
+                await getJson(
+                    "/system_status"
+                );
+
+            this._previewRefreshMs =
+                Math.max(
+                    100,
+                    Number(result.camera_preview_refresh_seconds ?? 1.0) * 1000
+                );
+        }
+        catch (error)
+        {
+            console.error(
+                error
+            );
+        }
+
+        this.showPreviewMode();
     }
 
 
@@ -73,108 +105,108 @@ export class PreviewPanel
     }
 
 
-    async startPreview()
+    showPreviewMode()
     {
-        try
+        this._mode =
+            "preview";
+
+        this._setMediaTitle(
+            "Live Camera"
+        );
+
+        this._hideVideo();
+        this._showImageShell();
+        this._startPreviewPolling();
+        this._hideClosePlaybackButton();
+    }
+
+
+    showPlaybackMode(videoUrl)
+    {
+        this._mode =
+            "playback";
+
+        this._setMediaTitle(
+            "Capture Playback"
+        );
+
+        this._stopPreviewPolling();
+        this._hideImage();
+        this._showVideo(
+            videoUrl
+        );
+
+        this._showClosePlaybackButton();
+    }
+
+
+    closePlayback()
+    {
+        this.showPreviewMode();
+    }
+
+    _showClosePlaybackButton()
+    {
+        const button =
+            document.getElementById("close-playback-button");
+
+        if (button !== null)
         {
-            const result =
-                await postJson(
-                    "/preview_start"
-                );
-
-            this._statusPanel.setStatus(
-                result.message
-            );
-
-            if (result.success)
-            {
-                this._showPreview();
-            }
-
-            this._eventLogPanel.refresh();
-        }
-        catch (error)
-        {
-            this._statusPanel.setStatus(
-                "Preview Start Failed"
-            );
-
-            console.error(
-                error
-            );
+            button.classList.remove("cameraImageHidden");
         }
     }
 
 
-    async stopPreview()
+    _hideClosePlaybackButton()
     {
-        try
+        const button =
+            document.getElementById("close-playback-button");
+
+        if (button !== null)
         {
-            const result =
-                await postJson(
-                    "/preview_stop"
-                );
-
-            this._statusPanel.setStatus(
-                result.message
-            );
-
-            if (result.success)
-            {
-                this._hidePreview();
-            }
-
-            this._eventLogPanel.refresh();
-        }
-        catch (error)
-        {
-            this._statusPanel.setStatus(
-                "Preview Stop Failed"
-            );
-
-            console.error(
-                error
-            );
+            button.classList.add("cameraImageHidden");
         }
     }
 
 
-    async updatePreviewStatus()
+    _startPreviewPolling()
     {
-        try
-        {
-            const result =
-                await getJson(
-                    "/preview_status"
-                );
+        this._stopPreviewPolling();
 
-            if (result.running)
-            {
-                this._statusPanel.setStatus(
-                    "Preview Running"
-                );
+        this._loadPreviewImage();
 
-                this._showPreview();
-            }
-            else
-            {
-                this._hidePreview();
-            }
-        }
-        catch (error)
-        {
-            console.error(
-                error
+        this._previewTimerId =
+            setInterval(
+                () => this._loadPreviewImage(),
+                this._previewRefreshMs
             );
+    }
+
+
+    _stopPreviewPolling()
+    {
+        if (this._previewTimerId !== null)
+        {
+            clearInterval(
+                this._previewTimerId
+            );
+
+            this._previewTimerId =
+                null;
         }
     }
 
 
-    _showPreview()
+    _loadPreviewImage()
     {
-        const video =
+        if (this._mode !== "preview")
+        {
+            return;
+        }
+
+        const image =
             document.getElementById(
-                "camera-video"
+                "camera-image"
             );
 
         const placeholder =
@@ -182,18 +214,129 @@ export class PreviewPanel
                 "preview-placeholder"
             );
 
-        if ((video !== null) && (placeholder !== null))
+        if (image === null)
+        {
+            return;
+        }
+
+        image.onload =
+            () =>
+            {
+                this._lastImageLoadTimeMs =
+                    Date.now();
+
+                image.classList.remove(
+                    "cameraImageHidden"
+                );
+
+                if (placeholder !== null)
+                {
+                    placeholder.classList.add(
+                        "cameraImageHidden"
+                    );
+                }
+
+                this._updateImageAge();
+            };
+
+        image.onerror =
+            () =>
+            {
+                if (this._mode !== "preview")
+                {
+                    return;
+                }
+
+                if (placeholder !== null)
+                {
+                    placeholder.textContent =
+                        "No preview frame";
+
+                    placeholder.classList.remove(
+                        "cameraImageHidden"
+                    );
+                }
+
+                image.classList.add(
+                    "cameraImageHidden"
+                );
+
+                this._lastImageLoadTimeMs =
+                    null;
+
+                this._updateImageAge();
+            };
+
+        image.src =
+            "/preview.jpg?ts=" + Date.now();
+    }
+
+
+    _showImageShell()
+    {
+        const placeholder =
+            document.getElementById(
+                "preview-placeholder"
+            );
+
+        if (placeholder !== null)
+        {
+            placeholder.textContent =
+                "Waiting for preview frame";
+
+            placeholder.classList.remove(
+                "cameraImageHidden"
+            );
+        }
+    }
+
+
+    _hideImage()
+    {
+        const image =
+            document.getElementById(
+                "camera-image"
+            );
+
+        const placeholder =
+            document.getElementById(
+                "preview-placeholder"
+            );
+
+        if (image !== null)
+        {
+            image.classList.add(
+                "cameraImageHidden"
+            );
+        }
+
+        if (placeholder !== null)
         {
             placeholder.classList.add(
                 "cameraImageHidden"
             );
+        }
+    }
 
+
+    _showVideo(videoUrl)
+    {
+        const video =
+            document.getElementById(
+                "camera-video"
+            );
+
+        if (video !== null)
+        {
             video.classList.remove(
                 "cameraImageHidden"
             );
 
+            video.controls =
+                true;
+
             video.src =
-                "/hls/stream.m3u8";
+                videoUrl;
 
             video.load();
 
@@ -209,19 +352,14 @@ export class PreviewPanel
     }
 
 
-    _hidePreview()
+    _hideVideo()
     {
         const video =
             document.getElementById(
                 "camera-video"
             );
 
-        const placeholder =
-            document.getElementById(
-                "preview-placeholder"
-            );
-
-        if ((video !== null) && (placeholder !== null))
+        if (video !== null)
         {
             video.pause();
 
@@ -234,10 +372,54 @@ export class PreviewPanel
             video.classList.add(
                 "cameraImageHidden"
             );
+        }
+    }
 
-            placeholder.classList.remove(
-                "cameraImageHidden"
+
+    _setMediaTitle(titleText)
+    {
+        const mediaTitle =
+            document.getElementById(
+                "media-title"
             );
+
+        if (mediaTitle !== null)
+        {
+            mediaTitle.textContent =
+                titleText;
+        }
+    }
+
+
+    _updateImageAge()
+    {
+        const imageAge =
+            document.getElementById(
+                "image-age"
+            );
+
+        if (imageAge === null)
+        {
+            return;
+        }
+
+        if (this._lastImageLoadTimeMs === null)
+        {
+            imageAge.textContent =
+                "Age: --";
+        }
+        else
+        {
+            const ageSeconds =
+                Math.floor(
+                    (
+                        Date.now() -
+                        this._lastImageLoadTimeMs
+                    ) / 1000
+                );
+
+            imageAge.textContent =
+                `Age: ${ageSeconds}s`;
         }
     }
 

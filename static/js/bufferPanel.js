@@ -22,6 +22,7 @@ export class BufferPanel
 
     initialize()
     {
+        /* disable ... No longer used
         this._bindClick(
             "buffer-start-button",
             () => this.start()
@@ -41,6 +42,7 @@ export class BufferPanel
             "buffer-status-button",
             () => this.status()
         );
+        // ... end disable */
 
         this.status();
 
