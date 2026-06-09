@@ -9,248 +9,224 @@
         name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-    <title>Video Camera Manager</title>
+    <title>Pi Camera Capture</title>
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=31">
+        href="/static/css/main.css?v=42">
 </head>
 
 <body>
 
     <div class="pageGrid">
 
-        <header class="titlePanel">
-            <h1>Video Camera Manager</h1>
+        <header class="topPanel systemOk">
+
+            <div class="titleBlock">
+                <h1>Pi Camera Capture</h1>
+
+                <div class="statusLine">
+                    <span id="status-value">Ready</span>
+                    <span id="heartbeat-value">Server: --</span>
+                </div>
+            </div>
+
+            <div class="liveSummaryBlock">
+                <span>Trigger: <strong id="trigger-state-value">--</strong></span>
+                <span>UTC: <strong id="utc-time-value">--:--:--</strong></span>
+            </div>
+
         </header>
 
-        <section class="controlPanel">
+        <main class="mainGrid">
 
-            <button class="ccButton" id="preview-start-button" type="button">
-                Start Preview
-            </button>
+            <section class="leftStack">
 
-            <button class="ccButton" id="preview-stop-button" type="button">
-                Stop Preview
-            </button>
+                <section class="subPanel cameraInfoPanel">
 
-            <button class="ccButton" id="capture-button" type="button">
-                Capture 5 Seconds
-            </button>
+                    <h2>Camera</h2>
 
-            <button class="ccButton" id="pi-preview-start-button" type="button">
-                Start Pi Display Preview
-            </button>
+                    <div class="cameraInfoGrid">
 
-            <button class="ccButton" id="pi-preview-stop-button" type="button">
-                Stop Pi Display Preview
-            </button>
-
-            <hr>
-
-            <button class="ccButton" id="buffer-start-button" type="button">
-                Start Buffer
-            </button>
-
-            <button class="ccButton" id="buffer-stop-button" type="button">
-                Stop Buffer
-            </button>
-
-            <button class="ccButton" id="buffer-capture-button" type="button">
-                Trigger Capture
-            </button>
-
-            <button class="ccButton" id="buffer-status-button" type="button">
-                Check Buffer
-            </button>
-
-            <button
-                class="ccButton ccButtonSecondary"
-                id="event-log-clear-button"
-                type="button">
-                Clear Event Log
-            </button>
-
-        </section>
-
-        <main class="cameraPanel">
-
-            <section class="cameraGrid">
-
-                <section class="leftColumn">
-
-                    <section class="subPanel previewPanel">
-                        <h2>Preview</h2>
-
-                        <div
-                            class="previewPlaceholder"
-                            id="preview-placeholder">
-                            Preview stopped
+                        <div class="cameraInfoColumn">
+                            <div>Device: <span id="camera-name-value">--</span></div>
+                            <div>Format: <span id="camera-format-value">--</span></div>
+                            <div>Frame: <span id="camera-frame-value">-- x --</span></div>
+                            <div>Target FPS: <span id="camera-target-fps-value">--</span></div>
                         </div>
 
-                        <video
-                            class="cameraImage cameraImageHidden"
-                            id="camera-video"
-                            controls
-                            muted
-                            playsinline>
-                        </video>
-                    </section>
-
-                    <section class="subPanel eventPanel">
-                        <h2>Event Log</h2>
-
-                        <div
-                            class="eventLog"
-                            id="event-log">
+                        <div class="cameraInfoColumn">
+                            <div>Latitude: <span id="camera-latitude-value">--.-------</span></div>
+                            <div>Longitude: <span id="camera-longitude-value">--.-------</span></div>
+                            <div>Bearing: <span id="camera-bearing-value">---.-°</span></div>
+                            <div>HFOV: <span id="camera-hfov-value">--.-°</span></div>
+                            <div>VFOV: <span id="camera-vfov-value">--.-°</span></div>
                         </div>
-                    </section>
 
-                    <section class="subPanel bufferPanel">
-                        <h2>Buffer Status</h2>
-
-                        <pre
-                            class="statusBlock"
-                            id="buffer-status-value">Not checked</pre>
-                    </section>
+                    </div>
 
                 </section>
 
-                <section class="subPanel metricsPanel">
+                <section class="subPanel mediaPanel">
 
-                    <div class="metricsToolbar">
+                    <div class="panelHeader">
+                        <h2>Media Viewer</h2>
 
-                        <h2>Metrics</h2>
-
-                        <span id="graph-mean-value">
-                            Mean: --
-                        </span>
-
-                        <div class="graphButtonBar">
-
-                            <button
-                                class="graphButton"
-                                data-window="0.0833">
-                                5 MIN
-                            </button>
-                            
-                            <button
-                                class="graphButton"
-                                data-window="1">
-                                1 HR
+                        <div class="modeButtons">
+                            <button class="miniButton" type="button">
+                                Live Snapshot
                             </button>
 
-                            <button
-                                class="graphButton"
-                                data-window="6">
-                                6 HR
+                            <button class="miniButton" type="button">
+                                Playback
                             </button>
-
-                            <button
-                                class="graphButton"
-                                data-window="12">
-                                12 HR
-                            </button>
-
-                            <button
-                                class="graphButton"
-                                data-window="24">
-                                1 D
-                            </button>
-
-                            <button
-                                class="graphButton"
-                                data-window="120">
-                                5 D
-                            </button>
-
-                            <button
-                                class="graphButton"
-                                data-window="240">
-                                10 D
-                            </button>
-
-                            <button
-                                class="graphButton"
-                                data-window="720">
-                                30 D
-                            </button>
-
                         </div>
-
                     </div>
 
-                    <div class="metricGraph">
-                        <div class="metricGraphTitle">
-                            Brightness
-                        </div>
-
-                        <canvas
-                            class="historyGraph"
-                            id="brightness-graph">
-                        </canvas>
+                    <div
+                        class="previewPlaceholder"
+                        id="preview-placeholder">
+                        Preview stopped
                     </div>
 
-                    <div class="metricGraph">
-                        <div class="metricGraphTitle">
-                            Brightness Delta
-                        </div>
+                    <video
+                        class="cameraImage cameraImageHidden"
+                        id="camera-video"
+                        controls
+                        muted
+                        playsinline>
+                    </video>
 
-                        <canvas
-                            class="historyGraph"
-                            id="brightness-delta-graph">
-                        </canvas>
+                    <div class="mediaFooter">
+                        <span>Refresh:</span>
+                        <button class="miniButton" type="button">Off</button>
+                        <button class="miniButton" type="button">1s</button>
+                        <button class="miniButton" type="button">5s</button>
+                        <button class="miniButton" type="button">15s</button>
+                        <span class="imageAge">Image age: --</span>
                     </div>
 
-                    <div class="metricGraph">
-                        <div class="metricGraphTitle">
-                            Motion
-                        </div>
+                </section>
 
-                        <canvas
-                            class="historyGraph"
-                            id="motion-graph">
-                        </canvas>
+                <section class="subPanel controlPanel">
+
+                    <h2>Control</h2>
+
+                    <div class="controlRow">
+                        <span>Trigger: Enabled</span>
+
+                        <button
+                            class="ccButton ccButtonSecondary"
+                            id="buffer-stop-button"
+                            type="button">
+                            Disable Trigger
+                        </button>
                     </div>
 
-                    <div class="metricGraph">
-                        <div class="metricGraphTitle">
-                            System
-                        </div>
+                    <button
+                        class="ccButton ccButtonDanger"
+                        id="buffer-capture-button"
+                        type="button">
+                        Manual Trigger
+                    </button>
 
-                        <canvas
-                            class="historyGraph"
-                            id="system-graph">
-                        </canvas>
-                    </div>
+                    <button class="ccButton" type="button">
+                        Trigger Settings...
+                    </button>
+
+                    <button class="ccButton" type="button">
+                        Camera Settings...
+                    </button>
+
+                    <button class="ccButton" type="button">
+                        Browse Captures...
+                    </button>
+
+                    <button
+                        class="ccButton ccButtonSecondary"
+                        id="event-log-clear-button"
+                        type="button">
+                        Clear Event Log
+                    </button>
+
+                    <pre
+                        class="hiddenStatusBlock"
+                        id="buffer-status-value">Not checked</pre>
 
                 </section>
 
             </section>
 
+            <section class="subPanel metricsPanel">
+
+                <div class="metricsToolbar">
+
+                    <h2>Graphs</h2>
+
+                    <span id="graph-mean-value">
+                        Mean: --
+                    </span>
+
+                    <div class="graphButtonBar">
+
+                        <button class="graphButton" data-window="0.083333">5 MIN</button>
+                        <button class="graphButton" data-window="1">1 HR</button>
+                        <button class="graphButton" data-window="6">6 HR</button>
+                        <button class="graphButton" data-window="12">12 HR</button>
+                        <button class="graphButton" data-window="24">1 D</button>
+                        <button class="graphButton" data-window="120">5 D</button>
+                        <button class="graphButton" data-window="240">10 D</button>
+                        <button class="graphButton" data-window="720">30 D</button>
+
+                    </div>
+
+                </div>
+
+                <div class="metricGraph">
+                    <div class="metricGraphTitle">Brightness</div>
+                    <canvas class="historyGraph" id="brightness-graph"></canvas>
+                </div>
+
+                <div class="metricGraph">
+                    <div class="metricGraphTitle">Trigger Metric</div>
+                    <canvas class="historyGraph" id="brightness-delta-graph"></canvas>
+                </div>
+
+                <div class="metricGraph">
+                    <div class="metricGraphTitle">Motion</div>
+                    <canvas class="historyGraph" id="motion-graph"></canvas>
+                </div>
+
+                <div class="metricGraph">
+                    <div class="metricGraphTitle">System</div>
+                    <canvas class="historyGraph" id="system-graph"></canvas>
+                </div>
+
+                <div class="sharedXAxis">
+                    one shared time axis for graph stack
+                </div>
+
+            </section>
+
         </main>
 
-        <section class="statusPanel">
+        <section class="subPanel eventPanel">
 
-            <span class="statusLabel">
-                Status:
-            </span>
+            <h2>Event Log</h2>
 
-            <span id="status-value">
-                Ready
-            </span>
-
-            <span
-                class="heartbeatText"
-                id="heartbeat-value">
-                | Server: --
-            </span>
+            <div
+                class="eventLog"
+                id="event-log">
+            </div>
 
         </section>
 
     </div>
 
-    <script type="module" src="/static/js/app.js?v=32"></script>
+    <script
+        type="module"
+        src="/static/js/app.js?v=33">
+    </script>
 
 </body>
 

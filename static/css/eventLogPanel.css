@@ -1,0 +1,23 @@
+.eventPanel
+{
+    display: grid;
+    grid-template-rows: 18px 1fr;
+    gap: 6px;
+}
+
+.eventLog
+{
+    overflow-y: auto;
+    padding: 6px;
+    box-sizing: border-box;
+    background-color: #111;
+    color: #eee;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.eventLogRow
+{
+    margin-bottom: 3px;
+    white-space: nowrap;
+}

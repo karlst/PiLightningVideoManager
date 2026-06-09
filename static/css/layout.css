@@ -1,0 +1,114 @@
+.pageGrid
+{
+    display: grid;
+    grid-template-rows: auto 1fr 120px;
+    gap: 8px;
+    height: calc(100vh - 16px);
+    box-sizing: border-box;
+}
+
+.topPanel
+{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    overflow: visible;
+
+    padding: 8px 8px 8px 8px;
+
+    border: 1px solid #777;
+    border-top: 8px solid #777;
+}
+
+.topPanel.systemOk
+{
+    border-top-color: #1f9d55;
+}
+
+.topPanel.systemWarn
+{
+    border-top-color: #d99a00;
+}
+
+.topPanel.systemFault
+{
+    border-top-color: #c00020;
+}
+
+.titleBlock h1
+{
+    margin: 0;
+    font-size: 20px;
+}
+
+.statusLine
+{
+    margin-top: 3px;
+    padding-bottom: 8px;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    color: #222;
+    white-space: nowrap;
+}
+
+#heartbeat-value
+{
+    margin-left: 14px;
+}
+
+.liveSummaryBlock
+{
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.mainGrid
+{
+    display: grid;
+    grid-template-columns: minmax(280px, 30%) 1fr;
+    gap: 8px;
+    min-height: 0;
+}
+
+.leftStack
+{
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    gap: 8px;
+    min-height: 0;
+}
+
+@media (max-width: 900px)
+{
+    .pageGrid
+    {
+        height: auto;
+        grid-template-rows: auto auto 160px;
+    }
+
+    .topPanel
+    {
+        align-items: flex-start;
+        flex-direction: column;
+        height: auto;
+    }
+
+    .liveSummaryBlock
+    {
+        flex-wrap: wrap;
+    }
+
+    .mainGrid
+    {
+        grid-template-columns: 1fr;
+    }
+
+    .leftStack
+    {
+        grid-template-rows: 360px auto;
+    }
+}

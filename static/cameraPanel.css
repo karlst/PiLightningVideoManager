@@ -1,0 +1,27 @@
+.cameraPanel
+{
+    display: grid;
+    grid-template-rows: 18px 1fr;
+    gap: 6px;
+}
+
+.cameraGrid
+{
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3px 10px;
+    align-content: start;
+    font-size: 12px;
+}
+
+.cameraGrid span
+{
+    color: #444;
+}
+
+.cameraGrid strong
+{
+    font-family: Consolas, monospace;
+    font-weight: 700;
+    text-align: right;
+}

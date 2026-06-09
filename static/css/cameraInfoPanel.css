@@ -1,0 +1,28 @@
+.cameraInfoPanel
+{
+    min-height: 110px;
+}
+
+.cameraInfoPanel h2
+{
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.cameraInfoGrid
+{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+
+    font-size: 12px;
+    line-height: 1.15;
+
+    padding-top: 4px;
+    padding-bottom: 8px;
+}
+
+.cameraInfoColumn span
+{
+    font-weight: 400;
+}

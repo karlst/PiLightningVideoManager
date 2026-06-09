@@ -1,0 +1,19 @@
+.controlPanel
+{
+    display: grid;
+    gap: 7px;
+}
+
+.controlRow
+{
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    font-size: 13px;
+}
+
+.hiddenStatusBlock
+{
+    display: none;
+}

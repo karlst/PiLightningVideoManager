@@ -8,6 +8,12 @@ from "./statusPanel.js?v=32";
 
 import
 {
+    CameraPanel
+}
+from "./cameraPanel.js?v=33";
+
+import
+{
     EventLogPanel
 }
 from "./eventLogPanel.js?v=32";
@@ -56,8 +62,17 @@ function initializePage()
     const metricsGraphPanel =
         new MetricsGraphPanel();
 
+    const cameraPanel =
+        new CameraPanel();
+
     statusPanel.setSystemSampleHandler(
         (result) => metricsGraphPanel.addSystemSample(
+            result
+        )
+    );
+
+    statusPanel.setSystemStatusHandler(
+        (result) => cameraPanel.updateFromSystemStatus(
             result
         )
     );

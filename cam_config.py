@@ -37,3 +37,10 @@ class CamConfig:
     metric_history_seconds: int = 3600
     metric_history_sample_seconds: float = 1.0
     motion_changed_pixel_threshold: int = 25
+
+    camera_name: str = "ELP USB Camera"
+    camera_latitude_degrees: float = 32.2225600
+    camera_longitude_degrees: float = -111.5919100
+    camera_bearing_degrees: float = 0.0
+    camera_hfov_degrees: float = 0.0
+    camera_vfov_degrees: float = 0.0

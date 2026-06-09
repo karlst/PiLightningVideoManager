@@ -312,33 +312,80 @@ def register_routes(
         return jsonify(
             {
                 "success": True,
+
                 "server_time_utc": datetime.now(
                     timezone.utc
                 ).strftime(
                     "%H:%M:%S"
                 ),
+
                 "preview_running":
                     services.preview_server.is_running(),
+
                 "buffer_running":
                     buffer_status["running"],
+
+                "trigger_enabled":
+                    buffer_status["running"],
+
+                "camera_name":
+                    services.config.camera_name,
+
+                "camera_format":
+                    services.config.input_format.upper(),
+
+                "camera_frame_width_pixels":
+                    services.config.frame_width_pixels,
+
+                "camera_frame_height_pixels":
+                    services.config.frame_height_pixels,
+
+                "camera_target_fps":
+                    services.config.frame_rate_fps,
+
+                "camera_geometry":
+                {
+                    "latitude_degrees":
+                        services.config.camera_latitude_degrees,
+
+                    "longitude_degrees":
+                        services.config.camera_longitude_degrees,
+
+                    "bearing_degrees":
+                        services.config.camera_bearing_degrees,
+
+                    "hfov_degrees":
+                        services.config.camera_hfov_degrees,
+
+                    "vfov_degrees":
+                        services.config.camera_vfov_degrees
+                },
+
                 "camera_fps":
                     buffer_status["estimated_fps"],
+
                 "camera_frames":
                     buffer_status["frame_count"],
+
                 "buffer_count":
                     buffer_status["buffer_count"],
+
                 "buffer_capacity":
                     buffer_status["buffer_capacity"],
+
                 "buffer_full":
                     buffer_status["buffer_full"],
+
                 "failed_read_count":
                     buffer_status["failed_read_count"],
+
                 "memory_mb":
                     memory_mb,
+
                 "last_error":
                     buffer_status["last_error"]
             }
-        )       
+        )     
 
     @app.route(
         "/metrics_history"

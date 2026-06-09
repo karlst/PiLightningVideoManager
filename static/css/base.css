@@ -1,0 +1,75 @@
+body
+{
+    font-family: Arial, sans-serif;
+    margin: 8px;
+    background-color: #f2f2f2;
+}
+
+.topPanel,
+.subPanel
+{
+    border: 1px solid #777;
+    background-color: white;
+    padding: 8px;
+    box-sizing: border-box;
+}
+
+.subPanel
+{
+    min-height: 0;
+    overflow: hidden;
+}
+
+.subPanel h2
+{
+    margin: 0;
+    font-size: 15px;
+}
+
+.ccButton,
+.miniButton,
+.graphButton
+{
+    font-weight: 600;
+    border: 1px solid #888;
+    border-radius: 4px;
+    background-color: #eeeeee;
+    cursor: pointer;
+}
+
+.ccButton:hover,
+.miniButton:hover,
+.graphButton:hover
+{
+    background-color: #e0e0e0;
+}
+
+.ccButton
+{
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 13px;
+}
+
+.ccButtonDanger
+{
+    color: white;
+    background-color: #b00020;
+    border-color: #700014;
+}
+
+.ccButtonDanger:hover
+{
+    background-color: #c5132f;
+}
+
+.ccButtonSecondary
+{
+    background-color: #dddddd;
+}
+
+.miniButton
+{
+    padding: 3px 6px;
+    font-size: 11px;
+}
