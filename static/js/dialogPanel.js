@@ -70,9 +70,80 @@ export class DialogPanel
 
     showAbout()
     {
-        this._showText(
+        this._showHtml(
             "About",
-            "Pi Camera Capture\n\nSnapshot preview from ring buffer.\nMP4 trigger captures.\nMetrics graphs.\nEvent logging."
+            `
+            <div class="aboutBox">
+                <h3>Pi Camera Capture</h3>
+
+                <p>
+                    Pi Camera Capture is a high-speed video capture and event
+                    detection system for lightning strokes, weather events,
+                    wildlife activity, and other short-duration events.
+                </p>
+
+                <p>
+                    At the heart of the system is a continuous ring buffer architecture. 
+                    Video frames are captured at high frame rates and stored in memory, 
+                    allowing the system to retain several seconds of history before an event occurs. 
+                    When a trigger condition is detected, the buffer contents are preserved and written to an MP4 video file, 
+                    capturing both the event and the moments leading up to it.
+                </p>
+
+                <h4>Key Features</h4>
+
+                <ul>
+                    <li>Continuous high-speed ring buffer capture</li>
+                    <li>Automatic triggering from brightness, brightness delta, and motion metrics</li>
+                    <li>Manual trigger capture</li>
+                    <li>Pre-trigger and post-trigger video recording</li>
+                    <li>MP4 capture storage and browser playback</li>
+                    <li>Live camera preview from buffered frames</li>
+                    <li>Configurable camera, trigger, location, bearing, and field-of-view settings</li>
+                    <li>Real-time graphs for brightness, trigger metrics, motion, and system status</li>
+                    <li>Event logging and system diagnostics</li>
+                    <li>Web control from desktop, tablet, or phone</li>
+                    <li>Remote access through Tailscale without exposing the Pi to the public internet</li>
+                </ul>
+
+                <h4>Triggering System</h4>
+                <p>
+                The trigger engine continuously analyzes incoming video frames and computes metrics such as scene brightness, 
+                brightness change, and motion activity. 
+                Trigger thresholds are fully configurable and can be tuned for specific applications. 
+                Automatic triggering allows the system to operate unattended while still 
+                capturing short-duration events that would otherwise be missed.
+                </p>
+
+                <h4>Ring Buffer Architecture</h4>
+                <p>
+                The ring buffer maintains a fixed-size rolling history of recent frames. 
+                As new frames arrive, the oldest frames are automatically overwritten. 
+                When a trigger occurs, the buffer contents are preserved, providing a complete record of what happened before, 
+                during, and after the event. This approach allows the system to capture unpredictable events 
+                without continuously recording large video files.
+                </p>
+
+                <h4>Capture Management</h4>
+                <p>
+                Triggered events are stored as MP4 video files and may be reviewed directly through the web interface. 
+                Automatic file management prevents storage exhaustion by removing older captures while preserving recent recordings.
+                </p>
+
+                <h4>System Monitoring</h4>
+                <p>
+                The application continuously tracks frame rate, memory usage, buffer utilization, 
+                brightness metrics, motion metrics, and trigger activity. Historical graphs and event logs 
+                provide insight into system performance and environmental conditions over time.
+                </p>
+
+                <p>
+                    The goal is unattended operation: the Pi watches continuously,
+                    captures rare events automatically, and lets the user review
+                    saved clips through the web interface.
+                </p>
+            </div>
+            `
         );
     }
 
@@ -198,6 +269,20 @@ export class DialogPanel
 
         this._body.textContent =
             bodyText;
+
+        this._dialog.showModal();
+    }
+
+    _showHtml(titleText, htmlText)
+    {
+        this._setTitle(
+            titleText
+        );
+
+        this._clearBody();
+
+        this._body.innerHTML =
+            htmlText;
 
         this._dialog.showModal();
     }

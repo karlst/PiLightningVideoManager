@@ -38,6 +38,7 @@ def create_app() -> Flask:
             "error"
         )
 
+    #TODO - This does not work yet because event manager writes in background.
     atexit.register(
         lambda: event_log.add(
             "*************\nVideo Manager Normal shutdown\n*************\n\n"
