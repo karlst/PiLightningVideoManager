@@ -103,6 +103,18 @@ export class DialogPanel
 
         this._clearBody();
 
+        const captureList =
+            document.createElement(
+                "div"
+            );
+
+        captureList.className =
+            "captureList";
+
+        this._body.appendChild(
+            captureList
+        );
+
         try
         {
             const result =
@@ -112,7 +124,7 @@ export class DialogPanel
 
             if (!result.success || result.files.length === 0)
             {
-                this._body.textContent =
+                captureList.textContent =
                     "No captures found.";
             }
             else
@@ -146,7 +158,7 @@ export class DialogPanel
                             }
                         );
 
-                        this._body.appendChild(
+                        captureList.appendChild(
                             button
                         );
                     }
@@ -155,7 +167,7 @@ export class DialogPanel
         }
         catch (error)
         {
-            this._body.textContent =
+            captureList.textContent =
                 "Failed to load captures.";
 
             console.error(

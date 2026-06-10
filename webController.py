@@ -11,6 +11,8 @@ from cam_capture import CamCapture
 from cam_config import CamConfig
 from event_log import EventLog
 from previewServer import PreviewServer
+from trigger_manager import TriggerManager
+from capture_manager import CaptureManager
 
 from datetime import datetime
 from datetime import timezone
@@ -26,6 +28,8 @@ class WebServices:
     capture: CamCapture
     preview_server: PreviewServer
     buffer_manager: BufferManager
+    trigger_manager: TriggerManager
+    capture_manager: CaptureManager
     event_log: EventLog
 
 
@@ -132,6 +136,61 @@ def register_routes(
             {
                 "running": buffer_status["running"],
                 "message": "Snapshot preview uses buffered frames"
+            }
+        )
+
+    @app.route(
+        "/trigger_enable",
+        methods=["POST"]
+    )
+    def trigger_enable():
+        success, message = (
+            services.trigger_manager.enable()
+        )
+
+        services.event_log.add(
+            message
+        )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message,
+                "trigger_status":
+                    services.trigger_manager.get_status()
+            }
+        )
+
+    @app.route(
+        "/trigger_disable",
+        methods=["POST"]
+    )
+    def trigger_disable():
+        success, message = (
+            services.trigger_manager.disable()
+        )
+
+        services.event_log.add(
+            message
+        )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message,
+                "trigger_status":
+                    services.trigger_manager.get_status()
+            }
+        )
+
+    @app.route(
+        "/trigger_status"
+    )
+    def trigger_status():
+        return jsonify(
+            {
+                "success": True,
+                **services.trigger_manager.get_status()
             }
         )
 
@@ -308,6 +367,10 @@ def register_routes(
             services.buffer_manager.get_status()
         )
 
+        trigger_status = (
+            services.trigger_manager.get_status()
+        )
+
         return jsonify(
             {
                 "success": True,
@@ -325,7 +388,10 @@ def register_routes(
                     buffer_status["running"],
 
                 "trigger_enabled":
-                    buffer_status["running"],
+                    trigger_status["enabled"],
+
+                "trigger_status":
+                    trigger_status,
 
                 "camera_name":
                     services.config.camera_name,
@@ -409,26 +475,9 @@ def register_routes(
     
     @app.route("/captures")
     def captures():
-        capture_directory = (
-            Path.home() /
-            "Documents" /
-            "videoManager" /
-            "captures"
+        files = (
+            services.capture_manager.list_captures()
         )
-
-        files = []
-
-        if capture_directory.exists():
-            for path in sorted(
-                capture_directory.glob("*.mp4"),
-                reverse=True
-            ):
-                files.append(
-                    {
-                        "name": path.name,
-                        "url": f"/capture_files/{path.name}"
-                    }
-                )
 
         return jsonify(
             {
@@ -437,13 +486,9 @@ def register_routes(
             }
         )
 
-
     @app.route("/capture_files/<path:filename>")
     def capture_file(filename: str):
         return send_from_directory(
-            Path.home() /
-            "Documents" /
-            "videoManager" /
-            "captures",
+            services.capture_manager.get_capture_directory(),
             filename
         )

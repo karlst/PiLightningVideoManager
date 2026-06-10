@@ -58,8 +58,17 @@ export class EventLogPanel
                         row.className =
                             "eventLogRow";
 
+                        const timestamp =
+                            entry.timestamp_utc ?? entry.timestamp ?? "--";
+
+                        const severity =
+                            entry.severity ?? entry.level ?? "info";
+
+                        const message =
+                            entry.message ?? "";
+
                         row.textContent =
-                            `[${entry.timestamp}] ${entry.level}: ${entry.message}`;
+                            `[${timestamp}] ${severity}: ${message}`;
 
                         eventLog.appendChild(
                             row

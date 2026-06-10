@@ -32,12 +32,14 @@ export class BufferPanel
             "buffer-stop-button",
             () => this.stop()
         );
+        // ... end disable */
 
         this._bindClick(
             "buffer-capture-button",
             () => this.capture()
         );
 
+        /* disable ... No longer used
         this._bindClick(
             "buffer-status-button",
             () => this.status()

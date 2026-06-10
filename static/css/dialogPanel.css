@@ -1,6 +1,7 @@
 .ccDialog
 {
-    width: min(620px, calc(100vw - 28px));
+    width: min(800px, calc(100vw - 28px));
+    max-height: 80vh;
     border: 1px solid #555;
     border-radius: 6px;
     padding: 0;
@@ -32,6 +33,12 @@
 {
     white-space: pre-wrap;
     font-size: 13px;
+
+    min-height: 0;
+    max-height: 500px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .captureListButton

@@ -98,12 +98,30 @@ export class MetricsGraphPanel
     {
         const metrics = this._getVisibleMetrics();
 
+        const maxBrightness =
+            this._getMaxMetricValue(
+                metrics,
+                "mean_brightness"
+            );
+
+        const maxBrightnessDelta =
+            this._getMaxMetricValue(
+                metrics,
+                "brightness_delta"
+            );
+
+        const maxMotion =
+            this._getMaxMetricValue(
+                metrics,
+                "changed_pixel_fraction"
+            );
+
         this._drawTwoSeriesGraph(
             "brightness-graph",
             metrics,
             "mean_brightness",
             "moving_average_brightness",
-            "Frame brightness",
+            `Bright Max=${maxBrightness.toFixed(1)}`,
             "Moving average"
         );
 
@@ -111,25 +129,86 @@ export class MetricsGraphPanel
             "brightness-delta-graph",
             metrics,
             "brightness_delta",
-            "Brightness delta"
+            `Delta Max=${maxBrightnessDelta.toFixed(1)}`
         );
 
         this._drawOneSeriesGraph(
             "motion-graph",
             metrics,
             "changed_pixel_fraction",
-            "Changed pixel fraction"
+            `Motion Max=${maxMotion.toFixed(4)}`
         );
 
         this._drawSystemGraph();
 
-        if (metrics.length > 0)
-        {
-            const latest = metrics[metrics.length - 1];
+        this._updateGraphStats(
+            metrics
+        );
+    }
 
-            document.getElementById("graph-mean-value").textContent =
-                `Mean: ${Number(latest.mean_brightness ?? 0.0).toFixed(1)}`;
+    _updateGraphStats(metrics)
+    {
+        const graphMeanValue =
+            document.getElementById(
+                "graph-mean-value"
+            );
+
+        if (graphMeanValue === null)
+        {
+            return;
         }
+
+        if (metrics.length === 0)
+        {
+            graphMeanValue.textContent =
+                "Max: --";
+
+            return;
+        }
+
+        const maxBrightness =
+            this._getMaxMetricValue(
+                metrics,
+                "mean_brightness"
+            );
+
+        const maxBrightnessDelta =
+            this._getMaxMetricValue(
+                metrics,
+                "brightness_delta"
+            );
+
+        const maxChangedPixelFraction =
+            this._getMaxMetricValue(
+                metrics,
+                "changed_pixel_fraction"
+            );
+
+        graphMeanValue.textContent =
+            (
+                `Max Bright: ${maxBrightness.toFixed(1)} | ` +
+                `Max Δ: ${maxBrightnessDelta.toFixed(1)} | ` +
+                `Max Motion: ${maxChangedPixelFraction.toFixed(4)}`
+            );
+    }
+
+    _getMaxMetricValue(metrics, key)
+    {
+        let maxValue =
+            0.0;
+
+        metrics.forEach(
+            (metric) =>
+            {
+                maxValue =
+                    Math.max(
+                        maxValue,
+                        Number(metric[key] ?? 0.0)
+                    );
+            }
+        );
+
+        return maxValue;
     }
 
     _getNewestMetricTime()
@@ -525,7 +604,7 @@ export class MetricsGraphPanel
 
             context.fillText(
                 labelB,
-                plot.left + 90,
+                plot.left + 110,
                 plot.top + 12
             );
         }
