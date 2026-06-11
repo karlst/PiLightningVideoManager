@@ -1,7 +1,7 @@
 """
 @file trigger_manager.py
 
-@brief Hardwired trigger logic for camera metric events.
+@brief Threshold-based trigger logic for camera metric events.
 """
 
 import time
@@ -117,27 +117,13 @@ class TriggerManager:
         should_fire = False
         reason = ""
 
-        if (
-            self._max_brightness is not None and
-            brightness >= self._config.trigger_min_brightness
-        ):
-            trigger_value = (
-                self._max_brightness *
-                (
-                    1.0 +
-                    (
-                        self._config.trigger_brightness_increase_percent /
-                        100.0
-                    )
-                )
+        if brightness >= self._config.trigger_brightness_threshold:
+            should_fire = True
+            reason = (
+                f"Brightness trigger: "
+                f"{brightness:.3f} >= "
+                f"{self._config.trigger_brightness_threshold:.3f}"
             )
-
-            if brightness > trigger_value:
-                should_fire = True
-                reason = (
-                    f"Brightness trigger: "
-                    f"{brightness:.3f} > {trigger_value:.3f}"
-                )
 
         return should_fire, reason
 
@@ -148,27 +134,13 @@ class TriggerManager:
         should_fire = False
         reason = ""
 
-        if (
-            self._max_brightness_delta is not None and
-            brightness_delta >= self._config.trigger_min_brightness_delta
-        ):
-            trigger_value = (
-                self._max_brightness_delta *
-                (
-                    1.0 +
-                    (
-                        self._config.trigger_brightness_delta_increase_percent /
-                        100.0
-                    )
-                )
+        if brightness_delta >= self._config.trigger_brightness_delta_threshold:
+            should_fire = True
+            reason = (
+                f"Brightness delta trigger: "
+                f"{brightness_delta:.3f} >= "
+                f"{self._config.trigger_brightness_delta_threshold:.3f}"
             )
-
-            if brightness_delta > trigger_value:
-                should_fire = True
-                reason = (
-                    f"Brightness delta trigger: "
-                    f"{brightness_delta:.3f} > {trigger_value:.3f}"
-                )
 
         return should_fire, reason
 
@@ -180,28 +152,15 @@ class TriggerManager:
         reason = ""
 
         if (
-            self._max_changed_pixel_fraction is not None and
             changed_pixel_fraction >=
-                self._config.trigger_min_changed_pixel_fraction
+            self._config.trigger_changed_pixel_fraction_threshold
         ):
-            trigger_value = (
-                self._max_changed_pixel_fraction *
-                (
-                    1.0 +
-                    (
-                        self._config.trigger_motion_increase_percent /
-                        100.0
-                    )
-                )
+            should_fire = True
+            reason = (
+                f"Motion trigger: "
+                f"{changed_pixel_fraction:.5f} >= "
+                f"{self._config.trigger_changed_pixel_fraction_threshold:.5f}"
             )
-
-            if changed_pixel_fraction > trigger_value:
-                should_fire = True
-                reason = (
-                    f"Motion trigger: "
-                    f"{changed_pixel_fraction:.5f} > "
-                    f"{trigger_value:.5f}"
-                )
 
         return should_fire, reason
 
