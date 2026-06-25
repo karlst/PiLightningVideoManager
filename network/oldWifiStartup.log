@@ -1,0 +1,389 @@
+2026-06-23 11:30:53 
+2026-06-23 11:30:53 ========================================
+2026-06-23 11:30:53 wifiStartup begin
+2026-06-23 11:30:53 ========================================
+2026-06-23 11:30:53 Error: failed to set Wi-Fi radio: Not authorized to perform this operation
+2026-06-23 11:30:53 Known WiFi file not found: /home/karlst/Documents/videoManager/network/wifiProfilesX.txt
+2026-06-23 11:30:53 No known WiFi profile connected
+2026-06-23 11:30:53 Starting AP profile: Hotspot
+2026-06-23 11:30:53 Error: Connection activation failed: Not authorized to control networking.
+2026-06-23 11:30:53 FAILED to start AP
+2026-06-23 11:30:53 
+2026-06-23 11:30:53 Access info:
+2026-06-23 11:30:53 Local IP addresses:
+2026-06-23 11:30:53     192.168.2.154
+2026-06-23 11:30:53     Web: http://192.168.2.154:8080
+2026-06-23 11:30:53     SSH: ssh karlst@192.168.2.154
+2026-06-23 11:30:53     100.94.219.76
+2026-06-23 11:30:53     Web: http://100.94.219.76:8080
+2026-06-23 11:30:53     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:30:53     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:30:53     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:30:53     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:30:53 Tailscale: connected
+2026-06-23 11:30:53     100.94.219.76
+2026-06-23 11:30:53     Web: http://100.94.219.76:8080
+2026-06-23 11:30:53     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:30:53     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:30:53     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:30:53     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:30:53 wifiStartup FAILED
+2026-06-23 11:30:53 ========================================
+2026-06-23 11:47:16 
+2026-06-23 11:47:16 ========================================
+2026-06-23 11:47:16 wifiStartup begin
+2026-06-23 11:47:16 ========================================
+2026-06-23 11:47:16 Error: failed to set Wi-Fi radio: Not authorized to perform this operation
+2026-06-23 11:47:16 Error: Known WiFi file not found: /home/karlst/Documents/videoManager/network/wifiProfilesX.txt
+2026-06-23 11:48:24 
+2026-06-23 11:48:24 ========================================
+2026-06-23 11:48:24 wifiStartup begin
+2026-06-23 11:48:24 ========================================
+2026-06-23 11:48:24 Error: failed to set Wi-Fi radio: Not authorized to perform this operation
+2026-06-23 11:48:24 No known WiFi profile connected
+2026-06-23 11:48:24 Starting AP profile: Hotspot
+2026-06-23 11:48:24 Error: Connection activation failed: Not authorized to control networking.
+2026-06-23 11:48:24 FAILED to start AP
+2026-06-23 11:48:24 
+2026-06-23 11:48:24 Access info:
+2026-06-23 11:48:24 Local IP addresses:
+2026-06-23 11:48:24     192.168.2.154
+2026-06-23 11:48:24     Web: http://192.168.2.154:8080
+2026-06-23 11:48:24     SSH: ssh karlst@192.168.2.154
+2026-06-23 11:48:24     100.94.219.76
+2026-06-23 11:48:24     Web: http://100.94.219.76:8080
+2026-06-23 11:48:24     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:48:24     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:48:24     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:48:24     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:48:24 Tailscale: connected
+2026-06-23 11:48:24     100.94.219.76
+2026-06-23 11:48:24     Web: http://100.94.219.76:8080
+2026-06-23 11:48:24     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:48:24     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:48:24     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:48:24     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:48:24 wifiStartup FAILED
+2026-06-23 11:48:24 ========================================
+2026-06-23 11:49:45 
+2026-06-23 11:49:45 ========================================
+2026-06-23 11:49:45 wifiStartup begin
+2026-06-23 11:49:45 ========================================
+2026-06-23 11:49:45 No known WiFi profile connected
+2026-06-23 11:49:45 Starting AP profile: Hotspot
+2026-06-23 11:49:49 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/7)
+2026-06-23 11:49:49 AP started: PiCamera3709
+2026-06-23 11:49:49 
+2026-06-23 11:49:49 Access info:
+2026-06-23 11:49:49 Local IP addresses:
+2026-06-23 11:49:49     10.42.0.1
+2026-06-23 11:49:49     Web: http://10.42.0.1:8080
+2026-06-23 11:49:49     SSH: ssh karlst@10.42.0.1
+2026-06-23 11:49:49     100.94.219.76
+2026-06-23 11:49:49     Web: http://100.94.219.76:8080
+2026-06-23 11:49:49     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:49:49     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:49:49     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:49:49     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:49:49 Tailscale: connected
+2026-06-23 11:49:49     100.94.219.76
+2026-06-23 11:49:49     Web: http://100.94.219.76:8080
+2026-06-23 11:49:49     SSH: ssh karlst@100.94.219.76
+2026-06-23 11:49:49     fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:49:49     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 11:49:49     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 11:49:49 wifiStartup complete
+2026-06-23 11:49:49 ========================================
+2026-06-23 12:07:29 
+2026-06-23 12:07:29 ========================================
+2026-06-23 12:07:29 wifiStartup begin
+2026-06-23 12:07:29 ========================================
+2026-06-23 12:07:29 Trying WiFi profile: Sherwood1
+2026-06-23 12:07:54 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 12:07:54 Failed profile: Sherwood1
+2026-06-23 12:07:54 Trying WiFi profile: Sherwood2
+2026-06-23 12:07:54 Error: unknown connection 'Sherwood2'.
+2026-06-23 12:07:54 Failed profile: Sherwood2
+2026-06-23 12:07:54 Trying WiFi profile: SherwoodWorks
+2026-06-23 12:07:59 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/13)
+2026-06-23 12:07:59 Connected using profile: SherwoodWorks
+2026-06-23 12:07:59 
+2026-06-23 12:07:59 Access info:
+2026-06-23 12:07:59 Local IP addresses:
+2026-06-23 12:07:59     192.168.2.154
+2026-06-23 12:07:59     Web: http://192.168.2.154:8080
+2026-06-23 12:07:59     SSH: ssh karlst@192.168.2.154
+2026-06-23 12:07:59     100.94.219.76
+2026-06-23 12:07:59     Web: http://100.94.219.76:8080
+2026-06-23 12:07:59     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:07:59     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:07:59     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:07:59     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:07:59 Tailscale: connected
+2026-06-23 12:07:59     100.94.219.76
+2026-06-23 12:07:59     Web: http://100.94.219.76:8080
+2026-06-23 12:07:59     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:07:59     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:07:59     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:07:59     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:07:59 wifiStartup complete
+2026-06-23 12:07:59 ========================================
+2026-06-23 12:11:05 
+2026-06-23 12:11:05 ========================================
+2026-06-23 12:11:05 wifiStartup begin
+2026-06-23 12:11:05 ========================================
+2026-06-23 12:11:05 Trying WiFi profile: Sherwood1
+2026-06-23 12:11:31 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 12:11:31 Failed profile: Sherwood1
+2026-06-23 12:11:31 Trying WiFi profile: Sherwood2
+2026-06-23 12:11:31 Error: unknown connection 'Sherwood2'.
+2026-06-23 12:11:31 Failed profile: Sherwood2
+2026-06-23 12:11:31 Trying WiFi profile: SherwoodWorks
+2026-06-23 12:11:59 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/15)
+2026-06-23 12:11:59 Connected using profile: SherwoodWorks
+2026-06-23 12:11:59 
+2026-06-23 12:11:59 Access info:
+2026-06-23 12:11:59 Local IP addresses:
+2026-06-23 12:11:59     192.168.2.154
+2026-06-23 12:11:59     Web: http://192.168.2.154:8080
+2026-06-23 12:11:59     SSH: ssh karlst@192.168.2.154
+2026-06-23 12:11:59     100.94.219.76
+2026-06-23 12:11:59     Web: http://100.94.219.76:8080
+2026-06-23 12:11:59     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:11:59     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:11:59     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:11:59     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:11:59 Tailscale: connected
+2026-06-23 12:11:59     100.94.219.76
+2026-06-23 12:11:59     Web: http://100.94.219.76:8080
+2026-06-23 12:11:59     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:11:59     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:11:59     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:11:59     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:11:59 wifiStartup complete
+2026-06-23 12:11:59 ========================================
+2026-06-23 12:39:08 
+2026-06-23 12:39:08 ========================================
+2026-06-23 12:39:08 wifiStartup begin
+2026-06-23 12:39:08 ========================================
+2026-06-23 12:39:08 Trying WiFi profile: Sherwood1
+2026-06-23 12:39:33 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 12:39:33 Failed profile: Sherwood1
+2026-06-23 12:39:33 Trying WiFi profile: Sherwood2
+2026-06-23 12:39:33 Error: unknown connection 'Sherwood2'.
+2026-06-23 12:39:33 Failed profile: Sherwood2
+2026-06-23 12:39:33 Trying WiFi profile: SherwoodWorks
+2026-06-23 12:40:01 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/17)
+2026-06-23 12:40:01 Connected using profile: SherwoodWorks
+2026-06-23 12:40:01 
+2026-06-23 12:40:01 Access info:
+2026-06-23 12:40:01 Local IP addresses:
+2026-06-23 12:40:01     192.168.2.154
+2026-06-23 12:40:01     Web: http://192.168.2.154:8080
+2026-06-23 12:40:01     SSH: ssh karlst@192.168.2.154
+2026-06-23 12:40:01     100.94.219.76
+2026-06-23 12:40:01     Web: http://100.94.219.76:8080
+2026-06-23 12:40:01     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:40:01     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:40:01     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:40:01     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:40:01 Tailscale: connected
+2026-06-23 12:40:01     100.94.219.76
+2026-06-23 12:40:01     Web: http://100.94.219.76:8080
+2026-06-23 12:40:01     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:40:01     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:40:01     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:40:01     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:40:01 wifiStartup complete
+2026-06-23 12:40:01 ========================================
+2026-06-23 12:52:37 
+2026-06-23 12:52:37 ========================================
+2026-06-23 12:52:37 wifiStartup begin
+2026-06-23 12:52:37 ========================================
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 Trying WiFi profile: Sherwood1
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 Failed profile: Sherwood1
+2026-06-23 12:52:37 Trying WiFi profile: Sherwood2
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 Failed profile: Sherwood2
+2026-06-23 12:52:37 Trying WiFi profile: SherwoodWorks
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 Failed profile: SherwoodWorks
+2026-06-23 12:52:37 Trying WiFi profile: Junk
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 Failed profile: Junk
+2026-06-23 12:52:37 No known WiFi profile connected
+2026-06-23 12:52:37 Starting AP profile: Hotspot
+2026-06-23 12:52:37 Error: NetworkManager is not running.
+2026-06-23 12:52:37 FAILED to start AP
+2026-06-23 12:52:40 
+2026-06-23 12:52:40 Access info:
+2026-06-23 12:52:40 Local IP addresses: none found
+2026-06-23 12:52:40 Tailscale: not connected
+2026-06-23 12:52:40 wifiStartup FAILED
+2026-06-23 12:52:40 ========================================
+2026-06-23 12:55:48 
+2026-06-23 12:55:48 ========================================
+2026-06-23 12:55:48 wifiStartup begin
+2026-06-23 12:55:48 ========================================
+2026-06-23 12:55:48 Trying WiFi profile: Sherwood1
+2026-06-23 12:56:13 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 12:56:13 Failed profile: Sherwood1
+2026-06-23 12:56:13 Trying WiFi profile: Sherwood2
+2026-06-23 12:56:13 Error: unknown connection 'Sherwood2'.
+2026-06-23 12:56:13 Failed profile: Sherwood2
+2026-06-23 12:56:13 Trying WiFi profile: SherwoodWorks
+2026-06-23 12:56:18 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/5)
+2026-06-23 12:56:18 Connected using profile: SherwoodWorks
+2026-06-23 12:56:18 
+2026-06-23 12:56:18 Access info:
+2026-06-23 12:56:18 Local IP addresses:
+2026-06-23 12:56:18     192.168.2.154
+2026-06-23 12:56:18     Web: http://192.168.2.154:8080
+2026-06-23 12:56:18     SSH: ssh karlst@192.168.2.154
+2026-06-23 12:56:18     100.94.219.76
+2026-06-23 12:56:18     Web: http://100.94.219.76:8080
+2026-06-23 12:56:18     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:56:18     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:56:18     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:56:18     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:56:18 Tailscale: connected
+2026-06-23 12:56:18     100.94.219.76
+2026-06-23 12:56:18     Web: http://100.94.219.76:8080
+2026-06-23 12:56:18     SSH: ssh karlst@100.94.219.76
+2026-06-23 12:56:18     fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:56:18     Web: http://fd7a:115c:a1e0::43b:db4d:8080
+2026-06-23 12:56:18     SSH: ssh karlst@fd7a:115c:a1e0::43b:db4d
+2026-06-23 12:56:18 wifiStartup complete
+2026-06-23 12:56:18 ========================================
+2026-06-23 12:57:51 
+2026-06-23 12:57:51 ========================================
+2026-06-23 12:57:51 wifiStartup begin
+2026-06-23 12:57:51 ========================================
+2026-06-23 12:57:51 Error: NetworkManager is not running.
+2026-06-23 12:57:51 Trying WiFi profile: Sherwood1
+2026-06-23 12:57:51 Error: NetworkManager is not running.
+2026-06-23 12:57:51 Failed profile: Sherwood1
+2026-06-23 12:57:51 Trying WiFi profile: Sherwood2
+2026-06-23 12:57:51 Error: NetworkManager is not running.
+2026-06-23 12:57:51 Failed profile: Sherwood2
+2026-06-23 12:57:51 Trying WiFi profile: Junk
+2026-06-23 12:57:51 Error: NetworkManager is not running.
+2026-06-23 12:57:51 Failed profile: Junk
+2026-06-23 12:57:51 No known WiFi profile connected
+2026-06-23 12:57:51 Starting AP profile: Hotspot
+2026-06-23 12:57:51 Error: NetworkManager is not running.
+2026-06-23 12:57:51 FAILED to start AP
+2026-06-23 12:57:54 
+2026-06-23 12:57:54 Access info:
+2026-06-23 12:57:54 Local IP addresses: none found
+2026-06-23 12:57:54 Tailscale: not connected
+2026-06-23 12:57:54 wifiStartup FAILED
+2026-06-23 12:57:54 ========================================
+2026-06-23 13:02:24 
+2026-06-23 13:02:24 ========================================
+2026-06-23 13:02:24 wifiStartup begin
+2026-06-23 13:02:24 ========================================
+2026-06-23 13:02:24 Error: NetworkManager is not running.
+2026-06-23 13:02:24 Trying WiFi profile: Sherwood1
+2026-06-23 13:02:24 Error: NetworkManager is not running.
+2026-06-23 13:02:24 Failed profile: Sherwood1
+2026-06-23 13:02:24 Trying WiFi profile: Sherwood2
+2026-06-23 13:02:24 Error: NetworkManager is not running.
+2026-06-23 13:02:24 Failed profile: Sherwood2
+2026-06-23 13:02:24 Trying WiFi profile: Junk
+2026-06-23 13:02:24 Error: NetworkManager is not running.
+2026-06-23 13:02:24 Failed profile: Junk
+2026-06-23 13:02:24 No known WiFi profile connected
+2026-06-23 13:02:24 Starting AP profile: Hotspot
+2026-06-23 13:02:24 Error: NetworkManager is not running.
+2026-06-23 13:02:24 FAILED to start AP
+2026-06-23 13:02:27 
+2026-06-23 13:02:27 Access info:
+2026-06-23 13:02:27 Local IP addresses: none found
+2026-06-23 13:02:27 Tailscale: not connected
+2026-06-23 13:02:27 wifiStartup FAILED
+2026-06-23 13:02:27 ========================================
+2026-06-23 13:11:04 
+2026-06-23 13:11:04 ========================================
+2026-06-23 13:11:04 wifiStartup begin
+2026-06-23 13:11:04 ========================================
+2026-06-23 13:11:04 Error: NetworkManager is not running.
+2026-06-23 13:11:04 Trying WiFi profile: Sherwood1
+2026-06-23 13:11:04 Error: NetworkManager is not running.
+2026-06-23 13:11:04 Failed profile: Sherwood1
+2026-06-23 13:11:04 Trying WiFi profile: Sherwood2
+2026-06-23 13:11:04 Error: NetworkManager is not running.
+2026-06-23 13:11:04 Failed profile: Sherwood2
+2026-06-23 13:11:04 Trying WiFi profile: Junk
+2026-06-23 13:11:04 Error: NetworkManager is not running.
+2026-06-23 13:11:04 Failed profile: Junk
+2026-06-23 13:11:04 No known WiFi profile connected
+2026-06-23 13:11:04 Starting AP profile: Hotspot
+2026-06-23 13:11:04 Error: NetworkManager is not running.
+2026-06-23 13:11:04 FAILED to start AP
+2026-06-23 13:11:07 
+2026-06-23 13:11:07 Access info:
+2026-06-23 13:11:07 Local IP addresses: none found
+2026-06-23 13:11:07 Tailscale: not connected
+2026-06-23 13:11:07 wifiStartup FAILED
+2026-06-23 13:11:07 ========================================
+2026-06-23 13:22:56 
+2026-06-23 13:22:56 ========================================
+2026-06-23 13:22:56 wifiStartup begin
+2026-06-23 13:22:56 ========================================
+2026-06-23 13:22:56 Trying WiFi profile: Sherwood1
+2026-06-23 13:23:21 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 13:23:21 Failed profile: Sherwood1
+2026-06-23 13:23:21 Trying WiFi profile: Sherwood2
+2026-06-23 13:23:21 Error: unknown connection 'Sherwood2'.
+2026-06-23 13:23:21 Failed profile: Sherwood2
+2026-06-23 13:23:21 Trying WiFi profile: Junk
+2026-06-23 13:23:21 Error: unknown connection 'Junk'.
+2026-06-23 13:23:21 Failed profile: Junk
+2026-06-23 13:23:21 No known WiFi profile connected
+2026-06-23 13:23:21 Starting AP profile: Hotspot
+2026-06-23 13:23:21 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+2026-06-23 13:23:21 AP started: PiCamera3709
+2026-06-23 13:23:22 
+2026-06-23 13:23:22 Access info:
+2026-06-23 13:23:22 Local IP addresses:
+2026-06-23 13:23:22     10.42.0.1
+2026-06-23 13:23:22     Web: http://10.42.0.1:8080
+2026-06-23 13:23:22     SSH: ssh karlst@10.42.0.1
+2026-06-23 13:23:22 Tailscale: not connected
+2026-06-23 13:23:22 wifiStartup complete
+2026-06-23 13:23:22 ========================================
+2026-06-23 13:35:53 
+2026-06-23 13:35:53 ========================================
+2026-06-23 13:35:53 wifiStartup begin
+2026-06-23 13:35:53 ========================================
+2026-06-23 13:35:54 Trying WiFi profile: Sherwood1
+2026-06-23 13:36:19 Error: Connection activation failed: The Wi-Fi network could not be found
+Hint: use 'journalctl -xe NM_CONNECTION=98cf1885-d3d9-412a-a627-5d7a68a667a3 + NM_DEVICE=wlan0' to get more details.
+2026-06-23 13:36:19 Failed profile: Sherwood1
+2026-06-23 13:36:19 Trying WiFi profile: Sherwood2
+2026-06-23 13:36:19 Error: unknown connection 'Sherwood2'.
+2026-06-23 13:36:19 Failed profile: Sherwood2
+2026-06-23 13:36:19 Trying WiFi profile: Junk
+2026-06-23 13:36:19 Error: unknown connection 'Junk'.
+2026-06-23 13:36:19 Failed profile: Junk
+2026-06-23 13:36:19 No known WiFi profile connected
+2026-06-23 13:36:19 Starting AP profile: Hotspot
+2026-06-23 13:36:19 Connection successfully activated (D-Bus active path: /org/freedesktop/NetworkManager/ActiveConnection/3)
+2026-06-23 13:36:19 AP started: PiCamera3709
+2026-06-23 13:36:20 
+2026-06-23 13:36:20 Access info:
+2026-06-23 13:36:20 Local IP addresses:
+2026-06-23 13:36:20     10.42.0.1
+2026-06-23 13:36:20     Web: http://10.42.0.1:8080
+2026-06-23 13:36:20     SSH: ssh karlst@10.42.0.1
+2026-06-23 13:36:20 Tailscale: not connected
+2026-06-23 13:36:20 wifiStartup complete
+2026-06-23 13:36:20 ========================================

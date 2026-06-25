@@ -50,6 +50,49 @@
     display: none;
 }
 
+.captureAnalysisPanel
+{
+    position: absolute;
+    left: 10px;
+    bottom: 10px;
+    z-index: 4;
+    min-width: 220px;
+    max-width: 320px;
+    padding: 8px 10px;
+    box-sizing: border-box;
+    border: 1px solid #777;
+    border-radius: 5px;
+    background-color: rgb(255 255 255 / 88%);
+    color: #111;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.captureAnalysisTitle
+{
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.captureAnalysisGrid
+{
+    display: grid;
+    grid-template-columns: auto auto;
+    column-gap: 12px;
+    row-gap: 3px;
+}
+
+.captureAnalysisLabel
+{
+    color: #333;
+}
+
+.captureAnalysisValue
+{
+    text-align: right;
+    font-weight: 700;
+}
+
 .mediaFooter
 {
     display: flex;

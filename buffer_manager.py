@@ -10,6 +10,7 @@ from pathlib import Path
 import cv2
 
 from brightness_plugin import BrightnessPlugin
+from bright_component_analyzer import BrightComponentAnalyzer
 from cam_config import CamConfig
 from camera_reader import CameraFrame
 from camera_reader import CameraReader
@@ -72,6 +73,10 @@ class BufferManager:
             )
         )
 
+        self._bright_component_analyzer = BrightComponentAnalyzer(
+            config
+        )
+
         self._camera_reader = CameraReader(
             config,
             on_frame=self._on_frame
@@ -86,6 +91,7 @@ class BufferManager:
 
         self._last_metric_time_monotonic: float = 0.0
         self._last_health_log_time_monotonic: float = 0.0
+        self._last_logged_error: str = ""
 
     def start(self) -> tuple[bool, str]:
         success = False
@@ -142,7 +148,30 @@ class BufferManager:
             )
         )
 
+        sidecar_data = None
+
         if success:
+            output_file = writer_status.get(
+                "output_file"
+            )
+
+            # Analyze the raw captured frames directly and write the JSON
+            # sidecar next to the MP4. This avoids decoding the MP4 later.
+            if output_file:
+                try:
+                    sidecar_data = (
+                        self._bright_component_analyzer.write_sidecar(
+                            frames,
+                            output_file
+                        )
+                    )
+
+                except Exception as error:
+                    self._event_log.add(
+                        f"Sidecar analysis failed: {error}",
+                        "error"
+                    )
+
             self._capture_manager.cleanup()
 
         capture_status = {
@@ -151,6 +180,9 @@ class BufferManager:
             ),
             **writer_status
         }
+
+        if sidecar_data is not None:
+            capture_status["sidecar"] = sidecar_data
 
         if len(frames) > 0:
             first_frame = frames[0]

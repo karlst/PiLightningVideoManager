@@ -9,6 +9,7 @@ from "./httpClient.js";
 
 export class DialogPanel
 {
+    // ## Initialize dialog references and remember the preview panel.
     constructor(previewPanel)
     {
         this._previewPanel =
@@ -25,6 +26,7 @@ export class DialogPanel
     }
 
 
+    // ## Bind dialog buttons and initialize dialog DOM references.
     initialize()
     {
         this._dialog =
@@ -68,6 +70,7 @@ export class DialogPanel
         );
     }
 
+    // ## Show the About dialog.
     showAbout()
     {
         this._showHtml(
@@ -148,6 +151,7 @@ export class DialogPanel
     }
 
 
+    // ## Show placeholder trigger settings dialog content.
     showTriggerSettings()
     {
         this._showText(
@@ -157,6 +161,7 @@ export class DialogPanel
     }
 
 
+    // ## Show placeholder camera settings dialog content.
     showCameraSettings()
     {
         this._showText(
@@ -166,6 +171,7 @@ export class DialogPanel
     }
 
 
+    // ## Show the capture browser with sidecar summary columns.
     async showBrowseCaptures()
     {
         this._setTitle(
@@ -200,6 +206,24 @@ export class DialogPanel
             }
             else
             {
+                // Show the quick screening fields first, then the compact ID.
+                const header =
+                    document.createElement(
+                        "div"
+                    );
+
+                header.className =
+                    "captureListHeader";
+
+                header.innerHTML =
+                    "<span>Duration</span>" +
+                    "<span>Valid</span>" +
+                    "<span>Capture</span>";
+
+                captureList.appendChild(
+                    header
+                );
+
                 result.files.forEach(
                     (captureFile) =>
                     {
@@ -214,8 +238,28 @@ export class DialogPanel
                         button.type =
                             "button";
 
-                        button.textContent =
-                            captureFile.name;
+                        button.appendChild(
+                            this._createCaptureCell(
+                                this._formatDuration(
+                                    captureFile.longest_event_ms
+                                )
+                            )
+                        );
+
+                        button.appendChild(
+                            this._createCaptureCell(
+                                this._formatCount(
+                                    captureFile.valid_component_count
+                                )
+                            )
+                        );
+
+                        button.appendChild(
+                            this._createCaptureCell(
+                                captureFile.display_name ||
+                                captureFile.name
+                            )
+                        );
 
                         button.addEventListener(
                             "click",
@@ -224,7 +268,8 @@ export class DialogPanel
                                 this.close();
 
                                 this._previewPanel.showPlaybackMode(
-                                    captureFile.url
+                                    captureFile.url,
+                                    captureFile
                                 );
                             }
                         );
@@ -250,6 +295,7 @@ export class DialogPanel
     }
 
 
+    // ## Close the active dialog.
     close()
     {
         if (this._dialog !== null)
@@ -259,6 +305,56 @@ export class DialogPanel
     }
 
 
+    // ## Create one display cell for the capture browser row.
+    _createCaptureCell(text)
+    {
+        const span =
+            document.createElement(
+                "span"
+            );
+
+        span.textContent =
+            text;
+
+        return span;
+    }
+
+
+    // ## Format a millisecond duration for the capture browser.
+    _formatDuration(value)
+    {
+        let text =
+            "--";
+
+        if (value !== null && value !== undefined)
+        {
+            text =
+                `${Number(value).toFixed(1)} ms`;
+        }
+
+        return text;
+    }
+
+
+    // ## Format a component count for the capture browser.
+    _formatCount(value)
+    {
+        let text =
+            "--";
+
+        if (value !== null && value !== undefined)
+        {
+            text =
+                String(
+                    value
+                );
+        }
+
+        return text;
+    }
+
+
+    // ## Show plain text content in the dialog.
     _showText(titleText, bodyText)
     {
         this._setTitle(
@@ -273,6 +369,7 @@ export class DialogPanel
         this._dialog.showModal();
     }
 
+    // ## Show trusted HTML content in the dialog.
     _showHtml(titleText, htmlText)
     {
         this._setTitle(
@@ -288,6 +385,7 @@ export class DialogPanel
     }
 
 
+    // ## Set the dialog title.
     _setTitle(titleText)
     {
         if (this._title !== null)
@@ -298,6 +396,7 @@ export class DialogPanel
     }
 
 
+    // ## Clear all existing dialog body content.
     _clearBody()
     {
         if (this._body !== null)
@@ -307,6 +406,7 @@ export class DialogPanel
     }
 
 
+    // ## Bind a click handler when the target element exists.
     _bindClick(elementId, handler)
     {
         const element =

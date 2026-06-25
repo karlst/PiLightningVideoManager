@@ -73,3 +73,31 @@
     padding: 6px;
     text-align: left;
 }
+.captureListHeader,
+.captureListButton
+{
+    display: grid;
+    grid-template-columns: 92px 58px 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.captureListHeader
+{
+    font-weight: 700;
+    font-size: 12px;
+    padding: 0 6px 4px 6px;
+    color: #444;
+}
+
+.captureListButton span:first-child,
+.captureListHeader span:first-child
+{
+    text-align: right;
+}
+
+.captureListButton span:nth-child(2),
+.captureListHeader span:nth-child(2)
+{
+    text-align: right;
+}

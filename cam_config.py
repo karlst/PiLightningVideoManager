@@ -60,6 +60,25 @@ class CamConfig:
     metric_history_sample_seconds: float = 1.0
     motion_changed_pixel_threshold: int = 25
 
+    # OpenCV connected-component analysis.
+    opencv_enabled: bool = True
+
+    # Absolute brightness catches high-contrast night lightning.
+    opencv_bright_threshold: int = 220
+
+    # Local contrast catches daylight lightning that is brighter than
+    # nearby cloud but not necessarily bright in absolute terms.
+    opencv_local_contrast_threshold: int = 25
+    opencv_local_contrast_window_pixels: int = 31
+
+    # Component geometry filters. These define a valid component.
+    opencv_min_component_area: int = 20
+    opencv_min_component_height: int = 20
+    opencv_min_component_aspect: float = 2.0
+
+    # Allowed gap when converting valid-component frames to event duration.
+    opencv_event_max_missing_frames: int = 3
+
     camera_name: str = "ELP USB Camera"
     camera_latitude_degrees: float = 32.2225600
     camera_longitude_degrees: float = -111.5919100
