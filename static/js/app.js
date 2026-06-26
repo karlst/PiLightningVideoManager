@@ -59,10 +59,14 @@ function initializePage()
             statusPanel
         );
 
+    const metricsGraphPanel =
+        new MetricsGraphPanel();
+
     const previewPanel =
         new PreviewPanel(
             statusPanel,
-            eventLogPanel
+            eventLogPanel,
+            metricsGraphPanel
         );
 
     const dialogPanel =
@@ -76,9 +80,6 @@ function initializePage()
             statusPanel,
             eventLogPanel
         );
-
-    const metricsGraphPanel =
-        new MetricsGraphPanel();
 
     const cameraPanel =
         new CameraPanel();

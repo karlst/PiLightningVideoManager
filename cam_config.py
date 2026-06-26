@@ -5,6 +5,8 @@ from pathlib import Path
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
+    app_version: str = "0.67"
+
     video_device: str = "/dev/video0"
     input_format: str = "mjpeg"
 

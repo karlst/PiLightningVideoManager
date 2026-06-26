@@ -14,6 +14,10 @@ export class MetricsGraphPanel
         this._iGraphWindowHours = 1;
         this._aMetricHistory = [];
         this._aSystemHistory = [];
+        this._mode = "live";
+        this._aCaptureMetrics = [];
+        this._captureName = "";
+        this._captureCursorFrameIndex = null;
     }
 
     initialize()
@@ -68,12 +72,82 @@ export class MetricsGraphPanel
             if (result.success)
             {
                 this._aMetricHistory = result.metrics;
-                this.drawAllGraphs();
+
+                if (this._mode === "live")
+                {
+                    this.drawAllGraphs();
+                }
             }
         }
         catch (error)
         {
             console.error(error);
+        }
+    }
+
+    // ## Replace long-term live graphs with frame-by-frame capture graphs.
+    showCaptureMetrics(captureFile)
+    {
+        const analysis =
+            captureFile?.analysis || {};
+
+        this._mode =
+            "capture";
+
+        this._aCaptureMetrics =
+            analysis.frame_records || [];
+
+        this._captureName =
+            captureFile?.capture_time_display ||
+            captureFile?.display_name ||
+            captureFile?.name ||
+            "Capture";
+
+        this._captureCursorFrameIndex =
+            this._getInitialCaptureCursorFrameIndex(
+                analysis
+            );
+
+        this._setGraphButtonsVisible(
+            false
+        );
+
+        this.drawAllGraphs();
+    }
+
+    // ## Return graph stack to long-term live metrics mode.
+    showLiveMetrics()
+    {
+        this._mode =
+            "live";
+
+        this._aCaptureMetrics =
+            [];
+
+        this._captureName =
+            "";
+
+        this._captureCursorFrameIndex =
+            null;
+
+        this._setGraphButtonsVisible(
+            true
+        );
+
+        this.drawAllGraphs();
+    }
+
+    // ## Move the capture graph cursor to match the current playback frame.
+    setCaptureCursorFrameIndex(frameIndex)
+    {
+        if (this._mode === "capture")
+        {
+            this._captureCursorFrameIndex =
+                this._clampCaptureFrameIndex(
+                    frameIndex
+                );
+
+            this.drawAllGraphs();
         }
     }
 
@@ -96,6 +170,12 @@ export class MetricsGraphPanel
 
     drawAllGraphs()
     {
+        if (this._mode === "capture")
+        {
+            this._drawCaptureGraphs();
+            return;
+        }
+
         const metrics = this._getVisibleMetrics();
 
         const maxBrightness =
@@ -144,6 +224,118 @@ export class MetricsGraphPanel
         this._updateGraphStats(
             metrics
         );
+    }
+
+    // ## Draw frame-by-frame metrics for the currently selected capture.
+    _drawCaptureGraphs()
+    {
+        const records =
+            this._aCaptureMetrics;
+
+        const maxBrightness =
+            this._getMaxMetricValue(
+                records,
+                "mean_brightness"
+            );
+
+        const maxDelta =
+            this._getMaxMetricValue(
+                records,
+                "brightness_delta_adjacent"
+            );
+
+        const maxValidComponents =
+            this._getMaxMetricValue(
+                records,
+                "valid_component_count"
+            );
+
+        const maxArea =
+            this._getMaxMetricValue(
+                records,
+                "max_component_area"
+            );
+
+        this._drawCaptureOneSeriesGraph(
+            "brightness-graph",
+            records,
+            "mean_brightness",
+            `Bright Max=${maxBrightness.toFixed(1)}`
+        );
+
+        this._drawCaptureOneSeriesGraph(
+            "brightness-delta-graph",
+            records,
+            "brightness_delta_adjacent",
+            `Adjacent Δ Max=${maxDelta.toFixed(1)}`
+        );
+
+        this._drawCaptureOneSeriesGraph(
+            "motion-graph",
+            records,
+            "valid_component_count",
+            `Valid Components Max=${maxValidComponents.toFixed(0)}`
+        );
+
+        this._drawCaptureOneSeriesGraph(
+            "system-graph",
+            records,
+            "max_component_area",
+            `Component Area Max=${maxArea.toFixed(0)}`
+        );
+
+        this._updateCaptureGraphStats(
+            records
+        );
+    }
+
+    // ## Update graph summary while showing capture-local frame metrics.
+    _updateCaptureGraphStats(records)
+    {
+        const graphMeanValue =
+            document.getElementById(
+                "graph-mean-value"
+            );
+
+        if (graphMeanValue === null)
+        {
+            return;
+        }
+
+        if (records.length === 0)
+        {
+            graphMeanValue.textContent =
+                "Capture metrics: none";
+
+            return;
+        }
+
+        const durationMs =
+            this._getCaptureDurationMs(
+                records
+            );
+
+        graphMeanValue.textContent =
+            (
+                `Capture: ${this._captureName} | ` +
+                `${records.length} frames | ` +
+                `${durationMs.toFixed(1)} ms`
+            );
+    }
+
+    // ## Hide graph time-window buttons during capture playback.
+    _setGraphButtonsVisible(visible)
+    {
+        const buttonBar =
+            document.querySelector(
+                ".graphButtonBar"
+            );
+
+        if (buttonBar !== null)
+        {
+            buttonBar.style.display =
+                visible ? "" : "none";
+        }
     }
 
     _updateGraphStats(metrics)
@@ -740,6 +932,415 @@ export class MetricsGraphPanel
                 plot.top + 12
             );
         }
+    }
+
+    // ## Draw one capture-local metric using offset_ms as the x-axis.
+    _drawCaptureOneSeriesGraph(
+        canvasId,
+        records,
+        key,
+        label
+    )
+    {
+        const canvas =
+            document.getElementById(canvasId);
+
+        if (canvas !== null)
+        {
+            this._resizeCanvas(canvas);
+
+            const context =
+                canvas.getContext("2d");
+
+            const values =
+                records.map(
+                    (record) =>
+                    {
+                        return Number(record[key] ?? 0.0);
+                    }
+                );
+
+            const limits =
+                this._getValueLimits(values);
+
+            const plot =
+                this._drawCaptureAxes(
+                    context,
+                    canvas.width,
+                    canvas.height,
+                    limits.minValue,
+                    limits.maxValue,
+                    records
+                );
+
+            this._drawCaptureLine(
+                context,
+                plot,
+                records,
+                key,
+                limits.minValue,
+                limits.maxValue,
+                "#2f80ed"
+            );
+
+            this._drawCaptureCursor(
+                context,
+                plot,
+                records
+            );
+
+            context.fillStyle = "#2f80ed";
+            context.textAlign = "left";
+
+            context.fillText(
+                label,
+                plot.left + 4,
+                plot.top + 12
+            );
+        }
+    }
+
+    // ## Draw capture graph axes using capture-relative milliseconds.
+    _drawCaptureAxes(
+        context,
+        width,
+        height,
+        minValue,
+        maxValue,
+        records
+    )
+    {
+        const plot =
+        {
+            left: 46,
+            right: width - 8,
+            top: 8,
+            bottom: height - 38
+        };
+
+        context.clearRect(0, 0, width, height);
+
+        context.strokeStyle = "#d0d0d0";
+        context.lineWidth = 1;
+
+        for (let iGrid = 0; iGrid <= 4; iGrid += 1)
+        {
+            const y =
+                plot.top +
+                (
+                    (plot.bottom - plot.top) *
+                    iGrid /
+                    4
+                );
+
+            context.beginPath();
+            context.moveTo(plot.left, y);
+            context.lineTo(plot.right, y);
+            context.stroke();
+        }
+
+        context.strokeStyle = "#888888";
+
+        context.beginPath();
+        context.moveTo(plot.left, plot.top);
+        context.lineTo(plot.left, plot.bottom);
+        context.lineTo(plot.right, plot.bottom);
+        context.stroke();
+
+        this._drawCaptureXAxis(
+            context,
+            plot,
+            records
+        );
+
+        context.fillStyle = "#333333";
+        context.font = "10px Arial";
+        context.textAlign = "left";
+
+        context.fillText(
+            maxValue.toFixed(1),
+            4,
+            plot.top + 8
+        );
+
+        context.fillText(
+            minValue.toFixed(1),
+            4,
+            plot.bottom
+        );
+
+        return plot;
+    }
+
+    // ## Draw capture-local x-axis labels from 0 to capture duration.
+    _drawCaptureXAxis(
+        context,
+        plot,
+        records
+    )
+    {
+        context.fillStyle = "#333333";
+        context.font = "10px Arial";
+        context.textAlign = "center";
+
+        const tickCount = 4;
+        const durationMs =
+            this._getCaptureDurationMs(
+                records
+            );
+
+        for (let iTick = 0; iTick <= tickCount; iTick += 1)
+        {
+            const fraction =
+                iTick / tickCount;
+
+            const x =
+                plot.left +
+                (
+                    (plot.right - plot.left) *
+                    fraction
+                );
+
+            const offsetMs =
+                durationMs * fraction;
+
+            context.beginPath();
+            context.moveTo(x, plot.bottom);
+            context.lineTo(x, plot.bottom + 4);
+            context.stroke();
+
+            context.fillText(
+                this._formatCaptureOffsetLabel(
+                    offsetMs
+                ),
+                x,
+                plot.bottom + 22
+            );
+        }
+    }
+
+    // ## Draw capture-local line using offset_ms for x position.
+    _drawCaptureLine(
+        context,
+        plot,
+        records,
+        valueKey,
+        minValue,
+        maxValue,
+        strokeStyle
+    )
+    {
+        if (records.length >= 2)
+        {
+            const valueRange =
+                Math.max(
+                    0.000001,
+                    maxValue - minValue
+                );
+
+            context.strokeStyle = strokeStyle;
+            context.lineWidth = 1.5;
+
+            context.beginPath();
+
+            records.forEach(
+                (record, index) =>
+                {
+                    const x =
+                        this._xCaptureOffsetToPixel(
+                            plot,
+                            records,
+                            Number(record.offset_ms ?? 0.0)
+                        );
+
+                    const value =
+                        Number(record[valueKey] ?? 0.0);
+
+                    const y =
+                        plot.bottom -
+                        (
+                            (value - minValue) *
+                            (plot.bottom - plot.top) /
+                            valueRange
+                        );
+
+                    if (index === 0)
+                    {
+                        context.moveTo(x, y);
+                    }
+                    else
+                    {
+                        context.lineTo(x, y);
+                    }
+                }
+            );
+
+            context.stroke();
+        }
+    }
+
+    // ## Convert capture offset to graph x pixel.
+    _xCaptureOffsetToPixel(
+        plot,
+        records,
+        offsetMs
+    )
+    {
+        const durationMs =
+            Math.max(
+                0.001,
+                this._getCaptureDurationMs(
+                    records
+                )
+            );
+
+        const fraction =
+            Math.max(
+                0.0,
+                Math.min(
+                    1.0,
+                    offsetMs / durationMs
+                )
+            );
+
+        return (
+            plot.left +
+            (
+                (plot.right - plot.left) *
+                fraction
+            )
+        );
+    }
+
+    // ## Draw a vertical cursor at the current playback frame.
+    _drawCaptureCursor(
+        context,
+        plot,
+        records
+    )
+    {
+        const frameIndex =
+            this._clampCaptureFrameIndex(
+                this._captureCursorFrameIndex
+            );
+
+        if (frameIndex !== null && records.length > 0)
+        {
+            const record =
+                records[frameIndex];
+
+            const x =
+                this._xCaptureOffsetToPixel(
+                    plot,
+                    records,
+                    Number(record.offset_ms ?? 0.0)
+                );
+
+            context.save();
+            context.strokeStyle = "#c00020";
+            context.lineWidth = 2;
+            context.beginPath();
+            context.moveTo(
+                x,
+                plot.top
+            );
+            context.lineTo(
+                x,
+                plot.bottom
+            );
+            context.stroke();
+
+            context.fillStyle = "#c00020";
+            context.textAlign = "center";
+            context.font = "10px Arial";
+            context.fillText(
+                `F${frameIndex + 1}`,
+                x,
+                plot.bottom + 34
+            );
+            context.restore();
+        }
+    }
+
+    // ## Pick the trigger frame as the first playback cursor when available.
+    _getInitialCaptureCursorFrameIndex(analysis)
+    {
+        let frameIndex =
+            null;
+
+        if (analysis?.trigger_frame_index !== null && analysis?.trigger_frame_index !== undefined)
+        {
+            frameIndex =
+                Number(analysis.trigger_frame_index);
+        }
+        else if (analysis?.trigger_frame_number !== null && analysis?.trigger_frame_number !== undefined)
+        {
+            frameIndex =
+                Number(analysis.trigger_frame_number) - 1;
+        }
+
+        return this._clampCaptureFrameIndex(
+            frameIndex
+        );
+    }
+
+    // ## Keep requested frame index inside the current capture frame range.
+    _clampCaptureFrameIndex(frameIndex)
+    {
+        let clampedIndex =
+            null;
+
+        if (frameIndex !== null && frameIndex !== undefined && this._aCaptureMetrics.length > 0)
+        {
+            clampedIndex =
+                Math.min(
+                    this._aCaptureMetrics.length - 1,
+                    Math.max(
+                        0,
+                        Math.round(
+                            Number(frameIndex)
+                        )
+                    )
+                );
+
+            if (Number.isNaN(clampedIndex))
+            {
+                clampedIndex =
+                    null;
+            }
+        }
+
+        return clampedIndex;
+    }
+
+    // ## Return the capture-local graph duration in milliseconds.
+    _getCaptureDurationMs(records)
+    {
+        let durationMs = 0.0;
+
+        if (records.length > 0)
+        {
+            durationMs = Number(
+                records[records.length - 1].offset_ms ?? 0.0
+            );
+        }
+
+        return durationMs;
+    }
+
+    // ## Format capture-local x-axis offsets.
+    _formatCaptureOffsetLabel(offsetMs)
+    {
+        let label =
+            `${offsetMs.toFixed(0)}ms`;
+
+        if (offsetMs >= 1000.0)
+        {
+            label =
+                `${(offsetMs / 1000.0).toFixed(2)}s`;
+        }
+
+        return label;
     }
 
     _getSampleTimeSeconds(sample)

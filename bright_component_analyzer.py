@@ -99,10 +99,46 @@ class BrightComponentAnalyzer:
         current_event_frames = 0
         missing_frame_count = 0
 
+        frame_records: list[dict] = []
+        previous_mean_brightness: float | None = None
+        first_monotonic = 0.0
+
+        if len(frames) > 0:
+            first_monotonic = frames[0].timestamp_monotonic
+
         # Analyze each captured frame using the same rules as live analysis.
-        for camera_frame in frames:
+        # Store per-frame records so playback can replace long-term graphs
+        # with capture-local frame metrics.
+        for frame_index, camera_frame in enumerate(
+            frames
+        ):
             frame_result = self.analyze_camera_frame(
                 camera_frame
+            )
+
+            mean_brightness = self._get_mean_brightness(
+                camera_frame.frame
+            )
+
+            brightness_delta_adjacent = 0.0
+
+            if previous_mean_brightness is not None:
+                brightness_delta_adjacent = (
+                    mean_brightness -
+                    previous_mean_brightness
+                )
+
+            previous_mean_brightness = mean_brightness
+
+            frame_records.append(
+                self._create_frame_record(
+                    frame_index=frame_index,
+                    camera_frame=camera_frame,
+                    first_monotonic=first_monotonic,
+                    frame_result=frame_result,
+                    mean_brightness=mean_brightness,
+                    brightness_delta_adjacent=brightness_delta_adjacent
+                )
             )
 
             component_count += int(
@@ -177,7 +213,7 @@ class BrightComponentAnalyzer:
         )
 
         result = {
-            "analysis_version": 2,
+            "analysis_version": 3,
             "frame_count": len(frames),
             "component_count": component_count,
             "valid_component_count": valid_component_count,
@@ -192,9 +228,7 @@ class BrightComponentAnalyzer:
                 longest_event_ms,
                 1
             ),
-            "frame_records": self._create_frame_records(
-                frames
-            )
+            "frame_records": frame_records
         }
 
         if metadata is not None:
@@ -232,42 +266,79 @@ class BrightComponentAnalyzer:
 
         return sidecar_data
 
-    # ## Build one lightweight timing record for every captured frame.
-    def _create_frame_records(
+    # ## Build one frame metric record for playback graphs.
+    def _create_frame_record(
         self,
-        frames: list[CameraFrame]
-    ) -> list[dict]:
-        records: list[dict] = []
+        frame_index: int,
+        camera_frame: CameraFrame,
+        first_monotonic: float,
+        frame_result: dict,
+        mean_brightness: float,
+        brightness_delta_adjacent: float
+    ) -> dict:
+        offset_ms = (
+            (
+                camera_frame.timestamp_monotonic -
+                first_monotonic
+            ) *
+            1000.0
+        )
 
-        first_monotonic = 0.0
-
-        if len(frames) > 0:
-            first_monotonic = frames[0].timestamp_monotonic
-
-        for frame_index, camera_frame in enumerate(
-            frames
-        ):
-            offset_ms = (
-                (
-                    camera_frame.timestamp_monotonic -
-                    first_monotonic
-                ) *
-                1000.0
+        record = {
+            "frame_index": frame_index,
+            "frame_number": frame_index + 1,
+            "sequence_number": camera_frame.sequence_number,
+            "timestamp_utc": camera_frame.timestamp_utc,
+            "offset_ms": round(
+                offset_ms,
+                3
+            ),
+            "mean_brightness": round(
+                mean_brightness,
+                3
+            ),
+            "brightness_delta_adjacent": round(
+                brightness_delta_adjacent,
+                3
+            ),
+            "component_count": int(
+                frame_result["component_count"]
+            ),
+            "valid_component_count": int(
+                frame_result["valid_component_count"]
+            ),
+            "max_component_area": int(
+                frame_result["max_component_area"]
+            ),
+            "max_component_height": int(
+                frame_result["max_component_height"]
+            ),
+            "max_component_width": int(
+                frame_result["max_component_width"]
+            ),
+            "max_component_aspect": round(
+                float(frame_result["max_component_aspect"]),
+                3
             )
+        }
 
-            records.append(
-                {
-                    "frame_index": frame_index,
-                    "sequence_number": camera_frame.sequence_number,
-                    "timestamp_utc": camera_frame.timestamp_utc,
-                    "offset_ms": round(
-                        offset_ms,
-                        3
-                    )
-                }
-            )
+        return record
 
-        return records
+    # ## Compute whole-frame mean brightness for one OpenCV frame.
+    def _get_mean_brightness(
+        self,
+        frame: np.ndarray
+    ) -> float:
+        gray_frame = cv2.cvtColor(
+            frame,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        mean_brightness = float(
+            gray_frame.mean()
+        )
+
+        return mean_brightness
 
     # ## Create a binary mask of pixels worth considering as component pixels.
     def _create_candidate_mask(

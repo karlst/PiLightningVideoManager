@@ -210,33 +210,10 @@ export class StatusPanel
     }
 
 
-    // ## Update the compact status line in the header.
+    // ## Header no longer shows operational status; keep method as a no-op.
     _updateHeartbeat(result)
     {
-        const fps =
-            formatNumber(
-                result.camera_fps,
-                1,
-                "--"
-            );
-
-        const memoryMb =
-            formatNumber(
-                result.memory_mb,
-                0,
-                "--"
-            );
-
-        setElementText(
-            "heartbeat-value",
-            `| Server: ${result.server_time_utc} ` +
-            `| Preview: ${result.preview_running ? "on" : "off"} ` +
-            `| Buffer: ${result.buffer_running ? "on" : "off"} ` +
-            `| FPS: ${fps} ` +
-            `| Frames: ${result.camera_frames ?? "--"} ` +
-            `| Buffer: ${result.buffer_count ?? "--"}/${result.buffer_capacity ?? "--"} ` +
-            `| RAM: ${memoryMb} MB`
-        );
+        void result;
     }
 
 
@@ -276,6 +253,11 @@ export class StatusPanel
                 0,
                 "--"
             );
+
+        setElementText(
+            "summary-version-value",
+            result.app_version ?? "--"
+        );
 
         setElementText(
             "summary-trigger-value",

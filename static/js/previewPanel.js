@@ -12,13 +12,16 @@ from "./httpClient.js";
 export class PreviewPanel
 {
     // ## Initialize preview state and related panels.
-    constructor(statusPanel, eventLogPanel)
+    constructor(statusPanel, eventLogPanel, metricsGraphPanel = null)
     {
         this._statusPanel =
             statusPanel;
 
         this._eventLogPanel =
             eventLogPanel;
+
+        this._metricsGraphPanel =
+            metricsGraphPanel;
 
         this._previewTimerId =
             null;
@@ -164,6 +167,7 @@ export class PreviewPanel
         this._hidePlaybackOverlay();
         this._hidePlaybackStepControls();
         this._showStatusContext();
+        this._showLiveGraphs();
         this._hideVideo();
         this._showImageShell();
         this._startPreviewPolling();
@@ -215,11 +219,37 @@ export class PreviewPanel
             resolvedCaptureFile
         );
 
+        this._showCaptureGraphs(
+            resolvedCaptureFile
+        );
+
         this._attachPlaybackOverlayEvents();
         this._attachPlaybackKeyboardEvents();
         this._updatePlaybackOverlay();
         this._showClosePlaybackButton();
         this._showPlaybackStepControls();
+    }
+
+
+    // ## Show frame-by-frame capture graphs during playback.
+    _showCaptureGraphs(captureFile)
+    {
+        if (this._metricsGraphPanel !== null)
+        {
+            this._metricsGraphPanel.showCaptureMetrics(
+                captureFile
+            );
+        }
+    }
+
+
+    // ## Restore live long-term graphs after playback closes.
+    _showLiveGraphs()
+    {
+        if (this._metricsGraphPanel !== null)
+        {
+            this._metricsGraphPanel.showLiveMetrics();
+        }
     }
 
 
@@ -930,7 +960,26 @@ export class PreviewPanel
             );
         }
 
+        this._updateCaptureGraphCursor(
+            frameRecord
+        );
+
         this._updatePlaybackPlayPauseButton();
+    }
+
+
+    // ## Move capture graph cursor to the current playback frame.
+    _updateCaptureGraphCursor(frameRecord)
+    {
+        if (
+            this._metricsGraphPanel !== null &&
+            frameRecord !== null
+        )
+        {
+            this._metricsGraphPanel.setCaptureCursorFrameIndex(
+                Number(frameRecord.frame_index ?? 0)
+            );
+        }
     }
 
 

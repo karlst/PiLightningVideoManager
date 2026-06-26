@@ -400,6 +400,9 @@ def register_routes(
             {
                 "success": True,
 
+                "app_version":
+                    services.config.app_version,
+
                 "server_time_utc": datetime.now(
                     timezone.utc
                 ).strftime(
