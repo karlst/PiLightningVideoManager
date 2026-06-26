@@ -5,8 +5,6 @@
 trigger evaluation, and event logging.
 """
 
-from pathlib import Path
-
 import cv2
 
 from brightness_plugin import BrightnessPlugin
@@ -24,11 +22,13 @@ from trigger_manager import TriggerManager
 from capture_manager import CaptureManager
 
 
+# ## Owns camera buffering, analysis, trigger, and capture components.
 class BufferManager:
     """
     @brief Owns camera buffering, analysis, trigger, and capture components.
     """
 
+    # ## Initialize camera buffering, metrics, triggering, and capture helpers.
     def __init__(
         self,
         config: CamConfig,
@@ -40,7 +40,7 @@ class BufferManager:
         self._trigger_manager = trigger_manager
         self._event_log = event_log
         self._capture_manager = capture_manager
-        
+
         self._capacity_frames = (
             config.frame_rate_fps *
             config.buffer_seconds
@@ -93,6 +93,25 @@ class BufferManager:
         self._last_health_log_time_monotonic: float = 0.0
         self._last_logged_error: str = ""
 
+        # Auto-trigger capture state.
+        #
+        # IDLE:
+        #     no auto-trigger is waiting.
+        #
+        # WAITING_FOR_POST:
+        #     trigger frame has been recorded, but capture is intentionally
+        #     delayed until post_trigger_seconds of later frames are buffered.
+        self._capture_state: str = "IDLE"
+        self._pending_trigger: dict | None = None
+
+        # Lightweight trigger-only brightness state.
+        #
+        # This path runs on every frame. It intentionally avoids the heavier
+        # graph/sidecar analysis plugins so lightning strokes are not missed
+        # by the slower metric-history sampling interval.
+        self._previous_trigger_mean_brightness: float | None = None
+
+    # ## Start the camera reader and clear existing runtime buffers.
     def start(self) -> tuple[bool, str]:
         success = False
         message = "Buffer already running"
@@ -100,6 +119,8 @@ class BufferManager:
         if not self.is_running():
             self._ring_buffer.clear()
             self._metric_history.clear()
+            self._clear_pending_trigger()
+            self._reset_live_analysis_state()
 
             success, message = (
                 self._camera_reader.start()
@@ -107,16 +128,21 @@ class BufferManager:
 
         if success:
             self._event_log.add(
-                "CameraReader started"
+                "CameraReader started",
+                event_type="system",
+                summary="Camera started"
             )
         else:
             self._event_log.add(
                 f"CameraReader start failed: {message}",
-                "error"
+                "error",
+                event_type="error",
+                summary="Camera start failed"
             )
 
         return success, message
 
+    # ## Stop the camera reader thread.
     def stop(self) -> tuple[bool, str]:
         success, message = (
             self._camera_reader.stop()
@@ -124,6 +150,7 @@ class BufferManager:
 
         return success, message
 
+    # ## Clear buffered frames and metrics when the camera is stopped.
     def clear(self) -> tuple[bool, str]:
         success = False
         message = "Buffer is running; stop before clearing"
@@ -131,16 +158,36 @@ class BufferManager:
         if not self.is_running():
             self._ring_buffer.clear()
             self._metric_history.clear()
+            self._clear_pending_trigger()
+            self._reset_live_analysis_state()
 
             success = True
             message = "Buffer cleared"
 
         return success, message
 
-    def capture(self) -> tuple[bool, str, dict]:
+    # ## Capture the current ring buffer and write MP4 plus analysis sidecar.
+    def capture(
+        self,
+        trigger_type: str = "manual",
+        trigger_display: str = "Manual",
+        trigger_reason: str = "Manual capture",
+        trigger_sequence_number: int | None = None,
+        trigger_timestamp_utc: str = "",
+        trigger_time_monotonic: float | None = None
+    ) -> tuple[bool, str, dict]:
         frames = (
             self._ring_buffer.snapshot()
         )
+
+        # Manual captures use the newest buffered frame as their practical
+        # trigger reference. Auto captures pass the original trigger primitive
+        # values recorded when the threshold was crossed.
+        if len(frames) > 0 and trigger_sequence_number is None:
+            newest_frame = frames[-1]
+            trigger_sequence_number = newest_frame.sequence_number
+            trigger_timestamp_utc = newest_frame.timestamp_utc
+            trigger_time_monotonic = newest_frame.timestamp_monotonic
 
         success, message, writer_status = (
             self._clip_writer.write_frames(
@@ -155,6 +202,17 @@ class BufferManager:
                 "output_file"
             )
 
+            sidecar_metadata = self._create_sidecar_metadata(
+                frames=frames,
+                writer_status=writer_status,
+                trigger_type=trigger_type,
+                trigger_display=trigger_display,
+                trigger_reason=trigger_reason,
+                trigger_sequence_number=trigger_sequence_number,
+                trigger_timestamp_utc=trigger_timestamp_utc,
+                trigger_time_monotonic=trigger_time_monotonic
+            )
+
             # Analyze the raw captured frames directly and write the JSON
             # sidecar next to the MP4. This avoids decoding the MP4 later.
             if output_file:
@@ -162,14 +220,17 @@ class BufferManager:
                     sidecar_data = (
                         self._bright_component_analyzer.write_sidecar(
                             frames,
-                            output_file
+                            output_file,
+                            sidecar_metadata
                         )
                     )
 
                 except Exception as error:
                     self._event_log.add(
                         f"Sidecar analysis failed: {error}",
-                        "error"
+                        "error",
+                        event_type="error",
+                        summary="Sidecar analysis failed"
                     )
 
             self._capture_manager.cleanup()
@@ -210,6 +271,7 @@ class BufferManager:
 
         return success, message, capture_status
 
+    # ## Encode the newest buffered frame as a JPEG preview image.
     def get_preview_jpeg(self) -> tuple[bytes | None, dict]:
         camera_frame = (
             self._ring_buffer.newest()
@@ -243,12 +305,15 @@ class BufferManager:
             "timestamp_monotonic": camera_frame.timestamp_monotonic
         }
 
+    # ## Return whether the camera reader is running.
     def is_running(self) -> bool:
         return self._camera_reader.is_running()
 
+    # ## Return sampled metric history for graphing.
     def get_metrics_history(self) -> list[dict]:
         return self._metric_history.snapshot()
 
+    # ## Return combined camera, buffer, metrics, and trigger status.
     def get_status(self) -> dict:
         reader_status = (
             self._camera_reader.get_status()
@@ -289,11 +354,14 @@ class BufferManager:
             "trigger_max_brightness_delta": trigger_status["max_brightness_delta"],
             "trigger_max_changed_pixel_fraction": trigger_status["max_changed_pixel_fraction"],
             "last_trigger_reason": trigger_status["last_trigger_reason"],
-            "last_trigger_time_monotonic": trigger_status["last_trigger_time_monotonic"]
+            "last_trigger_time_monotonic": trigger_status["last_trigger_time_monotonic"],
+            "capture_state": self._capture_state,
+            "pending_trigger": self._pending_trigger is not None
         }
 
         return status
 
+    # ## Write a periodic health line to the event log.
     def _log_periodic_health(
         self,
         camera_frame: CameraFrame
@@ -331,9 +399,15 @@ class BufferManager:
                 f"trig_bright={trigger_status['max_brightness']}, "
                 f"trig_delta={trigger_status['max_brightness_delta']}, "
                 f"trig_motion={trigger_status['max_changed_pixel_fraction']}"
+            ),
+            event_type="health",
+            summary=(
+                f"Health frames={camera_frame.sequence_number} "
+                f"buffer={buffer_status['count']}/{buffer_status['capacity']}"
             )
         )
-            
+
+    # ## Process one frame from CameraReader.
     def _on_frame_inner(
         self,
         camera_frame: CameraFrame
@@ -342,6 +416,37 @@ class BufferManager:
             camera_frame
         )
 
+        self._log_periodic_health(
+            camera_frame
+        )
+
+        captured_pending_trigger = self._capture_pending_trigger_if_ready(
+            camera_frame
+        )
+
+        # Run the lightweight trigger metric on every frame. Graph history
+        # sampling remains slower, but trigger detection no longer waits for
+        # metric_history_sample_seconds.
+        trigger_metric = self._analyze_trigger_frame(
+            camera_frame
+        )
+
+        if (
+            self._capture_state == "IDLE" and
+            not captured_pending_trigger
+        ):
+            should_fire, trigger_reason = (
+                self._trigger_manager.evaluate(
+                    trigger_metric
+                )
+            )
+
+            if should_fire:
+                self._arm_pending_trigger(
+                    trigger_reason=trigger_reason,
+                    trigger_frame=camera_frame
+                )
+
         should_sample_metric = (
             (
                 camera_frame.timestamp_monotonic -
@@ -349,11 +454,9 @@ class BufferManager:
             ) >= self._config.metric_history_sample_seconds
         )
 
-        self._log_periodic_health(
-            camera_frame
-        )
-
         if should_sample_metric:
+            # Full plugin analysis is for graph/history display only. It is
+            # intentionally not used to decide lightning triggers.
             metric = self._frame_analyzer.analyze(
                 camera_frame
             )
@@ -362,39 +465,371 @@ class BufferManager:
                 metric
             )
 
-            should_fire, trigger_reason = (
-                self._trigger_manager.evaluate(
-                    metric
-                )
+            self._last_metric_time_monotonic = (
+                camera_frame.timestamp_monotonic
             )
 
-            if should_fire:
-                success, message, capture_status = (
-                    self.capture()
+    # ## Analyze one frame using the cheap every-frame trigger metric.
+    def _analyze_trigger_frame(
+        self,
+        camera_frame: CameraFrame
+    ) -> dict:
+        gray_frame = cv2.cvtColor(
+            camera_frame.frame,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        mean_brightness = float(
+            gray_frame.mean()
+        )
+
+        brightness_delta_adjacent = 0.0
+
+        if self._previous_trigger_mean_brightness is not None:
+            brightness_delta_adjacent = (
+                mean_brightness -
+                self._previous_trigger_mean_brightness
+            )
+
+        self._previous_trigger_mean_brightness = mean_brightness
+
+        metric = {
+            "sequence_number": camera_frame.sequence_number,
+            "timestamp_utc": camera_frame.timestamp_utc,
+            "timestamp_monotonic": camera_frame.timestamp_monotonic,
+            "mean_brightness": mean_brightness,
+            "brightness_delta_adjacent": brightness_delta_adjacent,
+
+            # Keep the legacy key populated so existing trigger/status code
+            # keeps working while the meaning is now adjacent-frame delta.
+            "brightness_delta": brightness_delta_adjacent,
+            "changed_pixel_fraction": 0.0
+        }
+
+        return metric
+
+    # ## Remember an auto-trigger and wait for post-trigger frames.
+    def _arm_pending_trigger(
+        self,
+        trigger_reason: str,
+        trigger_frame: CameraFrame
+    ) -> None:
+        trigger_type, trigger_display = (
+            self._get_trigger_identity(
+                trigger_reason
+            )
+        )
+
+        # Record only primitive values. Do not keep the CameraFrame object;
+        # later frames will continue arriving and capture should use this
+        # exact original sequence number, not the eventual newest frame.
+        self._pending_trigger = {
+            "trigger_type": trigger_type,
+            "trigger_display": trigger_display,
+            "trigger_reason": trigger_reason,
+            "trigger_sequence_number": trigger_frame.sequence_number,
+            "trigger_timestamp_utc": trigger_frame.timestamp_utc,
+            "trigger_time_monotonic": trigger_frame.timestamp_monotonic,
+            "armed_time_monotonic": trigger_frame.timestamp_monotonic
+        }
+
+        self._capture_state = "WAITING_FOR_POST"
+
+        self._event_log.add(
+            (
+                f"Auto trigger armed: {trigger_reason}; "
+                f"post={self._config.post_trigger_seconds:.2f} sec, "
+                f"frame={trigger_frame.sequence_number}"
+            ),
+            event_type="trigger",
+            summary=(
+                f"Auto trigger armed, "
+                f"frame {trigger_frame.sequence_number}"
+            )
+        )
+
+    # ## Save a pending auto-trigger after post-trigger time has elapsed.
+    def _capture_pending_trigger_if_ready(
+        self,
+        camera_frame: CameraFrame
+    ) -> bool:
+        captured_pending_trigger = False
+
+        if (
+            self._capture_state == "WAITING_FOR_POST" and
+            self._pending_trigger is not None
+        ):
+            trigger_time_monotonic = float(
+                self._pending_trigger[
+                    "trigger_time_monotonic"
+                ]
+            )
+
+            elapsed_seconds = (
+                camera_frame.timestamp_monotonic -
+                trigger_time_monotonic
+            )
+
+            if elapsed_seconds >= self._config.post_trigger_seconds:
+                pending_trigger = dict(
+                    self._pending_trigger
                 )
 
+                self._capture_state = "SAVING"
+                self._pending_trigger = None
+                captured_pending_trigger = True
+
+                success, message, capture_status = (
+                    self.capture(
+                        trigger_type=pending_trigger["trigger_type"],
+                        trigger_display=pending_trigger["trigger_display"],
+                        trigger_reason=pending_trigger["trigger_reason"],
+                        trigger_sequence_number=pending_trigger[
+                            "trigger_sequence_number"
+                        ],
+                        trigger_timestamp_utc=pending_trigger[
+                            "trigger_timestamp_utc"
+                        ],
+                        trigger_time_monotonic=pending_trigger[
+                            "trigger_time_monotonic"
+                        ]
+                    )
+                )
+
+                self._capture_state = "IDLE"
+
                 if success:
+                    self._reset_live_analysis_state()
+
+                    self._last_metric_time_monotonic = (
+                        camera_frame.timestamp_monotonic
+                    )
+
+                    trigger_frame_text = self._get_capture_trigger_frame_text(
+                        capture_status
+                    )
+
                     self._event_log.add(
                         (
-                            f"Auto trigger fired: {trigger_reason}; "
+                            f"Auto trigger captured: "
+                            f"{pending_trigger['trigger_reason']}; "
                             f"{capture_status['frames_written']} frames, "
                             f"{capture_status['duration_seconds']:.2f} sec, "
+                            f"{trigger_frame_text}, "
                             f"{capture_status.get('output_file', '')}"
+                        ),
+                        event_type="trigger",
+                        summary=(
+                            f"Auto trigger captured, "
+                            f"{capture_status['frames_written']} frames"
                         )
                     )
                 else:
                     self._event_log.add(
                         (
                             f"Auto trigger failed: "
-                            f"{trigger_reason}; {message}"
+                            f"{pending_trigger['trigger_reason']}; "
+                            f"{message}"
                         ),
-                        "error"
+                        "error",
+                        event_type="error",
+                        summary="Auto trigger failed"
                     )
 
-            self._last_metric_time_monotonic = (
-                camera_frame.timestamp_monotonic
+                    self._capture_state = "IDLE"
+
+        return captured_pending_trigger
+
+    # ## Build sidecar metadata that describes capture timing and trigger cause.
+    def _create_sidecar_metadata(
+        self,
+        frames: list[CameraFrame],
+        writer_status: dict,
+        trigger_type: str,
+        trigger_display: str,
+        trigger_reason: str,
+        trigger_sequence_number: int | None,
+        trigger_timestamp_utc: str,
+        trigger_time_monotonic: float | None
+    ) -> dict:
+        metadata = {
+            "capture_start_utc": "",
+            "capture_end_utc": "",
+            "capture_duration_ms": 0.0,
+            "saved_utc": writer_status.get(
+                "saved_utc",
+                ""
+            ),
+            "trigger_type": trigger_type,
+            "trigger_display": trigger_display,
+            "trigger_reason": trigger_reason,
+            "trigger_utc": trigger_timestamp_utc,
+            "trigger_sequence_number": trigger_sequence_number,
+            "trigger_frame_index": None,
+            "trigger_frame_number": None,
+            "trigger_offset_ms": None
+        }
+
+        if len(frames) > 0:
+            first_frame = frames[0]
+            last_frame = frames[-1]
+
+            metadata.update(
+                {
+                    "capture_start_utc": first_frame.timestamp_utc,
+                    "capture_end_utc": last_frame.timestamp_utc,
+                    "capture_duration_ms": round(
+                        (
+                            last_frame.timestamp_monotonic -
+                            first_frame.timestamp_monotonic
+                        ) *
+                        1000.0,
+                        3
+                    )
+                }
             )
 
+        if trigger_sequence_number is not None:
+            # Store the trigger frame relative to the saved capture, not only
+            # the absolute camera sequence number. This is the value the UI
+            # should display during playback review.
+            trigger_frame_index = self._get_frame_index(
+                frames,
+                trigger_sequence_number
+            )
+
+            if trigger_frame_index is not None:
+                metadata.update(
+                    {
+                        "trigger_frame_index": trigger_frame_index,
+                        "trigger_frame_number": trigger_frame_index + 1
+                    }
+                )
+
+            if (
+                trigger_time_monotonic is not None and
+                len(frames) > 0
+            ):
+                metadata.update(
+                    {
+                        "trigger_offset_ms": round(
+                            (
+                                trigger_time_monotonic -
+                                frames[0].timestamp_monotonic
+                            ) *
+                            1000.0,
+                            3
+                        )
+                    }
+                )
+
+        return metadata
+
+    # ## Find a camera sequence number within the saved capture frame list.
+    def _get_frame_index(
+        self,
+        frames: list[CameraFrame],
+        sequence_number: int
+    ) -> int | None:
+        frame_index = None
+
+        for index, camera_frame in enumerate(
+            frames
+        ):
+            if camera_frame.sequence_number == sequence_number:
+                frame_index = index
+                break
+
+        return frame_index
+
+    # ## Convert trigger reason text into stable sidecar labels.
+    def _get_trigger_identity(
+        self,
+        trigger_reason: str
+    ) -> tuple[str, str]:
+        trigger_type = "unknown"
+        trigger_display = "Auto"
+
+        reason_lower = trigger_reason.lower()
+
+        if "brightness delta" in reason_lower:
+            trigger_type = "brightness_delta"
+            trigger_display = "Δ Bright"
+
+        elif "brightness trigger" in reason_lower:
+            trigger_type = "brightness"
+            trigger_display = "Brightness"
+
+        elif "motion trigger" in reason_lower:
+            trigger_type = "motion"
+            trigger_display = "Motion"
+
+        return trigger_type, trigger_display
+
+    # ## Produce event-log text for the trigger frame stored in a sidecar.
+    def _get_capture_trigger_frame_text(
+        self,
+        capture_status: dict
+    ) -> str:
+        text = "trigger frame unknown"
+
+        sidecar = capture_status.get(
+            "sidecar",
+            {}
+        )
+
+        trigger_frame_number = sidecar.get(
+            "trigger_frame_number",
+            None
+        )
+
+        frame_count = sidecar.get(
+            "frame_count",
+            None
+        )
+
+        if (
+            trigger_frame_number is not None and
+            frame_count is not None
+        ):
+            text = (
+                f"trigger frame "
+                f"{trigger_frame_number}/{frame_count}"
+            )
+
+        return text
+
+    # ## Reset live analyzer state after startup, clear, or capture.
+    def _reset_live_analysis_state(self) -> None:
+        # Rebuild graph/history plugins so stale moving averages and previous
+        # frames cannot create artificial brightness or motion deltas after a
+        # capture completes.
+        self._frame_analyzer = FrameAnalyzer()
+
+        self._frame_analyzer.add_plugin(
+            BrightnessPlugin(
+                average_window_frames=self._config.brightness_average_frames
+            )
+        )
+
+        self._frame_analyzer.add_plugin(
+            MotionPlugin(
+                changed_pixel_threshold=(
+                    self._config.motion_changed_pixel_threshold
+                )
+            )
+        )
+
+        # Reset the every-frame trigger baseline. The next frame establishes a
+        # fresh adjacent-frame reference and cannot immediately retrigger.
+        self._previous_trigger_mean_brightness = None
+
+    # ## Reset pending auto-trigger state.
+    def _clear_pending_trigger(self) -> None:
+        self._capture_state = "IDLE"
+        self._pending_trigger = None
+
+    # ## Catch and log frame-processing errors without spamming repeats.
     def _on_frame(
         self,
         camera_frame: CameraFrame
@@ -415,9 +850,11 @@ class BufferManager:
                         f"{camera_frame.sequence_number}: "
                         f"{error_message}"
                     ),
-                    "error"
+                    "error",
+                    event_type="error",
+                    summary=f"Buffer failure frame {camera_frame.sequence_number}"
                 )
 
                 self._last_logged_error = error_message
 
-            raise        
+            raise

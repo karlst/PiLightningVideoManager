@@ -19,6 +19,7 @@ from cam_config import CamConfig
 
 
 @dataclass
+# ## Stores one captured camera frame and its timing metadata.
 class CameraFrame:
     """
     @brief One captured camera frame.
@@ -30,11 +31,13 @@ class CameraFrame:
     frame: object
 
 
+# ## Reads camera frames continuously in a background thread.
 class CameraReader:
     """
     @brief Reads camera frames continuously in a background thread.
     """
 
+    # ## Initialize camera configuration, callback, and runtime counters.
     def __init__(
         self,
         config: CamConfig,
@@ -165,6 +168,7 @@ class CameraReader:
 
         return status
 
+    # ## Run the camera open/read/release lifecycle inside the worker thread.
     def _run_capture_loop(self) -> None:
         camera = None
 
@@ -189,6 +193,7 @@ class CameraReader:
             if camera is not None:
                 camera.release()
 
+    # ## Open and configure the V4L2 camera device.
     def _open_camera(self):
         camera = cv2.VideoCapture(
             self._config.video_device,
@@ -226,6 +231,7 @@ class CameraReader:
 
         return camera
 
+    # ## Read frames until stop is requested.
     def _capture_frames(
         self,
         camera
@@ -243,6 +249,7 @@ class CameraReader:
                     0.001
                 )
 
+    # ## Timestamp one frame and deliver it to the frame callback.
     def _handle_frame(
         self,
         frame
@@ -272,10 +279,12 @@ class CameraReader:
                 camera_frame
             )
 
+    # ## Increment the failed read counter.
     def _record_failed_read(self) -> None:
         with self._lock:
             self._failed_read_count += 1
 
+    # ## Store the latest camera error message.
     def _set_error(
         self,
         message: str
@@ -283,6 +292,7 @@ class CameraReader:
         with self._lock:
             self._last_error = message
 
+    # ## Read the stop flag under lock.
     def _is_stop_requested(self) -> bool:
         stop_requested = False
 

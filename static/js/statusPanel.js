@@ -7,6 +7,7 @@ import
 from "./httpClient.js";
 
 
+// ## Set text on an element if it exists.
 function setElementText(elementId, text)
 {
     const element =
@@ -22,24 +23,41 @@ function setElementText(elementId, text)
 }
 
 
+// ## Format a numeric value with a fixed number of decimal places.
 function formatNumber(value, digits, fallback)
 {
     const numberValue =
         Number(value);
 
-    if (!Number.isFinite(numberValue))
+    let result =
+        fallback;
+
+    if (Number.isFinite(numberValue))
     {
-        return fallback;
+        result =
+            numberValue.toFixed(
+                digits
+            );
     }
 
-    return numberValue.toFixed(
-        digits
-    );
+    return result;
 }
 
 
+// ## Format a boolean value as On or Off.
+function formatOnOff(value)
+{
+    const result =
+        value ? "On" : "Off";
+
+    return result;
+}
+
+
+// ## Updates the top status bar and operational status panel.
 export class StatusPanel
 {
+    // ## Initialize status callbacks.
     constructor()
     {
         this._systemSampleHandler =
@@ -50,6 +68,7 @@ export class StatusPanel
     }
 
 
+    // ## Register a callback for graph/system samples.
     setSystemSampleHandler(handler)
     {
         this._systemSampleHandler =
@@ -57,6 +76,7 @@ export class StatusPanel
     }
 
 
+    // ## Register a callback for full system status updates.
     setSystemStatusHandler(handler)
     {
         this._systemStatusHandler =
@@ -64,6 +84,7 @@ export class StatusPanel
     }
 
 
+    // ## Update the short status message in the header.
     setStatus(statusText)
     {
         setElementText(
@@ -73,6 +94,7 @@ export class StatusPanel
     }
 
 
+    // ## Fetch current system status and update dependent panels.
     async updateSystemStatus()
     {
         try
@@ -87,6 +109,10 @@ export class StatusPanel
             );
 
             this._updateLiveStatus(
+                result
+            );
+
+            this._updateSystemSummary(
                 result
             );
 
@@ -120,6 +146,8 @@ export class StatusPanel
         }
     }
 
+
+    // ## Update camera configuration values when those elements are present.
     _updateCameraInfo(result)
     {
         setElementText(
@@ -182,6 +210,7 @@ export class StatusPanel
     }
 
 
+    // ## Update the compact status line in the header.
     _updateHeartbeat(result)
     {
         const fps =
@@ -211,6 +240,7 @@ export class StatusPanel
     }
 
 
+    // ## Update UTC and legacy trigger state fields if present.
     _updateLiveStatus(result)
     {
         setElementText(
@@ -221,6 +251,67 @@ export class StatusPanel
         setElementText(
             "trigger-state-value",
             result.trigger_enabled ? "Armed" : "Disabled"
+        );
+
+        setElementText(
+            "trigger-enabled-text",
+            result.trigger_enabled ? "Trigger: Enabled" : "Trigger: Disabled"
+        );
+    }
+
+
+    // ## Update the operational Status panel.
+    _updateSystemSummary(result)
+    {
+        const fps =
+            formatNumber(
+                result.camera_fps,
+                1,
+                "--"
+            );
+
+        const memoryMb =
+            formatNumber(
+                result.memory_mb,
+                0,
+                "--"
+            );
+
+        setElementText(
+            "summary-trigger-value",
+            result.trigger_enabled ? "Enabled" : "Disabled"
+        );
+
+        setElementText(
+            "summary-fps-value",
+            fps
+        );
+
+        setElementText(
+            "summary-buffer-value",
+            `${result.buffer_count ?? "--"} / ${result.buffer_capacity ?? "--"}`
+        );
+
+        setElementText(
+            "summary-frames-value",
+            result.camera_frames ?? "--"
+        );
+
+        setElementText(
+            "summary-ram-value",
+            `${memoryMb} MB`
+        );
+
+        setElementText(
+            "summary-preview-value",
+            formatOnOff(
+                result.preview_running
+            )
+        );
+
+        setElementText(
+            "summary-error-value",
+            result.last_error || "None"
         );
     }
 }

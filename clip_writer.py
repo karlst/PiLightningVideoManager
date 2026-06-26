@@ -14,11 +14,13 @@ import numpy as np
 from camera_reader import CameraFrame
 
 
+# ## Writes buffered OpenCV frames to an MP4/H.264 video file.
 class ClipWriter:
     """
     @brief Writes buffered OpenCV frames to an MP4/H.264 video file.
     """
 
+    # ## Initialize the writer output location, frame rate, and FFmpeg path.
     def __init__(
         self,
         output_directory: Path,
@@ -29,6 +31,7 @@ class ClipWriter:
         self._frame_rate_fps = frame_rate_fps
         self._ffmpeg_path = ffmpeg_path
 
+    # ## Write a list of CameraFrame objects to one MP4 file.
     def write_frames(
         self,
         frames: list[CameraFrame]
@@ -38,6 +41,7 @@ class ClipWriter:
 
         status = {
             "output_file": "",
+            "saved_utc": "",
             "frames_requested": len(frames),
             "frames_written": 0,
             "codec": "libx264",
@@ -52,9 +56,13 @@ class ClipWriter:
                 exist_ok=True
             )
 
+            saved_utc = self._get_now_utc_text()
+
             output_file = (
                 self._output_directory /
-                self._create_clip_filename()
+                self._create_clip_filename(
+                    saved_utc
+                )
             )
 
             first_frame = frames[0].frame
@@ -67,6 +75,8 @@ class ClipWriter:
                 first_frame.shape[1]
             )
 
+            # Feed raw BGR frames to FFmpeg through stdin. The MP4 carries
+            # pixels only; detailed frame timing stays in the JSON sidecar.
             process = subprocess.Popen(
                 self._create_ffmpeg_command(
                     output_file=output_file,
@@ -139,6 +149,7 @@ class ClipWriter:
 
                 status = {
                     "output_file": str(output_file),
+                    "saved_utc": saved_utc,
                     "frames_requested": len(frames),
                     "frames_written": frames_written,
                     "codec": "libx264",
@@ -159,6 +170,7 @@ class ClipWriter:
 
                 status = {
                     "output_file": str(output_file),
+                    "saved_utc": saved_utc,
                     "frames_requested": len(frames),
                     "frames_written": frames_written,
                     "codec": "libx264",
@@ -169,6 +181,7 @@ class ClipWriter:
 
         return success, message, status
 
+    # ## Build the FFmpeg command used to encode raw BGR frames.
     def _create_ffmpeg_command(
         self,
         output_file: Path,
@@ -213,11 +226,35 @@ class ClipWriter:
 
         return command
 
-    def _create_clip_filename(self) -> str:
-        filename = datetime.now(
-            timezone.utc
-        ).strftime(
+    # ## Create a filename from the save time, not from frame time.
+    def _create_clip_filename(
+        self,
+        saved_utc: str
+    ) -> str:
+        filename_time = datetime.fromisoformat(
+            saved_utc.replace(
+                "Z",
+                "+00:00"
+            )
+        )
+
+        filename = filename_time.strftime(
             "trigger_%Y%m%dT%H%M%SZ.mp4"
         )
 
         return filename
+
+    # ## Return UTC with millisecond precision for capture-save metadata.
+    def _get_now_utc_text(self) -> str:
+        now_utc = datetime.now(
+            timezone.utc
+        )
+
+        text = now_utc.isoformat(
+            timespec="milliseconds"
+        ).replace(
+            "+00:00",
+            "Z"
+        )
+
+        return text

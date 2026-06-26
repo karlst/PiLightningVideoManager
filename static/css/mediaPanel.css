@@ -8,7 +8,7 @@
 .mediaPanel
 {
     display: grid;
-    grid-template-rows: 26px minmax(0, 1fr) 28px;
+    grid-template-rows: 26px minmax(0, 1fr) auto;
     gap: 6px;
 }
 
@@ -47,7 +47,7 @@
 
 .cameraImageHidden
 {
-    display: none;
+    display: none !important;
 }
 
 .captureAnalysisPanel
@@ -105,4 +105,34 @@
 .imageAge
 {
     margin-left: auto;
+}
+
+.playbackFrameOverlay
+{
+    position: absolute;
+    left: 10px;
+    top: 10px;
+    z-index: 5;
+    padding: 6px 8px;
+    border: 1px solid #777;
+    border-radius: 5px;
+    background-color: rgb(255 255 255 / 88%);
+    color: #111;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.25;
+    white-space: pre;
+}
+
+
+.playbackStepControls
+{
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.playbackStepControls .miniButton
+{
+    min-width: 42px;
 }

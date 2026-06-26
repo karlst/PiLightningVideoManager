@@ -50,7 +50,9 @@ def register_routes(
     )
     def capture_once():
         services.event_log.add(
-            "Capture once requested"
+            "Capture once requested",
+            event_type="capture",
+            summary="Capture once requested"
         )
 
         return_code = (
@@ -63,12 +65,16 @@ def register_routes(
 
         if success:
             services.event_log.add(
-                "Capture once completed"
+                "Capture once completed",
+                event_type="capture",
+                summary="Capture once completed"
             )
         else:
             services.event_log.add(
                 f"Capture once failed: return_code={return_code}",
-                "error"
+                "error",
+                event_type="error",
+                summary="Capture once failed"
             )
 
         return jsonify(
@@ -149,7 +155,9 @@ def register_routes(
         )
 
         services.event_log.add(
-            message
+            message,
+            event_type="trigger",
+            summary=message
         )
 
         return jsonify(
@@ -171,7 +179,9 @@ def register_routes(
         )
 
         services.event_log.add(
-            message
+            message,
+            event_type="trigger",
+            summary=message
         )
 
         return jsonify(
@@ -213,7 +223,9 @@ def register_routes(
         services.event_log.clear()
 
         services.event_log.add(
-            "Event log cleared"
+            "Event log cleared",
+            event_type="system",
+            summary="Event log cleared"
         )
 
         return jsonify(
@@ -233,7 +245,9 @@ def register_routes(
         )
 
         services.event_log.add(
-            message
+            message,
+            event_type="system",
+            summary=message
         )
 
         status = (
@@ -259,7 +273,9 @@ def register_routes(
         )
 
         services.event_log.add(
-            message
+            message,
+            event_type="system",
+            summary=message
         )
 
         status = (
@@ -295,12 +311,19 @@ def register_routes(
                     f"{capture_status['first_timestamp_utc']} to "
                     f"{capture_status['last_timestamp_utc']}, "
                     f"{capture_status.get('output_file', '')}"
+                ),
+                event_type="capture",
+                summary=(
+                    f"Capture saved, "
+                    f"{capture_status['frames_written']} frames"
                 )
             )
         else:
             services.event_log.add(
                 message,
-                "error"
+                "error",
+                event_type="error",
+                summary="Capture failed"
             )
 
         return jsonify(
@@ -322,7 +345,9 @@ def register_routes(
         )
 
         services.event_log.add(
-            message
+            message,
+            event_type="system",
+            summary=message
         )
 
         return jsonify(

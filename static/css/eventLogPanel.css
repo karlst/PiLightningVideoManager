@@ -1,8 +1,16 @@
 .eventPanel
 {
     display: grid;
-    grid-template-rows: 18px 1fr;
+    grid-template-rows: 20px 1fr;
     gap: 6px;
+}
+
+.recentEventHeader
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
 }
 
 .eventLog
@@ -20,4 +28,31 @@
 {
     margin-bottom: 3px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.fullEventLog
+{
+    display: grid;
+    gap: 6px;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.fullEventLogToolbar
+{
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.fullEventLogRow
+{
+    display: grid;
+    grid-template-columns: 170px 70px 90px 1fr;
+    gap: 8px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 3px;
 }

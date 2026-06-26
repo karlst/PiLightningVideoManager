@@ -8,8 +8,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from datetime import timezone
-from pathlib import Path
-from queue import Empty
 from queue import Queue
 from threading import Lock
 from threading import Thread
@@ -19,6 +17,7 @@ from cam_config import CamConfig
 
 
 class EventLog:
+    # ## Initialize in-memory event history and background file writer.
     def __init__(
         self,
         config: CamConfig
@@ -45,12 +44,25 @@ class EventLog:
 
         self._writer_thread.start()
 
+    # ## Add an event with full text and optional display summary.
     def add(
         self,
         message,
-        severity="info"
+        severity="info",
+        event_type="general",
+        summary=None
     ) -> None:
         try:
+            message_text = str(
+                message
+            )
+
+            summary_text = str(
+                summary
+            ) if summary is not None else self._shorten_summary(
+                message_text
+            )
+
             entry = {
                 "timestamp_utc":
                     datetime.now(
@@ -64,10 +76,16 @@ class EventLog:
                         severity
                     ),
 
-                "message":
+                "event_type":
                     str(
-                        message
-                    )
+                        event_type
+                    ),
+
+                "summary":
+                    summary_text,
+
+                "message":
+                    message_text
             }
 
             with self._lock:
@@ -87,14 +105,18 @@ class EventLog:
                 flush=True
             )
 
+    # ## Return a copy of the current in-memory event list.
     def snapshot(
         self
     ) -> list[dict]:
         with self._lock:
-            return list(
+            entries = list(
                 self._entries
             )
 
+        return entries
+
+    # ## Clear the in-memory event list and persisted event file.
     def clear(
         self
     ) -> None:
@@ -113,6 +135,7 @@ class EventLog:
                 flush=True
             )
 
+    # ## Load persisted event entries from the JSONL event file.
     def _load_from_file(
         self
     ) -> None:
@@ -123,38 +146,101 @@ class EventLog:
                 exist_ok=True
             )
 
-            return
+        else:
+            entries: list[dict] = []
 
-        entries: list[dict] = []
+            try:
+                with path.open(
+                    "r",
+                    encoding="utf-8"
+                ) as file:
+                    for line in file:
+                        line = line.strip()
 
-        try:
-            with path.open(
-                "r",
-                encoding="utf-8"
-            ) as file:
-                for line in file:
-                    line = line.strip()
-
-                    if line:
-                        entries.append(
-                            json.loads(
-                                line
+                        if line:
+                            entries.append(
+                                self._normalize_entry(
+                                    json.loads(
+                                        line
+                                    )
+                                )
                             )
-                        )
 
-            with self._lock:
-                self._entries = entries[
-                    -self._max_entries:
-                ]
+                with self._lock:
+                    self._entries = entries[
+                        -self._max_entries:
+                    ]
 
-            self._rewrite_file_from_memory()
+                self._rewrite_file_from_memory()
 
-        except Exception as error:
-            print(
-                f"EventLog load failure: {error}",
-                flush=True
+            except Exception as error:
+                print(
+                    f"EventLog load failure: {error}",
+                    flush=True
+                )
+
+    # ## Keep old event records compatible with the new structured format.
+    def _normalize_entry(
+        self,
+        entry: dict
+    ) -> dict:
+        message = str(
+            entry.get(
+                "message",
+                ""
+            )
+        )
+
+        normalized = {
+            "timestamp_utc": entry.get(
+                "timestamp_utc",
+                entry.get(
+                    "timestamp",
+                    ""
+                )
+            ),
+            "severity": str(
+                entry.get(
+                    "severity",
+                    entry.get(
+                        "level",
+                        "info"
+                    )
+                )
+            ),
+            "event_type": str(
+                entry.get(
+                    "event_type",
+                    "general"
+                )
+            ),
+            "summary": str(
+                entry.get(
+                    "summary",
+                    message
+                )
+            ),
+            "message": message
+        }
+
+        return normalized
+
+    # ## Shorten fallback summaries without parsing event text.
+    def _shorten_summary(
+        self,
+        message_text: str
+    ) -> str:
+        summary = message_text
+
+        if len(summary) > 100:
+            summary = (
+                summary[:97] +
+                "..."
             )
 
+        return summary
+
+    # ## Write queued events to disk on the background writer thread.
     def _writer_loop(
         self
     ) -> None:
@@ -177,6 +263,7 @@ class EventLog:
                     flush=True
                 )
 
+    # ## Append one normalized event entry to the JSONL event file.
     def _append_entry_to_file(
         self,
         entry: dict
@@ -191,6 +278,7 @@ class EventLog:
                 ) + "\n"
             )
 
+    # ## Rewrite the persisted file from the current in-memory event list.
     def _rewrite_file_from_memory(
         self
     ) -> None:
@@ -217,6 +305,7 @@ class EventLog:
                 flush=True
             )
 
+    # ## Keep only the configured number of recent entries in memory.
     def _trim_locked(
         self
     ) -> None:

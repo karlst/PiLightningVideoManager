@@ -9,7 +9,9 @@ import time
 from cam_config import CamConfig
 
 
+# ## Evaluates camera metrics against configured trigger thresholds.
 class TriggerManager:
+    # ## Initialize trigger state and tracked maximum metric values.
     def __init__(
         self,
         config: CamConfig
@@ -24,17 +26,21 @@ class TriggerManager:
         self._last_trigger_time_monotonic: float = 0.0
         self._last_trigger_reason: str = ""
 
+    # ## Enable automatic trigger evaluation.
     def enable(self) -> tuple[bool, str]:
         self._enabled = True
         return True, "Trigger enabled"
 
+    # ## Disable automatic trigger evaluation.
     def disable(self) -> tuple[bool, str]:
         self._enabled = False
         return True, "Trigger disabled"
 
+    # ## Return whether automatic triggers are enabled.
     def is_enabled(self) -> bool:
         return self._enabled
 
+    # ## Evaluate one metric sample and return whether capture should fire.
     def evaluate(
         self,
         metric: dict
@@ -46,10 +52,16 @@ class TriggerManager:
             )
         )
 
+        # The preferred lightning trigger metric is now adjacent-frame mean
+        # brightness delta, computed on every frame by BufferManager. Fall back
+        # to the legacy key so older metric records do not break evaluation.
         brightness_delta = float(
             metric.get(
-                "brightness_delta",
-                0.0
+                "brightness_delta_adjacent",
+                metric.get(
+                    "brightness_delta",
+                    0.0
+                )
             )
         )
 
@@ -99,6 +111,7 @@ class TriggerManager:
 
         return should_fire, reason
 
+    # ## Return trigger status values for UI and health logging.
     def get_status(self) -> dict:
         return {
             "enabled": self._enabled,
@@ -110,6 +123,7 @@ class TriggerManager:
             "last_trigger_time_monotonic": self._last_trigger_time_monotonic
         }
 
+    # ## Check absolute mean brightness threshold.
     def _check_brightness(
         self,
         brightness: float
@@ -127,6 +141,7 @@ class TriggerManager:
 
         return should_fire, reason
 
+    # ## Check adjacent-frame mean brightness delta threshold.
     def _check_brightness_delta(
         self,
         brightness_delta: float
@@ -144,6 +159,7 @@ class TriggerManager:
 
         return should_fire, reason
 
+    # ## Check changed-pixel fraction threshold.
     def _check_changed_pixel_fraction(
         self,
         changed_pixel_fraction: float
@@ -164,6 +180,7 @@ class TriggerManager:
 
         return should_fire, reason
 
+    # ## Update maximum observed metric values.
     def _update_max_values(
         self,
         brightness: float,
@@ -188,6 +205,7 @@ class TriggerManager:
         ):
             self._max_changed_pixel_fraction = changed_pixel_fraction
 
+    # ## Return whether trigger cooldown has elapsed.
     def _cooldown_elapsed(self) -> bool:
         return (
             (

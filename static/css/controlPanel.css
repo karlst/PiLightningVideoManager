@@ -4,13 +4,28 @@
     gap: 7px;
 }
 
-.controlRow
+.contextGrid
 {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    align-items: center;
-    font-size: 13px;
+    grid-template-columns: max-content 160px;
+    column-gap: 16px;
+    row-gap: 3px;
+    justify-content: start;
+    align-items: baseline;
+
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.contextGrid div:nth-child(odd)
+{
+    color: #444;
+}
+
+.contextGrid div:nth-child(even)
+{
+    text-align: left;
+    font-weight: 700;
 }
 
 .hiddenStatusBlock

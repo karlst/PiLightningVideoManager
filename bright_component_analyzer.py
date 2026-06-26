@@ -22,15 +22,15 @@ from camera_reader import CameraFrame
 #  A component is a connected group of candidate pixels. A valid component
 #  is one that passes the configured area, height, and aspect-ratio filters.
 class BrightComponentAnalyzer:
-    
 
+    # ## Store analysis configuration.
     def __init__(
         self,
         config: CamConfig
     ) -> None:
         self._config = config
 
-    # ##Analyze one raw OpenCV frame and return component metrics.
+    # ## Analyze one raw OpenCV frame and return component metrics.
     def analyze_frame(
         self,
         frame: np.ndarray
@@ -75,7 +75,6 @@ class BrightComponentAnalyzer:
         self,
         camera_frame: CameraFrame
     ) -> dict:
-        
         result = self.analyze_frame(
             camera_frame.frame
         )
@@ -85,9 +84,9 @@ class BrightComponentAnalyzer:
     # ## Analyze a captured frame list and produce sidecar summary data.
     def analyze_frames(
         self,
-        frames: list[CameraFrame]
+        frames: list[CameraFrame],
+        metadata: dict | None = None
     ) -> dict:
-        
         component_count = 0
         valid_component_count = 0
 
@@ -178,7 +177,7 @@ class BrightComponentAnalyzer:
         )
 
         result = {
-            "analysis_version": 1,
+            "analysis_version": 2,
             "frame_count": len(frames),
             "component_count": component_count,
             "valid_component_count": valid_component_count,
@@ -192,8 +191,16 @@ class BrightComponentAnalyzer:
             "longest_event_ms": round(
                 longest_event_ms,
                 1
+            ),
+            "frame_records": self._create_frame_records(
+                frames
             )
         }
+
+        if metadata is not None:
+            result.update(
+                metadata
+            )
 
         return result
 
@@ -201,11 +208,12 @@ class BrightComponentAnalyzer:
     def write_sidecar(
         self,
         frames: list[CameraFrame],
-        output_file: str | Path
+        output_file: str | Path,
+        metadata: dict | None = None
     ) -> dict:
-        
         sidecar_data = self.analyze_frames(
-            frames
+            frames,
+            metadata
         )
 
         sidecar_path = Path(
@@ -223,6 +231,43 @@ class BrightComponentAnalyzer:
         )
 
         return sidecar_data
+
+    # ## Build one lightweight timing record for every captured frame.
+    def _create_frame_records(
+        self,
+        frames: list[CameraFrame]
+    ) -> list[dict]:
+        records: list[dict] = []
+
+        first_monotonic = 0.0
+
+        if len(frames) > 0:
+            first_monotonic = frames[0].timestamp_monotonic
+
+        for frame_index, camera_frame in enumerate(
+            frames
+        ):
+            offset_ms = (
+                (
+                    camera_frame.timestamp_monotonic -
+                    first_monotonic
+                ) *
+                1000.0
+            )
+
+            records.append(
+                {
+                    "frame_index": frame_index,
+                    "sequence_number": camera_frame.sequence_number,
+                    "timestamp_utc": camera_frame.timestamp_utc,
+                    "offset_ms": round(
+                        offset_ms,
+                        3
+                    )
+                }
+            )
+
+        return records
 
     # ## Create a binary mask of pixels worth considering as component pixels.
     def _create_candidate_mask(
@@ -274,7 +319,6 @@ class BrightComponentAnalyzer:
         self,
         candidate_mask: np.ndarray
     ) -> tuple[int, list[dict]]:
-        
         component_total, labels, stats, centroids = (
             cv2.connectedComponentsWithStats(
                 candidate_mask,
@@ -351,7 +395,6 @@ class BrightComponentAnalyzer:
         height: int,
         aspect: float
     ) -> bool:
-        
         is_valid = (
             area >= self._config.opencv_min_component_area and
             height >= self._config.opencv_min_component_height and
@@ -365,7 +408,6 @@ class BrightComponentAnalyzer:
         self,
         components: list[dict]
     ) -> dict:
-        
         largest_component = {
             "area": 0,
             "height": 0,
@@ -381,10 +423,10 @@ class BrightComponentAnalyzer:
 
         return largest_component
 
+    # ## Return zero-valued metrics for disabled analysis or empty results.
     def _empty_frame_result(
         self
     ) -> dict:
-        
         result = {
             "component_count": 0,
             "valid_component_count": 0,
@@ -401,7 +443,6 @@ class BrightComponentAnalyzer:
         self,
         value: int
     ) -> int:
-        
         window_pixels = max(
             3,
             value

@@ -13,6 +13,7 @@ from cam_config import CamConfig
 from event_log import EventLog
 
 
+# ## Manages saved MP4 captures and their JSON analysis sidecars.
 class CaptureManager:
     # ## Initialize capture storage and event logging.
     def __init__(
@@ -52,6 +53,23 @@ class CaptureManager:
                         "name": path.name,
                         "display_name": self._get_display_name(
                             path
+                        ),
+                        "capture_time_utc": self._get_capture_time_utc(
+                            sidecar,
+                            path
+                        ),
+                        "capture_time_display":
+                            self._get_capture_time_display(
+                                sidecar,
+                                path
+                            ),
+                        "trigger_type": sidecar.get(
+                            "trigger_type",
+                            "unknown"
+                        ),
+                        "trigger_display": sidecar.get(
+                            "trigger_display",
+                            "--"
                         ),
                         "url": f"/capture_files/{path.name}",
                         "size_bytes": path.stat().st_size,
@@ -160,7 +178,46 @@ class CaptureManager:
 
         return sidecar
 
-    # ## Build the compact display name used in the capture browser.
+    # ## Prefer trigger UTC, then capture start UTC, then filename fallback.
+    def _get_capture_time_utc(
+        self,
+        sidecar: dict,
+        path: Path
+    ) -> str:
+        capture_time = str(
+            sidecar.get(
+                "trigger_utc",
+                ""
+            ) or
+            sidecar.get(
+                "capture_start_utc",
+                ""
+            ) or
+            self._get_filename_time_utc(
+                path
+            )
+        )
+
+        return capture_time
+
+    # ## Return a compact readable UTC time for the capture browser.
+    def _get_capture_time_display(
+        self,
+        sidecar: dict,
+        path: Path
+    ) -> str:
+        capture_time = self._get_capture_time_utc(
+            sidecar,
+            path
+        )
+
+        display = self._format_utc_for_display(
+            capture_time
+        )
+
+        return display
+
+    # ## Build the compact display name used as a fallback capture ID.
     def _get_display_name(
         self,
         path: Path
@@ -184,6 +241,68 @@ class CaptureManager:
             )
 
         return display_name
+
+    # ## Parse the older filename timestamp when no sidecar time exists.
+    def _get_filename_time_utc(
+        self,
+        path: Path
+    ) -> str:
+        text = ""
+
+        match = re.search(
+            r"(\d{8})T?(\d{6})Z?",
+            path.stem
+        )
+
+        if match is not None:
+            date_text = match.group(1)
+            time_text = match.group(2)
+
+            text = (
+                f"{date_text[0:4]}-"
+                f"{date_text[4:6]}-"
+                f"{date_text[6:8]}T"
+                f"{time_text[0:2]}:"
+                f"{time_text[2:4]}:"
+                f"{time_text[4:6]}Z"
+            )
+
+        return text
+
+    # ## Convert ISO UTC text to YYYY-MM-DD HH:MM:SS.mmm UTC.
+    def _format_utc_for_display(
+        self,
+        value: str
+    ) -> str:
+        display = "--"
+
+        if value:
+            text = value.replace(
+                "T",
+                " "
+            ).replace(
+                "Z",
+                ""
+            )
+
+            if "." in text:
+                head, fraction = text.split(
+                    ".",
+                    1
+                )
+
+                text = (
+                    head +
+                    "." +
+                    fraction[:3]
+                )
+
+            display = (
+                text +
+                " UTC"
+            )
+
+        return display
 
     # ## Delete one capture MP4 and its matching JSON sidecar.
     def _delete_capture_file(

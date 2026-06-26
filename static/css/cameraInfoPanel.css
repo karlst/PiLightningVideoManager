@@ -1,28 +1,35 @@
-.cameraInfoPanel
+.contextPanel
 {
     min-height: 110px;
 }
 
-.cameraInfoPanel h2
+.contextPanel h2
 {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
     font-size: 14px;
 }
 
-.cameraInfoGrid
+.contextGrid
 {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-
+    grid-template-columns: auto 1fr;
+    column-gap: 12px;
+    row-gap: 3px;
+    font-family: Consolas, monospace;
     font-size: 12px;
-    line-height: 1.15;
-
-    padding-top: 4px;
-    padding-bottom: 8px;
+    line-height: 1.2;
 }
 
-.cameraInfoColumn span
+.contextGrid div:nth-child(odd)
 {
-    font-weight: 400;
+    color: #555;
+}
+
+.contextGrid div:nth-child(even)
+{
+    text-align: right;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

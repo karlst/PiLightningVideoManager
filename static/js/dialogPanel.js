@@ -171,7 +171,7 @@ export class DialogPanel
     }
 
 
-    // ## Show the capture browser with sidecar summary columns.
+    // ## Show the capture browser with timing, trigger, and sidecar columns.
     async showBrowseCaptures()
     {
         this._setTitle(
@@ -206,7 +206,6 @@ export class DialogPanel
             }
             else
             {
-                // Show the quick screening fields first, then the compact ID.
                 const header =
                     document.createElement(
                         "div"
@@ -216,9 +215,10 @@ export class DialogPanel
                     "captureListHeader";
 
                 header.innerHTML =
+                    "<span>Time UTC</span>" +
+                    "<span>Trigger</span>" +
                     "<span>Duration</span>" +
-                    "<span>Valid</span>" +
-                    "<span>Capture</span>";
+                    "<span>Valid</span>";
 
                 captureList.appendChild(
                     header
@@ -240,6 +240,22 @@ export class DialogPanel
 
                         button.appendChild(
                             this._createCaptureCell(
+                                this._formatCaptureTime(
+                                    captureFile
+                                )
+                            )
+                        );
+
+                        button.appendChild(
+                            this._createCaptureCell(
+                                this._formatTrigger(
+                                    captureFile
+                                )
+                            )
+                        );
+
+                        button.appendChild(
+                            this._createCaptureCell(
                                 this._formatDuration(
                                     captureFile.longest_event_ms
                                 )
@@ -251,13 +267,6 @@ export class DialogPanel
                                 this._formatCount(
                                     captureFile.valid_component_count
                                 )
-                            )
-                        );
-
-                        button.appendChild(
-                            this._createCaptureCell(
-                                captureFile.display_name ||
-                                captureFile.name
                             )
                         );
 
@@ -317,6 +326,80 @@ export class DialogPanel
             text;
 
         return span;
+    }
+
+
+    // ## Format the preferred capture time from trigger/capture sidecar data.
+    _formatCaptureTime(captureFile)
+    {
+        const analysis =
+            captureFile?.analysis || {};
+
+        let text =
+            captureFile?.capture_time_display ||
+            analysis.trigger_utc ||
+            analysis.capture_start_utc ||
+            "--";
+
+        if (text !== "--" && !text.includes("UTC"))
+        {
+            text =
+                this._formatUtcText(
+                    text
+                );
+        }
+
+        return text;
+    }
+
+
+    // ## Format the trigger condition for the capture browser.
+    _formatTrigger(captureFile)
+    {
+        const analysis =
+            captureFile?.analysis || {};
+
+        const text =
+            captureFile?.trigger_display ||
+            analysis.trigger_display ||
+            "--";
+
+        return text;
+    }
+
+
+    // ## Format UTC ISO text as a compact readable UTC value.
+    _formatUtcText(value)
+    {
+        let text =
+            "--";
+
+        if (value !== null && value !== undefined && value !== "")
+        {
+            text =
+                String(value)
+                    .replace("T", " ")
+                    .replace("Z", "");
+
+            if (text.includes("."))
+            {
+                const parts =
+                    text.split(".");
+
+                text =
+                    parts[0] +
+                    "." +
+                    parts[1].slice(
+                        0,
+                        3
+                    );
+            }
+
+            text +=
+                " UTC";
+        }
+
+        return text;
     }
 
 

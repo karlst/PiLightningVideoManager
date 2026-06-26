@@ -13,7 +13,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=43">
+        href="/static/css/main.css?v=49">
 </head>
 
 <body>
@@ -23,7 +23,7 @@
         <header class="topPanel systemOk">
 
             <div class="titleBlock">
-                <h1>Pi Camera Capture</h1>
+                <h1>Karl's Really New Pi Camera Capture</h1>
 
                 <div class="statusLine">
                     <span id="status-value">Ready</span>
@@ -39,144 +39,97 @@
 
         <main class="mainGrid">
 
-            <section class="leftStack">
+            <section class="subPanel mediaPanel">
 
-                <section class="subPanel cameraInfoPanel">
+                <div class="panelHeader">
+                    <h2 id="media-title">Live Camera</h2>
+                </div>
 
-                    <h2>Camera</h2>
+                <div class="mediaViewport">
 
-                    <div class="cameraInfoGrid">
-
-                        <div class="cameraInfoColumn">
-                            <div>Device: <span id="camera-name-value">--</span></div>
-                            <div>Format: <span id="camera-format-value">--</span></div>
-                            <div>Frame: <span id="camera-frame-value">-- x --</span></div>
-                            <div>Target FPS: <span id="camera-target-fps-value">--</span></div>
-                        </div>
-
-                        <div class="cameraInfoColumn">
-                            <div>Latitude: <span id="camera-latitude-value">--.-------</span></div>
-                            <div>Longitude: <span id="camera-longitude-value">--.-------</span></div>
-                            <div>Bearing: <span id="camera-bearing-value">---.-°</span></div>
-                            <div>HFOV: <span id="camera-hfov-value">--.-°</span></div>
-                            <div>VFOV: <span id="camera-vfov-value">--.-°</span></div>
-                        </div>
-
+                    <div
+                        class="previewPlaceholder"
+                        id="preview-placeholder">
+                        No preview frame
                     </div>
 
-                </section>
+                    <img
+                        class="cameraImage cameraImageHidden"
+                        id="camera-image"
+                        alt="Camera preview">
 
-                <section class="subPanel mediaPanel">
+                    <video
+                        class="cameraImage cameraImageHidden"
+                        id="camera-video"
+                        controls
+                        muted
+                        playsinline>
+                    </video>
 
-                    <div class="panelHeader">
-                        <h2 id="media-title">Live Camera</h2>
-                    </div>
+                </div>
 
-                    <div class="mediaViewport">
+                <div class="mediaFooter">
 
-                        <div
-                            class="previewPlaceholder"
-                            id="preview-placeholder">
-                            No preview frame
-                        </div>
+                    <button
+                        class="miniButton cameraImageHidden"
+                        id="close-playback-button"
+                        type="button">
+                        Close Playback
+                    </button>
 
-                        <img
-                            class="cameraImage cameraImageHidden"
-                            id="camera-image"
-                            alt="Camera preview">
-
-                        <video
-                            class="cameraImage cameraImageHidden"
-                            id="camera-video"
-                            controls
-                            muted
-                            playsinline>
-                        </video>
-
-                    </div>
-
-                    <div class="mediaFooter">
+                    <div
+                        class="playbackStepControls cameraImageHidden"
+                        id="playback-step-controls">
 
                         <button
-                            class="miniButton cameraImageHidden"
-                            id="close-playback-button"
-                            type="button">
-                            Close Playback
-                        </button>
-                    </div>
-
-                </section>
-
-                <section class="subPanel controlPanel">
-
-                    <h2>Control</h2>
-
-                    <div class="controlRow">
-                        <span id="trigger-enabled-text">Trigger: Enabled</span>
-
-                        <!-- disabled for now-->
-                        <!-- <button
-                            class="ccButton ccButtonSecondary"
-                            id="trigger-disable-button"
-                            type="button">
-                            Disable Trigger
+                            class="miniButton"
+                            id="playback-step-back-10-button"
+                            type="button"
+                            title="Back 10 frames: Shift+Left">
+                            -10
                         </button>
 
                         <button
-                            class="ccButton ccButtonSecondary cameraImageHidden"
-                            id="trigger-enable-button"
-                            type="button">
-                            Enable Trigger
-                        </button> -->
+                            class="miniButton"
+                            id="playback-step-back-1-button"
+                            type="button"
+                            title="Back 1 frame: Left">
+                            -1
+                        </button>
+
+                        <button
+                            class="miniButton"
+                            id="playback-play-pause-button"
+                            type="button"
+                            title="Play/Pause: Space">
+                            Pause
+                        </button>
+
+                        <button
+                            class="miniButton"
+                            id="playback-step-forward-1-button"
+                            type="button"
+                            title="Forward 1 frame: Right">
+                            +1
+                        </button>
+
+                        <button
+                            class="miniButton"
+                            id="playback-step-forward-10-button"
+                            type="button"
+                            title="Forward 10 frames: Shift+Right">
+                            +10
+                        </button>
+
                     </div>
 
-                    <button
-                        class="ccButton"
-                        id="about-button"
-                        type="button">
-                        About...
-                    </button>
+                    <span
+                        class="imageAge"
+                        id="image-age">
+                        Age: --
+                    </span>
 
-                    <button
-                        class="ccButton ccButtonDanger"
-                        id="buffer-capture-button"
-                        type="button">
-                        Manual Trigger
-                    </button>
-
-                    <button
-                        class="ccButton"
-                        id="trigger-settings-button"
-                        type="button">
-                        Trigger Settings...
-                    </button>
-
-                    <button
-                        class="ccButton"
-                        id="camera-settings-button"
-                        type="button">
-                        Camera Settings...
-                    </button>
-
-                    <button
-                        class="ccButton"
-                        id="browse-captures-button"
-                        type="button">
-                        Browse Captures...
-                    </button>
-
-                    <button
-                        class="ccButton ccButtonSecondary"
-                        id="event-log-clear-button"
-                        type="button">
-                        Clear Event Log
-                    </button>
-
-                    <pre
-                        class="hiddenStatusBlock"
-                        id="buffer-status-value">Not checked</pre>
-
-                </section>
+                </div>
 
             </section>
 
@@ -231,11 +184,127 @@
 
             </section>
 
+            <section class="subPanel controlPanel">
+
+                <h2>Control</h2>
+
+                <span
+                    class="hiddenStatusBlock"
+                    id="trigger-enabled-text">
+                    Trigger: Enabled
+                </span>
+
+                <button
+                    class="ccButton ccButtonDanger"
+                    id="buffer-capture-button"
+                    type="button">
+                    Capture Frames
+                </button>
+
+                <button
+                    class="ccButton"
+                    id="browse-captures-button"
+                    type="button">
+                    Browse Captures...
+                </button>
+
+                <button
+                    class="ccButton ccButtonSecondary"
+                    id="trigger-disable-button"
+                    type="button">
+                    Disable Trigger
+                </button>
+
+                <button
+                    class="ccButton ccButtonSecondary cameraImageHidden"
+                    id="trigger-enable-button"
+                    type="button">
+                    Enable Trigger
+                </button>
+
+                <button
+                    class="ccButton"
+                    id="trigger-settings-button"
+                    type="button">
+                    Trigger Settings...
+                </button>
+
+                <button
+                    class="ccButton"
+                    id="camera-settings-button"
+                    type="button">
+                    Camera Settings...
+                </button>
+
+                <button
+                    class="ccButton ccButtonSecondary"
+                    id="show-event-log-button"
+                    type="button">
+                    Show Event Log...
+                </button>
+
+                <button
+                    class="ccButton"
+                    id="about-button"
+                    type="button">
+                    About...
+                </button>
+
+                <pre
+                    class="hiddenStatusBlock"
+                    id="buffer-status-value">Not checked</pre>
+
+            </section>
+
+            <section class="subPanel contextPanel">
+
+                <h2 id="context-panel-title">Status</h2>
+
+                <div
+                    class="contextGrid"
+                    id="system-summary-panel">
+
+                    <div>Trigger</div><div id="summary-trigger-value">--</div>
+                    <div>FPS</div><div id="summary-fps-value">--</div>
+                    <div>Buffer</div><div id="summary-buffer-value">-- / --</div>
+                    <div>Frames</div><div id="summary-frames-value">--</div>
+                    <div>RAM</div><div id="summary-ram-value">-- MB</div>
+                    <div>Preview</div><div id="summary-preview-value">--</div>
+                    <div>Last Error</div><div id="summary-error-value">--</div>
+
+                </div>
+
+                <div
+                    class="contextGrid cameraImageHidden"
+                    id="capture-analysis-panel">
+
+                    <div>Capture</div><div id="analysis-capture-value">--</div>
+                    <div>Duration</div><div id="analysis-duration-value">--</div>
+                    <div>Frames</div><div id="analysis-frames-value">--</div>
+                    <div>Components</div><div id="analysis-components-value">--</div>
+                    <div>Valid</div><div id="analysis-valid-value">--</div>
+                    <div>Max Area</div><div id="analysis-area-value">--</div>
+                    <div>Max H/W</div><div id="analysis-height-width-value">--</div>
+                    <div>Aspect</div><div id="analysis-aspect-value">--</div>
+
+                </div>
+
+            </section>
+
         </main>
 
         <section class="subPanel eventPanel">
 
-            <h2>Event Log</h2>
+            <div class="recentEventHeader">
+                <h2>Recent Events</h2>
+
+                <button
+                    class="miniButton"
+                    id="show-event-log-button-bottom"
+                    type="button">
+                    Show Event Log...
+                </button>
+            </div>
 
             <div
                 class="eventLog"
@@ -270,7 +339,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=34">
+        src="/static/js/app.js?v=39">
     </script>
 
 </body>

@@ -77,7 +77,7 @@
 .captureListButton
 {
     display: grid;
-    grid-template-columns: 92px 58px 1fr;
+    grid-template-columns: minmax(190px, 1.7fr) minmax(82px, 0.8fr) minmax(86px, 0.8fr) minmax(58px, 0.5fr);
     gap: 8px;
     align-items: center;
 }
@@ -90,14 +90,10 @@
     color: #444;
 }
 
-.captureListButton span:first-child,
-.captureListHeader span:first-child
-{
-    text-align: right;
-}
-
-.captureListButton span:nth-child(2),
-.captureListHeader span:nth-child(2)
+.captureListButton span:nth-child(3),
+.captureListHeader span:nth-child(3),
+.captureListButton span:nth-child(4),
+.captureListHeader span:nth-child(4)
 {
     text-align: right;
 }

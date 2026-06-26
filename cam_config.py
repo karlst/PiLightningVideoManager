@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+# ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
     video_device: str = "/dev/video0"
@@ -91,21 +92,17 @@ class CamConfig:
 
     # Triggers on mean frame brightness - this value disables it range: 0-255
     trigger_brightness_threshold: float = 999.0
-    
-    # Mean per-pixel brightness change between consecutive frames.
-    # Range: 0.0 - 255.0
-    # 0 = identical frames
-    # 255 = every pixel changed from black to white
+
+    # Mean brightness increase from the immediately previous frame.
+    # Range: roughly -255.0 to 255.0.
     #
-    # Typical values:
-    #   < 1.0    noise
-    #   1 - 5    minor motion
-    #   5 - 20   significant scene change
-    #   20+      likely lightning flash
+    # This trigger is evaluated on every captured frame, not on the slower
+    # graph-history sample interval. At 260 fps, adjacent frames are about
+    # 3.846 ms apart.
     #
     # Primary lightning trigger.
     trigger_brightness_delta_threshold: float = 5.0
-    
+
     # Fraction of pixels that changed.
     # Range: 0.0 - 1.0
     #
@@ -118,7 +115,7 @@ class CamConfig:
     #
     # Set to 1.0 to effectively disable.
     trigger_changed_pixel_fraction_threshold: float = 1.0
-    
+
     # Minimum time between trigger events.
     #
     # Lightning flashes often contain multiple strokes
@@ -128,6 +125,7 @@ class CamConfig:
     capture_max_files: int = 100
     capture_protect_recent_seconds: float = 60.0
 
+    # ## Ensure all configured output directories exist.
     def ensure_directories(
         self
     ) -> None:
