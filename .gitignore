@@ -1,19 +1,46 @@
-__pycache__/
-*.pyc
+# ==========================================================
+# Pi Camera Capture / Video Frame Analyzer
+# ==========================================================
 
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# PyInstaller
+build/
+dist/
+
+# Python packaging
+*.egg-info/
+.eggs/
+
+# Test caches
+.pytest_cache/
+.mypy_cache/
+
+# IDEs
 .vscode/
+.idea/
 
-
-hls/
-video/
-captures/
-
-*.mkv
-*.mp4
-*.jpg
-*.png
-*.m3u8
-*.ts
-
+# Operating system files
 .DS_Store
+Thumbs.db
+desktop.ini
 
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Scratch
+scratch/
+test_output/
+
+# Local captures
+captures/

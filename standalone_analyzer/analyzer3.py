@@ -1246,12 +1246,19 @@ class AnalyzerWindow(QMainWindow):
 
     # ## Release video resources
 
+        # ## Release video resources and terminate the application
+
     def closeEvent(self, event) -> None:
         if self.capture is not None:
             self.capture.release()
             self.capture = None
 
         event.accept()
+
+        application = QApplication.instance()
+
+        if application is not None:
+            application.quit()
 
 
 # ## Main program
@@ -1313,6 +1320,9 @@ def main() -> int:
         )
 
         application = QApplication(sys.argv)
+        application.setQuitOnLastWindowClosed(
+            True
+        )
 
         window = AnalyzerWindow(
             video_path=video_path,
