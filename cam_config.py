@@ -91,7 +91,10 @@ class CamConfig:
     camera_vfov_degrees: float = 0.0
     camera_preview_refresh_seconds: float = 0.2
 
-    trigger_enabled: bool = TRIGGER_CONFIG.trigger_enabled
+    trigger_enabled: bool = True
+
+     # Minimum time between automatic trigger events.
+    trigger_cooldown_seconds: float = 1.0
 
     trigger_brightness_threshold: float = (
         TRIGGER_CONFIG.trigger_brightness_threshold
@@ -103,10 +106,6 @@ class CamConfig:
 
     trigger_changed_pixel_fraction_threshold: float = (
         TRIGGER_CONFIG.trigger_changed_pixel_fraction_threshold
-    )
-
-    trigger_cooldown_seconds: float = (
-        TRIGGER_CONFIG.trigger_cooldown_seconds
     )
 
     capture_max_files: int = 100

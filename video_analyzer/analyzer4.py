@@ -31,8 +31,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from common.trigger_config import TRIGGER_CONFIG
-from common.trigger_manager import TriggerManager
+from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_finder import CandidateFinder
 
 # ## Resolve video and sidecar paths
 
@@ -224,45 +224,6 @@ def build_pi_metric_arrays(
     return pi_brightness, pi_brightness_delta
 
 
-# ## Recover the threshold used for the original capture
-
-# def get_trigger_threshold(
-#     sidecar: dict[str, Any] | None,
-#     default: float = 5.0,
-# ) -> float:
-#     if sidecar is None:
-#         return default
-
-#     reason = str(sidecar.get("trigger_reason", ""))
-#     match = re.search(
-#         r"brightness delta trigger:.*?>=\s*([-+]?\d+(?:\.\d+)?)",
-#         reason,
-#         flags=re.IGNORECASE,
-#     )
-
-#     if match is None:
-#         return default
-
-#     try:
-#         return float(match.group(1))
-#     except ValueError:
-#         return default
-
-
-# # ## Find the first replay frame crossing the brightness-delta threshold
-
-# def find_replay_trigger_frame(
-#     brightness_delta: np.ndarray,
-#     threshold: float,
-# ) -> int | None:
-#     matching_frames = np.flatnonzero(
-#         brightness_delta >= threshold
-#     )
-
-#     if matching_frames.size == 0:
-#         return None
-
-#     return int(matching_frames[0])
 
 
 # ## Format optional value
@@ -343,7 +304,7 @@ class AnalyzerWindow(QMainWindow):
         self.frame_records = self.build_frame_record_map()
         self.trigger_frame_index = self.get_trigger_frame_index()
 
-        self.setWindowTitle("Standalone Analyzer")
+        self.setWindowTitle("Video Frame Analyzer")
         self.resize(1400, 1000)
 
         self.create_actions()
@@ -1543,8 +1504,8 @@ def main() -> int:
         #     trigger_threshold,
         # )
 
-        trigger_manager = TriggerManager(
-            TRIGGER_CONFIG
+        candidate_finder = CandidateFinder(
+            CANDIDATE_CONFIG
         )
 
         replay_trigger_frame_index = None
@@ -1573,20 +1534,9 @@ def main() -> int:
                     "changed_pixel_fraction": 0.0,
                 }
 
-                timestamp_monotonic = (
-                    float(
-                        record.get(
-                            "offset_ms",
-                            0.0
-                        )
-                    ) /
-                    1000.0
-                )
-
                 fired, reason = (
-                    trigger_manager.evaluate(
-                        metric,
-                        timestamp_monotonic
+                    candidate_finder.evaluate(
+                        metric
                     )
                 )
 
@@ -1614,7 +1564,7 @@ def main() -> int:
             replay_brightness_delta=replay_brightness_delta,
             pi_brightness=pi_brightness,
             pi_brightness_delta=pi_brightness_delta,
-            trigger_threshold=TRIGGER_CONFIG.trigger_brightness_delta_threshold,
+            trigger_threshold=CANDIDATE_CONFIG.candidate_brightness_delta_threshold,
             replay_trigger_frame_index=replay_trigger_frame_index,
         )
 
