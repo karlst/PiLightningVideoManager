@@ -11,7 +11,7 @@ from cam_capture import CamCapture
 from cam_config import CamConfig
 from event_log import EventLog
 from previewServer import PreviewServer
-from trigger_manager import TriggerManager
+from common.trigger_manager import TriggerManager
 from capture_manager import CaptureManager
 
 from datetime import datetime

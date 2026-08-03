@@ -18,7 +18,7 @@ from frame_analyzer import FrameAnalyzer
 from metric_history import MetricHistory
 from motion_plugin import MotionPlugin
 from ring_buffer import RingBuffer
-from trigger_manager import TriggerManager
+from common.trigger_manager import TriggerManager
 from capture_manager import CaptureManager
 
 
@@ -437,7 +437,8 @@ class BufferManager:
         ):
             should_fire, trigger_reason = (
                 self._trigger_manager.evaluate(
-                    trigger_metric
+                    trigger_metric,
+                    camera_frame.timestamp_monotonic
                 )
             )
 

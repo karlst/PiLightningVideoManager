@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from common import TRIGGER_CONFIG
 
 
 # ## Camera, capture, trigger, analysis, and storage configuration.
@@ -90,39 +91,23 @@ class CamConfig:
     camera_vfov_degrees: float = 0.0
     camera_preview_refresh_seconds: float = 0.2
 
-    trigger_enabled: bool = True
+    trigger_enabled: bool = TRIGGER_CONFIG.trigger_enabled
 
-    # Triggers on mean frame brightness - this value disables it range: 0-255
-    trigger_brightness_threshold: float = 999.0
+    trigger_brightness_threshold: float = (
+        TRIGGER_CONFIG.trigger_brightness_threshold
+    )
 
-    # Mean brightness increase from the immediately previous frame.
-    # Range: roughly -255.0 to 255.0.
-    #
-    # This trigger is evaluated on every captured frame, not on the slower
-    # graph-history sample interval. At 260 fps, adjacent frames are about
-    # 3.846 ms apart.
-    #
-    # Primary lightning trigger.
-    trigger_brightness_delta_threshold: float = 5.0
+    trigger_brightness_delta_threshold: float = (
+        TRIGGER_CONFIG.trigger_brightness_delta_threshold
+    )
 
-    # Fraction of pixels that changed.
-    # Range: 0.0 - 1.0
-    #
-    # Examples:
-    #   0.0001   sensor noise
-    #   0.001    small object movement
-    #   0.01     bird entering frame
-    #   0.10     large scene motion
-    #   1.0      every pixel changed
-    #
-    # Set to 1.0 to effectively disable.
-    trigger_changed_pixel_fraction_threshold: float = 1.0
+    trigger_changed_pixel_fraction_threshold: float = (
+        TRIGGER_CONFIG.trigger_changed_pixel_fraction_threshold
+    )
 
-    # Minimum time between trigger events.
-    #
-    # Lightning flashes often contain multiple strokes
-    # separated by fractions of a second.
-    trigger_cooldown_seconds: float = 1.0
+    trigger_cooldown_seconds: float = (
+        TRIGGER_CONFIG.trigger_cooldown_seconds
+    )
 
     capture_max_files: int = 100
     capture_protect_recent_seconds: float = 60.0

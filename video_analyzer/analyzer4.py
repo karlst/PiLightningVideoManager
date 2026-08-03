@@ -1,5 +1,7 @@
 # ## Imports
 
+
+
 import argparse
 import json
 import re
@@ -29,6 +31,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from common.trigger_config import TRIGGER_CONFIG
+from common.trigger_manager import TriggerManager
 
 # ## Resolve video and sidecar paths
 
@@ -222,43 +226,43 @@ def build_pi_metric_arrays(
 
 # ## Recover the threshold used for the original capture
 
-def get_trigger_threshold(
-    sidecar: dict[str, Any] | None,
-    default: float = 5.0,
-) -> float:
-    if sidecar is None:
-        return default
+# def get_trigger_threshold(
+#     sidecar: dict[str, Any] | None,
+#     default: float = 5.0,
+# ) -> float:
+#     if sidecar is None:
+#         return default
 
-    reason = str(sidecar.get("trigger_reason", ""))
-    match = re.search(
-        r"brightness delta trigger:.*?>=\s*([-+]?\d+(?:\.\d+)?)",
-        reason,
-        flags=re.IGNORECASE,
-    )
+#     reason = str(sidecar.get("trigger_reason", ""))
+#     match = re.search(
+#         r"brightness delta trigger:.*?>=\s*([-+]?\d+(?:\.\d+)?)",
+#         reason,
+#         flags=re.IGNORECASE,
+#     )
 
-    if match is None:
-        return default
+#     if match is None:
+#         return default
 
-    try:
-        return float(match.group(1))
-    except ValueError:
-        return default
+#     try:
+#         return float(match.group(1))
+#     except ValueError:
+#         return default
 
 
-# ## Find the first replay frame crossing the brightness-delta threshold
+# # ## Find the first replay frame crossing the brightness-delta threshold
 
-def find_replay_trigger_frame(
-    brightness_delta: np.ndarray,
-    threshold: float,
-) -> int | None:
-    matching_frames = np.flatnonzero(
-        brightness_delta >= threshold
-    )
+# def find_replay_trigger_frame(
+#     brightness_delta: np.ndarray,
+#     threshold: float,
+# ) -> int | None:
+#     matching_frames = np.flatnonzero(
+#         brightness_delta >= threshold
+#     )
 
-    if matching_frames.size == 0:
-        return None
+#     if matching_frames.size == 0:
+#         return None
 
-    return int(matching_frames[0])
+#     return int(matching_frames[0])
 
 
 # ## Format optional value
@@ -1533,12 +1537,65 @@ def main() -> int:
             sidecar,
             len(replay_brightness),
         )
-        trigger_threshold = get_trigger_threshold(sidecar)
-        replay_trigger_frame_index = find_replay_trigger_frame(
-            replay_brightness_delta,
-            trigger_threshold,
+        # trigger_threshold = get_trigger_threshold(sidecar)
+        # replay_trigger_frame_index = find_replay_trigger_frame(
+        #     replay_brightness_delta,
+        #     trigger_threshold,
+        # )
+
+        trigger_manager = TriggerManager(
+            TRIGGER_CONFIG
         )
 
+        replay_trigger_frame_index = None
+        replay_trigger_reason = None
+
+        if sidecar is not None:
+            frame_records = sidecar.get(
+                "frame_records",
+                []
+            )
+
+            for record in frame_records:
+                metric = {
+                    "mean_brightness": float(
+                        record.get(
+                            "mean_brightness",
+                            0.0
+                        )
+                    ),
+                    "brightness_delta_adjacent": float(
+                        record.get(
+                            "brightness_delta_adjacent",
+                            0.0
+                        )
+                    ),
+                    "changed_pixel_fraction": 0.0,
+                }
+
+                timestamp_monotonic = (
+                    float(
+                        record.get(
+                            "offset_ms",
+                            0.0
+                        )
+                    ) /
+                    1000.0
+                )
+
+                fired, reason = (
+                    trigger_manager.evaluate(
+                        metric,
+                        timestamp_monotonic
+                    )
+                )
+
+                if fired:
+                    replay_trigger_frame_index = int(
+                        record["frame_index"]
+                    )
+                    replay_trigger_reason = reason
+                    break
         print(
             f"Decoded frames: {len(replay_brightness)}"
         )
@@ -1557,7 +1614,7 @@ def main() -> int:
             replay_brightness_delta=replay_brightness_delta,
             pi_brightness=pi_brightness,
             pi_brightness_delta=pi_brightness_delta,
-            trigger_threshold=trigger_threshold,
+            trigger_threshold=TRIGGER_CONFIG.trigger_brightness_delta_threshold,
             replay_trigger_frame_index=replay_trigger_frame_index,
         )
 

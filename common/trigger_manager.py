@@ -6,7 +6,7 @@
 
 import time
 
-from cam_config import CamConfig
+from common.trigger_config import TriggerConfig
 
 
 # ## Evaluates camera metrics against configured trigger thresholds.
@@ -14,7 +14,7 @@ class TriggerManager:
     # ## Initialize trigger state and tracked maximum metric values.
     def __init__(
         self,
-        config: CamConfig
+        config: TriggerConfig
     ) -> None:
         self._config = config
         self._enabled = config.trigger_enabled
@@ -23,7 +23,7 @@ class TriggerManager:
         self._max_brightness_delta: float | None = None
         self._max_changed_pixel_fraction: float | None = None
 
-        self._last_trigger_time_monotonic: float = 0.0
+        self._last_trigger_time_monotonic: float | None = None
         self._last_trigger_reason: str = ""
 
     # ## Enable automatic trigger evaluation.
@@ -43,7 +43,8 @@ class TriggerManager:
     # ## Evaluate one metric sample and return whether capture should fire.
     def evaluate(
         self,
-        metric: dict
+        metric: dict,
+        timestamp_monotonic: float
     ) -> tuple[bool, str]:
         brightness = float(
             metric.get(
@@ -75,7 +76,7 @@ class TriggerManager:
         should_fire = False
         reason = ""
 
-        if self._enabled and self._cooldown_elapsed():
+        if self._enabled and self._cooldown_elapsed(timestamp_monotonic):
             should_fire, reason = (
                 self._check_brightness(
                     brightness
@@ -104,7 +105,7 @@ class TriggerManager:
 
         if should_fire:
             self._last_trigger_time_monotonic = (
-                time.monotonic()
+                timestamp_monotonic
             )
 
             self._last_trigger_reason = reason
@@ -206,10 +207,16 @@ class TriggerManager:
             self._max_changed_pixel_fraction = changed_pixel_fraction
 
     # ## Return whether trigger cooldown has elapsed.
-    def _cooldown_elapsed(self) -> bool:
+    def _cooldown_elapsed(
+        self,
+        timestamp_monotonic: float
+    ) -> bool:
+        if self._last_trigger_time_monotonic is None:
+            return True
+
         return (
             (
-                time.monotonic() -
+                timestamp_monotonic -
                 self._last_trigger_time_monotonic
             ) >= self._config.trigger_cooldown_seconds
         )

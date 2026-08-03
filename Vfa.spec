@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['standalone_analyzer\\analyzer3.py'],
+    ['video_analyzer\\analyzer3.py'],
     pathex=[],
     binaries=[],
     datas=[],

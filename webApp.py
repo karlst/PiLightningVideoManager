@@ -1,7 +1,8 @@
 from flask import Flask
 from pathlib import Path
 
-from trigger_manager import TriggerManager
+from common.trigger_manager import TriggerManager
+from common.trigger_manager import TRIGGER_CONFIG
 from buffer_manager import BufferManager
 from cam_capture import CamCapture
 from cam_config import CamConfig
@@ -59,7 +60,8 @@ def create_app() -> Flask:
     )
 
     trigger_manager = TriggerManager(
-        config
+        TRIGGER_CONFIG
+    
     )
 
     buffer_manager = BufferManager(
