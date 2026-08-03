@@ -4,8 +4,6 @@
 @brief Threshold-based logic for identifying candidates.
 """
 
-import time
-
 from common.candidate_config import CandidateConfig
 
 
@@ -73,9 +71,6 @@ class CandidateFinder:
                     changed_pixel_fraction
                 )
             )
-
-        if should_fire:
-            self._last_trigger_reason = reason
 
         return should_fire, reason
 
