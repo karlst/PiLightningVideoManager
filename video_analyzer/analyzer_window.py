@@ -27,6 +27,8 @@ from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.candidate_settings_panel import CandidateSettingsPanel
 from video_analyzer.capture_data import CaptureData
 from video_analyzer.graph_panel import GraphPanel
+from video_analyzer.solution_filter import SolutionResult
+from video_analyzer.solution_panel import SolutionPanel
 from video_analyzer.version import VERSION
 from video_analyzer.video_reader import VideoReader
 
@@ -62,11 +64,13 @@ class AnalyzerWindow(QMainWindow):
         self,
         capture_data: CaptureData,
         candidate_result: CandidateReplayResult,
+        solution_result: SolutionResult,
     ) -> None:
         super().__init__()
 
         self.capture_data = capture_data
         self.candidate_result = candidate_result
+        self.solution_result = solution_result
         self.candidate_config = CANDIDATE_CONFIG
         self.frame_number = 0
         self.updating_slider = False
@@ -266,6 +270,22 @@ class AnalyzerWindow(QMainWindow):
             0,
         )
 
+        lower_right_widget = QWidget()
+        lower_right_layout = QVBoxLayout(
+            lower_right_widget
+        )
+        lower_right_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+        lower_right_layout.setSpacing(6)
+
+        self.solution_panel = SolutionPanel(
+            self.solution_result
+        )
+
         self.candidate_settings_panel = (
             CandidateSettingsPanel(
                 self.candidate_config,
@@ -273,8 +293,16 @@ class AnalyzerWindow(QMainWindow):
             )
         )
 
-        workspace_layout.addWidget(
+        lower_right_layout.addWidget(
+            self.solution_panel
+        )
+        lower_right_layout.addWidget(
             self.candidate_settings_panel,
+            stretch=1,
+        )
+
+        workspace_layout.addWidget(
+            lower_right_widget,
             1,
             1,
         )

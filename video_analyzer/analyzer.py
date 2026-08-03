@@ -10,6 +10,7 @@ from common.candidate_config import CANDIDATE_CONFIG
 from video_analyzer.analyzer_window import AnalyzerWindow
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
+from video_analyzer.solution_filter import SolutionFilter
 
 
 def main() -> int:
@@ -41,11 +42,19 @@ def main() -> int:
             CANDIDATE_CONFIG,
         )
 
+        solution_filter = SolutionFilter()
+        solution_result = solution_filter.evaluate(
+            capture_data.pi_brightness,
+            capture_data.pi_brightness_delta,
+            capture_data.original_trigger_frame_index,
+        )
+
         application = QApplication(sys.argv)
 
         window = AnalyzerWindow(
             capture_data=capture_data,
             candidate_result=candidate_result,
+            solution_result=solution_result,
         )
 
         window.show()
