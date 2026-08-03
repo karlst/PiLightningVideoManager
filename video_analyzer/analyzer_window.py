@@ -7,26 +7,27 @@ from typing import Any
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
-    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
-    QMessageBox,
     QPushButton,
     QSlider,
-    QSplitter,
     QVBoxLayout,
     QWidget,
 )
 
 from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import CandidateConfig
 from video_analyzer.candidate_replay import CandidateReplayResult
+from video_analyzer.candidate_replay import replay_candidate_finder
+from video_analyzer.candidate_settings_panel import CandidateSettingsPanel
 from video_analyzer.capture_data import CaptureData
 from video_analyzer.graph_panel import GraphPanel
+from video_analyzer.version import VERSION
 from video_analyzer.video_reader import VideoReader
 
 
@@ -66,6 +67,7 @@ class AnalyzerWindow(QMainWindow):
 
         self.capture_data = capture_data
         self.candidate_result = candidate_result
+        self.candidate_config = CANDIDATE_CONFIG
         self.frame_number = 0
         self.updating_slider = False
 
@@ -73,37 +75,16 @@ class AnalyzerWindow(QMainWindow):
             capture_data.video_path
         )
 
-        self.setWindowTitle("Video Frame Analyzer")
-        self.resize(1400, 1000)
+        self.setWindowTitle(
+            f"Video Frame Analyzer — v{VERSION}"
+        )
+        self.resize(1500, 1050)
 
-        self.create_actions()
         self.create_ui()
         self.connect_controls()
 
         self.update_capture_information()
         self.set_frame(0, force=True)
-
-    def create_actions(self) -> None:
-        self.open_action = QAction("Open Capture...", self)
-        self.open_action.setShortcut(
-            QKeySequence.StandardKey.Open
-        )
-        self.open_action.triggered.connect(
-            self.open_capture
-        )
-
-        self.exit_action = QAction("Exit", self)
-        self.exit_action.setShortcut(
-            QKeySequence.StandardKey.Quit
-        )
-        self.exit_action.triggered.connect(
-            self.close
-        )
-
-        file_menu = self.menuBar().addMenu("File")
-        file_menu.addAction(self.open_action)
-        file_menu.addSeparator()
-        file_menu.addAction(self.exit_action)
 
     def create_information_group(
         self,
@@ -114,8 +95,8 @@ class AnalyzerWindow(QMainWindow):
         layout = QGridLayout(group)
 
         layout.setContentsMargins(8, 6, 8, 6)
-        layout.setHorizontalSpacing(12)
-        layout.setVerticalSpacing(2)
+        layout.setHorizontalSpacing(10)
+        layout.setVerticalSpacing(1)
 
         value_labels: dict[str, QLabel] = {}
 
@@ -127,12 +108,10 @@ class AnalyzerWindow(QMainWindow):
                 Qt.AlignmentFlag.AlignLeft
                 | Qt.AlignmentFlag.AlignVCenter
             )
-
             value_label.setAlignment(
                 Qt.AlignmentFlag.AlignLeft
                 | Qt.AlignmentFlag.AlignVCenter
             )
-
             value_label.setTextInteractionFlags(
                 Qt.TextInteractionFlag.TextSelectableByMouse
             )
@@ -142,7 +121,6 @@ class AnalyzerWindow(QMainWindow):
                 row,
                 0,
             )
-
             layout.addWidget(
                 value_label,
                 row,
@@ -154,8 +132,6 @@ class AnalyzerWindow(QMainWindow):
         layout.setColumnStretch(0, 0)
         layout.setColumnStretch(1, 1)
 
-        group.setMaximumHeight(300)
-
         return group, value_labels
 
     def create_ui(self) -> None:
@@ -166,20 +142,15 @@ class AnalyzerWindow(QMainWindow):
         main_layout.setContentsMargins(6, 6, 6, 6)
         main_layout.setSpacing(4)
 
-        vertical_splitter = QSplitter(
-            Qt.Orientation.Vertical
-        )
+        workspace_layout = QGridLayout()
+        workspace_layout.setContentsMargins(0, 0, 0, 0)
+        workspace_layout.setHorizontalSpacing(6)
+        workspace_layout.setVerticalSpacing(6)
 
-        main_layout.addWidget(
-            vertical_splitter,
-            stretch=1,
-        )
-
-        upper_widget = QWidget()
-        upper_layout = QVBoxLayout(upper_widget)
-
-        upper_layout.setContentsMargins(0, 0, 0, 0)
-        upper_layout.setSpacing(4)
+        workspace_layout.setColumnStretch(0, 7)
+        workspace_layout.setColumnStretch(1, 3)
+        workspace_layout.setRowStretch(0, 3)
+        workspace_layout.setRowStretch(1, 2)
 
         self.image_label = QLabel()
         self.image_label.setAlignment(
@@ -190,14 +161,23 @@ class AnalyzerWindow(QMainWindow):
             "QLabel { background-color: black; }"
         )
 
-        upper_layout.addWidget(
+        workspace_layout.addWidget(
             self.image_label,
-            stretch=1,
+            0,
+            0,
         )
 
-        information_layout = QHBoxLayout()
-        information_layout.setContentsMargins(0, 0, 0, 0)
-        information_layout.setSpacing(6)
+        information_widget = QWidget()
+        information_layout = QVBoxLayout(
+            information_widget
+        )
+        information_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+        information_layout.setSpacing(4)
 
         capture_fields = [
             ("video", "Video"),
@@ -205,7 +185,6 @@ class AnalyzerWindow(QMainWindow):
             ("capture_start", "Capture start UTC"),
             ("capture_duration", "Duration"),
             ("trigger", "Trigger"),
-            ("trigger_threshold", "Trigger threshold"),
             ("trigger_frame", "Pi trigger frame"),
             ("replay_trigger_frame", "Replay trigger frame"),
             ("replay_result", "Replay result"),
@@ -231,11 +210,7 @@ class AnalyzerWindow(QMainWindow):
             ("picture_type", "Encoded type"),
             ("key_frame", "Key frame"),
             ("pi_brightness", "Pi brightness"),
-            ("replay_brightness", "Replay brightness"),
-            ("brightness_difference", "Brightness difference"),
             ("pi_brightness_delta", "Pi brightness change"),
-            ("replay_brightness_delta", "Replay brightness change"),
-            ("delta_difference", "Change difference"),
         ]
 
         (
@@ -263,37 +238,51 @@ class AnalyzerWindow(QMainWindow):
         )
 
         information_layout.addWidget(
-            capture_group,
-            stretch=1,
+            capture_group
         )
         information_layout.addWidget(
-            component_group,
-            stretch=1,
+            component_group
         )
         information_layout.addWidget(
-            frame_group,
-            stretch=1,
+            frame_group
         )
+        information_layout.addStretch(1)
 
-        upper_layout.addLayout(
-            information_layout
+        workspace_layout.addWidget(
+            information_widget,
+            0,
+            1,
         )
 
         self.graph_panel = GraphPanel(
             self.capture_data,
             self.candidate_result,
+            self.candidate_config,
         )
 
-        vertical_splitter.addWidget(
-            upper_widget
-        )
-        vertical_splitter.addWidget(
-            self.graph_panel
+        workspace_layout.addWidget(
+            self.graph_panel,
+            1,
+            0,
         )
 
-        vertical_splitter.setStretchFactor(0, 3)
-        vertical_splitter.setStretchFactor(1, 2)
-        vertical_splitter.setSizes([560, 400])
+        self.candidate_settings_panel = (
+            CandidateSettingsPanel(
+                self.candidate_config,
+                self.apply_candidate_settings,
+            )
+        )
+
+        workspace_layout.addWidget(
+            self.candidate_settings_panel,
+            1,
+            1,
+        )
+
+        main_layout.addLayout(
+            workspace_layout,
+            stretch=1,
+        )
 
         controls_layout = QHBoxLayout()
         controls_layout.setContentsMargins(0, 0, 0, 0)
@@ -356,6 +345,25 @@ class AnalyzerWindow(QMainWindow):
             self.on_slider_changed
         )
 
+    def apply_candidate_settings(
+        self,
+        config: CandidateConfig,
+    ) -> None:
+        """Replay the archived Pi metrics using experimental thresholds."""
+
+        self.candidate_config = config
+        self.candidate_result = replay_candidate_finder(
+            self.capture_data.sidecar,
+            config,
+        )
+
+        self.graph_panel.update_candidate_result(
+            self.candidate_result,
+            self.candidate_config,
+        )
+
+        self.update_trigger_replay_information()
+
     def frame_to_pixmap(
         self,
         frame: np.ndarray,
@@ -409,6 +417,7 @@ class AnalyzerWindow(QMainWindow):
         )
 
         if sidecar is None:
+            self.update_trigger_replay_information()
             return
 
         capture_labels["capture_start"].setText(
@@ -445,41 +454,6 @@ class AnalyzerWindow(QMainWindow):
 
         capture_labels["trigger_frame"].setText(
             format_value(trigger_frame_number)
-        )
-
-        capture_labels["trigger_threshold"].setText(
-            format_number(
-                CANDIDATE_CONFIG.
-                candidate_brightness_delta_threshold,
-                3,
-            )
-        )
-
-        replay_frame_index = self.candidate_result.frame_index
-        replay_frame_number = (
-            replay_frame_index + 1
-            if replay_frame_index is not None
-            else None
-        )
-
-        capture_labels["replay_trigger_frame"].setText(
-            format_value(replay_frame_number)
-        )
-
-        if trigger_frame_index is None:
-            replay_result = "Pi trigger unavailable"
-        elif replay_frame_index is None:
-            replay_result = "NO REPLAY TRIGGER"
-        elif replay_frame_index == trigger_frame_index:
-            replay_result = "MATCH"
-        else:
-            difference = (
-                replay_frame_index - trigger_frame_index
-            )
-            replay_result = f"DIFF {difference:+d} frames"
-
-        capture_labels["replay_result"].setText(
-            replay_result
         )
 
         capture_labels["trigger_offset"].setText(
@@ -519,6 +493,41 @@ class AnalyzerWindow(QMainWindow):
                 1,
                 " ms",
             )
+        )
+
+        self.update_trigger_replay_information()
+
+    def update_trigger_replay_information(self) -> None:
+        capture_labels = self.capture_value_labels
+        trigger_frame_index = (
+            self.capture_data.original_trigger_frame_index
+        )
+        replay_frame_index = self.candidate_result.frame_index
+
+        replay_frame_number = (
+            replay_frame_index + 1
+            if replay_frame_index is not None
+            else None
+        )
+
+        capture_labels["replay_trigger_frame"].setText(
+            format_value(replay_frame_number)
+        )
+
+        if trigger_frame_index is None:
+            replay_result = "Pi trigger unavailable"
+        elif replay_frame_index is None:
+            replay_result = "NO REPLAY TRIGGER"
+        elif replay_frame_index == trigger_frame_index:
+            replay_result = "MATCH"
+        else:
+            difference = (
+                replay_frame_index - trigger_frame_index
+            )
+            replay_result = f"DIFF {difference:+d} frames"
+
+        capture_labels["replay_result"].setText(
+            replay_result
         )
 
     def update_frame_information(self) -> None:
@@ -585,16 +594,6 @@ class AnalyzerWindow(QMainWindow):
             format_value(key_frame)
         )
 
-        replay_brightness = (
-            self.capture_data.replay_brightness[
-                self.frame_number
-            ]
-        )
-        replay_delta = (
-            self.capture_data.replay_brightness_delta[
-                self.frame_number
-            ]
-        )
         pi_brightness = (
             self.capture_data.pi_brightness[
                 self.frame_number
@@ -611,24 +610,8 @@ class AnalyzerWindow(QMainWindow):
             if np.isfinite(pi_brightness)
             else "—"
         )
-        labels["replay_brightness"].setText(
-            f"{replay_brightness:.3f}"
-        )
-        labels["brightness_difference"].setText(
-            f"{replay_brightness - pi_brightness:+.3f}"
-            if np.isfinite(pi_brightness)
-            else "—"
-        )
         labels["pi_brightness_delta"].setText(
             f"{pi_delta:+.3f}"
-            if np.isfinite(pi_delta)
-            else "—"
-        )
-        labels["replay_brightness_delta"].setText(
-            f"{replay_delta:+.3f}"
-        )
-        labels["delta_difference"].setText(
-            f"{replay_delta - pi_delta:+.3f}"
             if np.isfinite(pi_delta)
             else "—"
         )
@@ -748,26 +731,6 @@ class AnalyzerWindow(QMainWindow):
 
         if frame is not None:
             self.display_frame(frame)
-
-    def open_capture(self) -> None:
-        filename, _selected_filter = QFileDialog.getOpenFileName(
-            self,
-            "Open Capture",
-            str(self.capture_data.video_path.parent),
-            "Capture files (*.mp4 *.json);;MP4 files (*.mp4);;"
-            "JSON files (*.json)",
-        )
-
-        if not filename:
-            return
-
-        QMessageBox.information(
-            self,
-            "Open Capture",
-            "For this first version, close the analyzer and "
-            "start it with the selected capture:\n\n"
-            f"{filename}",
-        )
 
     def closeEvent(self, event) -> None:
         self.video_reader.close()

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import CandidateConfig
 from common.candidate_finder import CandidateFinder
 
 
@@ -21,9 +22,12 @@ class CandidateReplayResult:
 
 def replay_candidate_finder(
     sidecar: dict[str, Any] | None,
+    config: CandidateConfig = CANDIDATE_CONFIG,
 ) -> CandidateReplayResult:
+    """Return the first trigger frame found using the supplied config."""
+
     candidate_finder = CandidateFinder(
-        CANDIDATE_CONFIG
+        config
     )
 
     if sidecar is None:
