@@ -8,11 +8,18 @@ from typing import Protocol
 import numpy as np
 
 
+CATEGORY_TRUE_FLASH = "TRUE_FLASH"
+CATEGORY_FRAME_DROPOUT = "FRAME_DROPOUT"
+CATEGORY_BRIGHT_NOISE = "BRIGHT_NOISE"
+CATEGORY_STEADY_STATE_CHANGE = "STEADY_STATE_CHANGE"
+
+
 @dataclass(frozen=True)
 class SolutionResult:
     """Result returned by a solution filter."""
 
     is_solution: bool
+    category: str
     reason: str
 
 

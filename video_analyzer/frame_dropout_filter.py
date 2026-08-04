@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from video_analyzer.solution_types import CATEGORY_FRAME_DROPOUT
+from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
 from video_analyzer.solution_types import SolutionResult
 
 
@@ -37,6 +39,7 @@ class FrameDropoutFilter:
 
             return SolutionResult(
                 is_solution=False,
+                category=CATEGORY_FRAME_DROPOUT,
                 reason=(
                     "Frame dropout detected: "
                     f"{dropout_frames} dark frame(s) starting at "
@@ -49,6 +52,7 @@ class FrameDropoutFilter:
 
         return SolutionResult(
             is_solution=True,
+            category=CATEGORY_TRUE_FLASH,
             reason="Frame dropout filter passed",
         )
 
@@ -94,11 +98,6 @@ class FrameDropoutFilter:
                 dropout_frames += 1
                 index += 1
 
-            if dropout_frames == 0:
-                continue
-
-            # If the dark run continued beyond four frames, it is not the
-            # short-dropout pattern this filter is intended to detect.
             if (
                 index < frame_count and
                 float(brightness[index]) <

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from video_analyzer.solution_types import CATEGORY_BRIGHT_NOISE
+from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
 from video_analyzer.solution_types import SolutionResult
 
 
@@ -29,6 +31,7 @@ class BrightnessNoiseFilter:
         if max_sign_changes >= self._MIN_SIGN_CHANGES:
             return SolutionResult(
                 is_solution=False,
+                category=CATEGORY_BRIGHT_NOISE,
                 reason=(
                     "Brightness delta oscillation detected: "
                     f"{max_sign_changes} sign changes in "
@@ -38,6 +41,7 @@ class BrightnessNoiseFilter:
 
         return SolutionResult(
             is_solution=True,
+            category=CATEGORY_TRUE_FLASH,
             reason="Brightness noise filter passed",
         )
 

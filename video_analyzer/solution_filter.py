@@ -6,6 +6,8 @@ import numpy as np
 
 from video_analyzer.brightness_noise_filter import BrightnessNoiseFilter
 from video_analyzer.frame_dropout_filter import FrameDropoutFilter
+from video_analyzer.steady_state_change_filter import SteadyStateChangeFilter
+from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
 from video_analyzer.solution_types import SolutionResult
 from video_analyzer.solution_types import SolutionRule
 
@@ -17,6 +19,7 @@ class SolutionFilter:
         self._filters: list[SolutionRule] = [
             BrightnessNoiseFilter(),
             FrameDropoutFilter(),
+            SteadyStateChangeFilter()
         ]
 
     def evaluate(
@@ -37,5 +40,6 @@ class SolutionFilter:
 
         return SolutionResult(
             is_solution=True,
+            category=CATEGORY_TRUE_FLASH,
             reason="All solution filters passed",
         )

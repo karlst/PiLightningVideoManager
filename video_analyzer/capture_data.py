@@ -10,6 +10,7 @@ from typing import Any
 
 import cv2
 import numpy as np
+import os
 
 
 @dataclass
@@ -124,11 +125,16 @@ def read_frame_info(filename: Path) -> list[dict[str, Any]]:
     ]
 
     try:
+        creationflags = 0
+        if os.name == "nt":
+            creationflags = subprocess.CREATE_NO_WINDOW
+
         result = subprocess.run(
             command,
             capture_output=True,
             text=True,
             check=True,
+            creationflags = creationflags,
         )
     except FileNotFoundError:
         raise RuntimeError("ffprobe was not found in PATH.") from None
