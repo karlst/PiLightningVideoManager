@@ -44,3 +44,7 @@ test_output/
 
 # Local captures
 captures/
+
+network/wifiProfiles.txt
+network/wifiStartup.log
+
