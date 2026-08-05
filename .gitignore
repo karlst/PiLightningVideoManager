@@ -48,3 +48,6 @@ captures/
 network/wifiProfiles.txt
 network/wifiStartup.log
 
+hls/
+v4l2_test/
+
