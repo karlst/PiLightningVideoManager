@@ -9,8 +9,8 @@ import json
 import re
 import time
 
-from cam_config import CamConfig
-from event_log import EventLog
+from video_capture.cam_config import CamConfig
+from video_capture.event_log import EventLog
 
 
 # ## Manages saved MP4 captures and their JSON analysis sidecars.

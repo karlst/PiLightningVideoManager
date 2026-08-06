@@ -4,7 +4,7 @@
 @brief Thread-safe metric history buffer.
 """
 
-from ring_buffer import RingBuffer
+from video_capture.ring_buffer import RingBuffer
 
 
 class MetricHistory:

@@ -1,7 +1,7 @@
 import subprocess
 from pathlib import Path
 
-from cam_config import CamConfig
+from video_capture.cam_config import CamConfig
 
 
 class PreviewServer:

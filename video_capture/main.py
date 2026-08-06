@@ -1,4 +1,4 @@
-from webApp import create_app
+from video_capture.webApp import create_app
 
 # this is the videoManager entry point.
 def main() -> int:

@@ -6,13 +6,13 @@ from flask import make_response
 from flask import render_template
 from flask import send_from_directory
 
-from buffer_manager import BufferManager
-from cam_capture import CamCapture
-from cam_config import CamConfig
-from event_log import EventLog
-from previewServer import PreviewServer
-from common.trigger_manager import TriggerManager
-from capture_manager import CaptureManager
+from video_capture.buffer_manager import BufferManager
+from video_capture.cam_capture import CamCapture
+from video_capture.cam_config import CamConfig
+from video_capture.event_log import EventLog
+from video_capture.previewServer import PreviewServer
+from video_capture.trigger_manager import TriggerManager
+from video_capture.capture_manager import CaptureManager
 
 from datetime import datetime
 from datetime import timezone

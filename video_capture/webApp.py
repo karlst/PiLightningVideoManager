@@ -1,16 +1,16 @@
 from flask import Flask
 from pathlib import Path
 
-from common.trigger_manager import TriggerManager
-from common.trigger_manager import TRIGGER_CONFIG
-from buffer_manager import BufferManager
-from cam_capture import CamCapture
-from cam_config import CamConfig
-from event_log import EventLog
-from previewServer import PreviewServer
-from webController import WebServices
-from webController import register_routes
-from capture_manager import CaptureManager
+from trigger_manager import TriggerManager
+from common.candidate_config import CANDIDATE_CONFIG
+from video_capture.buffer_manager import BufferManager
+from video_capture.cam_capture import CamCapture
+from video_capture.cam_config import CamConfig
+from video_capture.event_log import EventLog
+from video_capture.previewServer import PreviewServer
+from video_capture.webController import WebServices
+from video_capture.webController import register_routes
+from video_capture.capture_manager import CaptureManager
 import logging
 import atexit
 
@@ -60,7 +60,7 @@ def create_app() -> Flask:
     )
 
     trigger_manager = TriggerManager(
-        TRIGGER_CONFIG
+        CANDIDATE_CONFIG
     
     )
 

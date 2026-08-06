@@ -7,19 +7,19 @@ trigger evaluation, and event logging.
 
 import cv2
 
-from brightness_plugin import BrightnessPlugin
-from bright_component_analyzer import BrightComponentAnalyzer
-from cam_config import CamConfig
-from camera_reader import CameraFrame
-from camera_reader import CameraReader
-from clip_writer import ClipWriter
-from event_log import EventLog
-from frame_analyzer import FrameAnalyzer
-from metric_history import MetricHistory
-from motion_plugin import MotionPlugin
-from ring_buffer import RingBuffer
-from common.trigger_manager import TriggerManager
-from capture_manager import CaptureManager
+from video_capture.brightness_plugin import BrightnessPlugin
+from video_capture.bright_component_analyzer import BrightComponentAnalyzer
+from video_capture.cam_config import CamConfig
+from video_capture.camera_reader import CameraFrame
+from video_capture.camera_reader import CameraReader
+from video_capture.clip_writer import ClipWriter
+from video_capture.event_log import EventLog
+from video_capture.frame_analyzer import FrameAnalyzer
+from video_capture.metric_history import MetricHistory
+from video_capture.motion_plugin import MotionPlugin
+from video_capture.ring_buffer import RingBuffer
+from video_capture.trigger_manager import TriggerManager
+from video_capture.capture_manager import CaptureManager
 
 
 # ## Owns camera buffering, analysis, trigger, and capture components.

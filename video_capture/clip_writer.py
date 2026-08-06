@@ -11,7 +11,7 @@ import subprocess
 
 import numpy as np
 
-from camera_reader import CameraFrame
+from video_capture.camera_reader import CameraFrame
 
 
 # ## Writes buffered OpenCV frames to an MP4/H.264 video file.

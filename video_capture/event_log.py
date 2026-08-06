@@ -13,7 +13,7 @@ from threading import Lock
 from threading import Thread
 import json
 
-from cam_config import CamConfig
+from video_capture.cam_config import CamConfig
 
 
 class EventLog:

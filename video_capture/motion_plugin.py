@@ -7,7 +7,7 @@
 import cv2
 import numpy as np
 
-from camera_reader import CameraFrame
+from video_capture.camera_reader import CameraFrame
 
 
 class MotionPlugin:

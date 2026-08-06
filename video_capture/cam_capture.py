@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 
-from cam_config import CamConfig
-from utils import utc_now
+from video_capture.cam_config import CamConfig
+from video_capture.utils import utc_now
 
 
 class CamCapture:

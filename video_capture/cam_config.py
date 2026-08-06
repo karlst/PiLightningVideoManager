@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from common import TRIGGER_CONFIG
+from common.candidate_config import CANDIDATE_CONFIG
 
 
 # ## Camera, capture, trigger, analysis, and storage configuration.
@@ -97,15 +97,15 @@ class CamConfig:
     trigger_cooldown_seconds: float = 1.0
 
     trigger_brightness_threshold: float = (
-        TRIGGER_CONFIG.trigger_brightness_threshold
+        CANDIDATE_CONFIG.candidate_brightness_threshold
     )
 
     trigger_brightness_delta_threshold: float = (
-        TRIGGER_CONFIG.trigger_brightness_delta_threshold
+        CANDIDATE_CONFIG.candidate_brightness_delta_threshold
     )
 
     trigger_changed_pixel_fraction_threshold: float = (
-        TRIGGER_CONFIG.trigger_changed_pixel_fraction_threshold
+        CANDIDATE_CONFIG.candidate_changed_pixel_fraction_threshold
     )
 
     capture_max_files: int = 100

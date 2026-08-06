@@ -7,7 +7,7 @@
 import os
 import subprocess
 
-from cam_config import CamConfig
+from video_capture.cam_config import CamConfig
 
 
 class DisplayPreview:

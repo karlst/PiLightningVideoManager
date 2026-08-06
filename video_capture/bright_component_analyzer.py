@@ -13,8 +13,8 @@ import json
 import cv2
 import numpy as np
 
-from cam_config import CamConfig
-from camera_reader import CameraFrame
+from video_capture.cam_config import CamConfig
+from video_capture.camera_reader import CameraFrame
 
 
 # ## Finds connected bright/local-contrast components and summarizes them.

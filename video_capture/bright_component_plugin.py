@@ -3,8 +3,8 @@ Frame analyzer plugin for OpenCV bright/local-contrast components.
 """
 
 from bright_component_analyzer import BrightComponentAnalyzer
-from cam_config import CamConfig
-from camera_reader import CameraFrame
+from video_capture.cam_config import CamConfig
+from video_capture.camera_reader import CameraFrame
 
 
 # ## Adds connected-component geometry metrics to frame analysis.

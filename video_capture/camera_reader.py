@@ -15,7 +15,7 @@ import time
 
 import cv2
 
-from cam_config import CamConfig
+from video_capture.cam_config import CamConfig
 
 
 @dataclass
