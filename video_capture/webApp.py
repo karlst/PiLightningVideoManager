@@ -1,8 +1,8 @@
 from flask import Flask
 from pathlib import Path
 
-from trigger_manager import TriggerManager
-from common.candidate_config import CANDIDATE_CONFIG
+from video_capture.trigger_manager import TriggerManager
+from video_capture.cam_config import CamConfig
 from video_capture.buffer_manager import BufferManager
 from video_capture.cam_capture import CamCapture
 from video_capture.cam_config import CamConfig
@@ -60,7 +60,7 @@ def create_app() -> Flask:
     )
 
     trigger_manager = TriggerManager(
-        CANDIDATE_CONFIG
+        CamConfig
     
     )
 

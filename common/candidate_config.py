@@ -18,7 +18,7 @@ class CandidateConfig:
 
     # Mean brightness increase from the immediately previous frame.
     # Primary lightning trigger.
-    candidate_brightness_delta_threshold: float = 5.0
+    candidate_brightness_delta_threshold: float = 2.5
 
     # Fraction of pixels that changed.
     # Range: 0.0 - 1.0.

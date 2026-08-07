@@ -8,6 +8,7 @@ import time
 
 from video_capture.cam_config import CamConfig
 from common.candidate_finder import CandidateFinder
+from common.candidate_config import CANDIDATE_CONFIG
 
 
 # ## Evaluates camera metrics against configured trigger thresholds.
@@ -19,6 +20,7 @@ class TriggerManager:
     ) -> None:
         self._config = config
         self._enabled = config.trigger_enabled
+        self._candidate_finder = CandidateFinder(CANDIDATE_CONFIG)
 
         self._last_trigger_time_monotonic: float | None = None
         self._last_trigger_reason: str = ""
@@ -48,7 +50,7 @@ class TriggerManager:
         reason = ""
 
         if self._enabled and self._cooldown_elapsed(timestamp_monotonic):
-            should_fire, reason = CandidateFinder.evaluate(metric)
+            should_fire, reason = self._candidate_finder.evaluate(metric)
 
         if should_fire:
             self._last_trigger_time_monotonic = (
@@ -60,13 +62,14 @@ class TriggerManager:
         return should_fire, reason
 
     # ## Return trigger status values for UI and health logging.
+    #TODO- fix max_brightness, etc
     def get_status(self) -> dict:
         return {
             "enabled": self._enabled,
             "state": "Enabled" if self._enabled else "Disabled",
-            "max_brightness": self._max_brightness,
-            "max_brightness_delta": self._max_brightness_delta,
-            "max_changed_pixel_fraction": self._max_changed_pixel_fraction,
+            "max_brightness": 99,
+            "max_brightness_delta": 99,
+            "max_changed_pixel_fraction": 1,
             "last_trigger_reason": self._last_trigger_reason,
             "last_trigger_time_monotonic": self._last_trigger_time_monotonic
         }
