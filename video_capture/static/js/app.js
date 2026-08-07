@@ -87,11 +87,7 @@ function initializePage()
     const triggerManager =
         new TriggerManager();
         
-            statusPanel.setSystemSampleHandler(
-            (result) => metricsGraphPanel.addSystemSample(
-                result
-            )
-        );
+            
     triggerManager.initialize();
 
     
