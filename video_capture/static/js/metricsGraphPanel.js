@@ -13,7 +13,6 @@ export class MetricsGraphPanel
     {
         this._iGraphWindowHours = 1;
         this._aMetricHistory = [];
-        this._aSystemHistory = [];
         this._mode = "live";
         this._aCaptureMetrics = [];
         this._captureName = "";
@@ -47,21 +46,7 @@ export class MetricsGraphPanel
         this.updateMetricHistory();
     }
 
-    addSystemSample(result)
-    {
-        this._aSystemHistory.push(
-            {
-                timestamp: Date.now(),
-                fps: result.camera_fps,
-                memory_mb: result.memory_mb
-            }
-        );
-
-        while (this._aSystemHistory.length > 3600)
-        {
-            this._aSystemHistory.shift();
-        }
-    }
+    
 
     async updateMetricHistory()
     {
@@ -176,32 +161,15 @@ export class MetricsGraphPanel
             return;
         }
 
-        const metrics = this._getVisibleMetrics();
-
-        const maxBrightness =
-            this._getMaxMetricValue(
-                metrics,
-                "mean_brightness"
-            );
-
-        const maxBrightnessDelta =
-            this._getMaxMetricValue(
-                metrics,
-                "brightness_delta"
-            );
-
-        const maxMotion =
-            this._getMaxMetricValue(
-                metrics,
-                "changed_pixel_fraction"
-            );
+        const metrics =
+            this._getVisibleMetrics();
 
         this._drawTwoSeriesGraph(
             "brightness-graph",
             metrics,
             "mean_brightness",
             "moving_average_brightness",
-            `Bright Max=${maxBrightness.toFixed(1)}`,
+            "Brightness",
             "Moving average"
         );
 
@@ -209,20 +177,7 @@ export class MetricsGraphPanel
             "brightness-delta-graph",
             metrics,
             "brightness_delta",
-            `Delta Max=${maxBrightnessDelta.toFixed(1)}`
-        );
-
-        this._drawOneSeriesGraph(
-            "motion-graph",
-            metrics,
-            "changed_pixel_fraction",
-            `Motion Max=${maxMotion.toFixed(4)}`
-        );
-
-        this._drawSystemGraph();
-
-        this._updateGraphStats(
-            metrics
+            "Delta brightness"
         );
     }
 
@@ -232,96 +187,21 @@ export class MetricsGraphPanel
         const records =
             this._aCaptureMetrics;
 
-        const maxBrightness =
-            this._getMaxMetricValue(
-                records,
-                "mean_brightness"
-            );
-
-        const maxDelta =
-            this._getMaxMetricValue(
-                records,
-                "brightness_delta_adjacent"
-            );
-
-        const maxValidComponents =
-            this._getMaxMetricValue(
-                records,
-                "valid_component_count"
-            );
-
-        const maxArea =
-            this._getMaxMetricValue(
-                records,
-                "max_component_area"
-            );
-
         this._drawCaptureOneSeriesGraph(
             "brightness-graph",
             records,
             "mean_brightness",
-            `Bright Max=${maxBrightness.toFixed(1)}`
+            "Brightness"
         );
 
         this._drawCaptureOneSeriesGraph(
             "brightness-delta-graph",
             records,
             "brightness_delta_adjacent",
-            `Adjacent Δ Max=${maxDelta.toFixed(1)}`
-        );
-
-        this._drawCaptureOneSeriesGraph(
-            "motion-graph",
-            records,
-            "valid_component_count",
-            `Valid Components Max=${maxValidComponents.toFixed(0)}`
-        );
-
-        this._drawCaptureOneSeriesGraph(
-            "system-graph",
-            records,
-            "max_component_area",
-            `Component Area Max=${maxArea.toFixed(0)}`
-        );
-
-        this._updateCaptureGraphStats(
-            records
+            "Delta brightness"
         );
     }
-
-    // ## Update graph summary while showing capture-local frame metrics.
-    _updateCaptureGraphStats(records)
-    {
-        const graphMeanValue =
-            document.getElementById(
-                "graph-mean-value"
-            );
-
-        if (graphMeanValue === null)
-        {
-            return;
-        }
-
-        if (records.length === 0)
-        {
-            graphMeanValue.textContent =
-                "Capture metrics: none";
-
-            return;
-        }
-
-        const durationMs =
-            this._getCaptureDurationMs(
-                records
-            );
-
-        graphMeanValue.textContent =
-            (
-                `Capture: ${this._captureName} | ` +
-                `${records.length} frames | ` +
-                `${durationMs.toFixed(1)} ms`
-            );
-    }
+    
 
     // ## Hide graph time-window buttons during capture playback.
     _setGraphButtonsVisible(visible)
@@ -338,70 +218,9 @@ export class MetricsGraphPanel
         }
     }
 
-    _updateGraphStats(metrics)
-    {
-        const graphMeanValue =
-            document.getElementById(
-                "graph-mean-value"
-            );
+    
 
-        if (graphMeanValue === null)
-        {
-            return;
-        }
-
-        if (metrics.length === 0)
-        {
-            graphMeanValue.textContent =
-                "Max: --";
-
-            return;
-        }
-
-        const maxBrightness =
-            this._getMaxMetricValue(
-                metrics,
-                "mean_brightness"
-            );
-
-        const maxBrightnessDelta =
-            this._getMaxMetricValue(
-                metrics,
-                "brightness_delta"
-            );
-
-        const maxChangedPixelFraction =
-            this._getMaxMetricValue(
-                metrics,
-                "changed_pixel_fraction"
-            );
-
-        graphMeanValue.textContent =
-            (
-                `Max Bright: ${maxBrightness.toFixed(1)} | ` +
-                `Max Δ: ${maxBrightnessDelta.toFixed(1)} | ` +
-                `Max Motion: ${maxChangedPixelFraction.toFixed(4)}`
-            );
-    }
-
-    _getMaxMetricValue(metrics, key)
-    {
-        let maxValue =
-            0.0;
-
-        metrics.forEach(
-            (metric) =>
-            {
-                maxValue =
-                    Math.max(
-                        maxValue,
-                        Number(metric[key] ?? 0.0)
-                    );
-            }
-        );
-
-        return maxValue;
-    }
+    
 
     _getNewestMetricTime()
     {
@@ -447,36 +266,7 @@ export class MetricsGraphPanel
         return visibleMetrics;
     }
 
-    _getVisibleSystemSamples()
-    {
-        let visibleSamples = [];
-
-        if (this._aSystemHistory.length > 0)
-        {
-            const newestSample =
-                this._aSystemHistory[
-                    this._aSystemHistory.length - 1
-                ];
-
-            const newestTime =
-                Number(newestSample.timestamp ?? 0);
-
-            const minimumTime =
-                newestTime - (this._getWindowSeconds() * 1000.0);
-
-            visibleSamples =
-                this._aSystemHistory.filter(
-                    (sample) =>
-                    {
-                        return (
-                            Number(sample.timestamp ?? 0) >= minimumTime
-                        );
-                    }
-                );
-        }
-
-        return visibleSamples;
-    }
+    
 
     _getWindowSeconds()
     {
@@ -864,75 +654,7 @@ export class MetricsGraphPanel
         }
     }
 
-    _drawSystemGraph()
-    {
-        const canvas =
-            document.getElementById("system-graph");
-
-        if (canvas !== null)
-        {
-            this._resizeCanvas(canvas);
-
-            const context =
-                canvas.getContext("2d");
-
-            const samples =
-                this._getVisibleSystemSamples();
-
-            const values =
-                samples.map(
-                    (item) =>
-                    {
-                        return Number(item.memory_mb ?? 0.0);
-                    }
-                );
-
-            const limits =
-                this._getValueLimits(values);
-
-            const plot =
-                this._drawAxes(
-                    context,
-                    canvas.width,
-                    canvas.height,
-                    limits.minValue,
-                    limits.maxValue
-                );
-
-            let newestTimeSeconds = 0.0;
-
-            if (this._aSystemHistory.length > 0)
-            {
-                const newestSample =
-                    this._aSystemHistory[
-                        this._aSystemHistory.length - 1
-                    ];
-
-                newestTimeSeconds =
-                    Number(newestSample.timestamp ?? 0) / 1000.0;
-            }
-
-            this._drawLine(
-                context,
-                plot,
-                samples,
-                "memory_mb",
-                limits.minValue,
-                limits.maxValue,
-                newestTimeSeconds,
-                "#2f80ed"
-            );
-
-            context.fillStyle = "#2f80ed";
-            context.textAlign = "left";
-
-            context.fillText(
-                "RAM MB",
-                plot.left + 4,
-                plot.top + 12
-            );
-        }
-    }
+    
 
     // ## Draw one capture-local metric using offset_ms as the x-axis.
     _drawCaptureOneSeriesGraph(

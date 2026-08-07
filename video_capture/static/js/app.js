@@ -94,12 +94,7 @@ function initializePage()
         );
     triggerManager.initialize();
 
-    statusPanel.setSystemStatusHandler(
-        (result) => cameraPanel.updateFromSystemStatus(
-            result
-        )
-    );
-
+    
     statusPanel.setStatus(
         "Ready"
     );

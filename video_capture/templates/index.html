@@ -23,7 +23,8 @@
         <header class="topPanel systemOk">
 
             <div class="titleBlock">
-                <h1>Karl's Lightning Camera Capture v 0.67</h1>
+                <h1>Karl's Lightning Camera Capture v</h1>
+                <span id="header-version-value">--</span>
             </div>
 
             <div class="liveSummaryBlock">
@@ -134,10 +135,6 @@
 
                     <h2>Graphs</h2>
 
-                    <span id="graph-mean-value">
-                        Mean: --
-                    </span>
-
                     <div class="graphButtonBar">
 
                         <button class="graphButton" data-window="0.083333">5 MIN</button>
@@ -159,18 +156,8 @@
                 </div>
 
                 <div class="metricGraph">
-                    <div class="metricGraphTitle">Trigger Metric</div>
+                    <div class="metricGraphTitle">Delta Brightness</div>
                     <canvas class="historyGraph" id="brightness-delta-graph"></canvas>
-                </div>
-
-                <div class="metricGraph">
-                    <div class="metricGraphTitle">Motion</div>
-                    <canvas class="historyGraph" id="motion-graph"></canvas>
-                </div>
-
-                <div class="metricGraph">
-                    <div class="metricGraphTitle">System</div>
-                    <canvas class="historyGraph" id="system-graph"></canvas>
                 </div>
 
                 <div class="sharedXAxis">
@@ -262,6 +249,7 @@
                     <div>Version</div><div id="summary-version-value">--</div>
                     <div>Trigger</div><div id="summary-trigger-value">--</div>
                     <div>FPS</div><div id="summary-fps-value">--</div>
+                    <div>Chip Temp</div><div id="summary-chip-temp-value">-- °C</div>
                     <div>Buffer</div><div id="summary-buffer-value">-- / --</div>
                     <div>Frames</div><div id="summary-frames-value">--</div>
                     <div>RAM</div><div id="summary-ram-value">-- MB</div>

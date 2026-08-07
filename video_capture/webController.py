@@ -32,6 +32,25 @@ class WebServices:
     capture_manager: CaptureManager
     event_log: EventLog
 
+def get_chip_temperature_c() -> float | None:
+    thermal_path = Path(
+        "/sys/class/thermal/thermal_zone0/temp"
+    )
+
+    try:
+        millidegrees_c = float(
+            thermal_path.read_text(
+                encoding="utf-8"
+            ).strip()
+        )
+
+        return (
+            millidegrees_c /
+            1000.0
+        )
+
+    except Exception:
+        return None
 
 def register_routes(
     app: Flask,
@@ -462,6 +481,9 @@ def register_routes(
 
                 "camera_frames":
                     buffer_status["frame_count"],
+
+                "chip_temperature_c":
+                    get_chip_temperature_c(),
 
                 "buffer_count":
                     buffer_status["buffer_count"],
