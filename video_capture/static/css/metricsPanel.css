@@ -1,75 +1,66 @@
 .metricsPanel
 {
     display: grid;
-    grid-template-rows: 38px repeat(4, minmax(0, 1fr)) 24px;
-    gap: 12px;
-}
 
-.metricsToolbar
-{
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-}
+    grid-template-rows:
+        38px
+        minmax(0, 1fr)
+        minmax(0, 1fr);
 
-.metricsToolbar h2
-{
-    flex: 0 0 auto;
-}
-.metricsPanel
-{
-    display: grid;
-    grid-template-rows: 38px repeat(4, minmax(0, 1fr)) 24px;
     gap: 6px;
+
+    min-height: 0;
 }
 
 .metricsToolbar
 {
     display: flex;
     align-items: center;
+
     gap: 8px;
+
     min-width: 0;
 }
 
 .metricsToolbar h2
 {
     flex: 0 0 auto;
-}
-
-#graph-mean-value
-{
-    flex: 0 0 auto;
-    font-size: 11px;
-    white-space: nowrap;
 }
 
 .graphButtonBar
 {
     display: flex;
     flex: 1 1 auto;
+
     gap: 4px;
+
     min-width: 0;
 }
 
 .graphButton
 {
     flex: 1 1 0;
+
     padding: 3px 4px;
+
     font-size: 10px;
+
     white-space: nowrap;
 }
 
 .graphButtonActive
 {
     color: white;
+
     background-color: #2f80ed;
+
     border-color: #1f4f8f;
 }
 
 .metricGraph
 {
     display: block;
+
     min-height: 0;
 }
 
@@ -81,92 +72,25 @@
 .historyGraph
 {
     display: block;
+
     width: 100%;
     height: 100%;
+
     background-color: #fafafa;
 }
 
 .sharedXAxis
 {
-    font-family: Consolas, monospace;
-    font-size: 11px;
-    color: #555;
-    text-align: center;
+    display: none;
 }
 
 @media (max-width: 900px)
 {
     .metricsPanel
     {
-        grid-template-rows: 36px repeat(4, 190px) 18px;
-    }
-}
-#graph-mean-value
-{
-    flex: 0 0 auto;
-    font-size: 11px;
-    white-space: nowrap;
-}
-
-.graphButtonBar
-{
-    display: flex;
-    flex: 1 1 auto;
-    gap: 4px;
-    min-width: 0;
-}
-
-.graphButton
-{
-    flex: 1 1 0;
-    padding: 3px 4px;
-    font-size: 10px;
-    white-space: nowrap;
-}
-
-.graphButtonActive
-{
-    color: white;
-    background-color: #2f80ed;
-    border-color: #1f4f8f;
-}
-
-.metricGraph
-{
-    display: grid;
-    grid-template-rows: 28px minmax(0, 1fr);
-    min-height: 0;
-}
-
-.metricGraphTitle
-{
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 28px;
-    padding-left: 4px;
-    overflow: visible;
-}
-
-.historyGraph
-{
-    display: block;
-    width: 100%;
-    height: 100%;
-    background-color: #fafafa;
-}
-
-.sharedXAxis
-{
-    font-family: Consolas, monospace;
-    font-size: 11px;
-    color: #555;
-    text-align: center;
-}
-
-@media (max-width: 900px)
-{
-    .metricsPanel
-    {
-        grid-template-rows: 36px repeat(4, 190px) 18px;
+        grid-template-rows:
+            36px
+            minmax(190px, 1fr)
+            minmax(190px, 1fr);
     }
 }
