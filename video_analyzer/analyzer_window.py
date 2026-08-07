@@ -196,16 +196,6 @@ class AnalyzerWindow(QMainWindow):
             ("frame_count", "Frame count"),
         ]
 
-        component_fields = [
-            ("component_count", "Components"),
-            ("valid_component_count", "Valid components"),
-            ("max_component_area", "Maximum area"),
-            ("max_component_height", "Maximum height"),
-            ("max_component_width", "Maximum width"),
-            ("max_component_aspect", "Maximum aspect"),
-            ("longest_event", "Longest event"),
-        ]
-
         frame_fields = [
             ("frame_number", "Frame"),
             ("timestamp_utc", "Timestamp UTC"),
@@ -226,14 +216,6 @@ class AnalyzerWindow(QMainWindow):
         )
 
         (
-            component_group,
-            self.component_value_labels,
-        ) = self.create_information_group(
-            "Component information",
-            component_fields,
-        )
-
-        (
             frame_group,
             self.frame_value_labels,
         ) = self.create_information_group(
@@ -243,9 +225,6 @@ class AnalyzerWindow(QMainWindow):
 
         information_layout.addWidget(
             capture_group
-        )
-        information_layout.addWidget(
-            component_group
         )
         information_layout.addWidget(
             frame_group
@@ -432,7 +411,6 @@ class AnalyzerWindow(QMainWindow):
 
     def update_capture_information(self) -> None:
         capture_labels = self.capture_value_labels
-        component_labels = self.component_value_labels
         sidecar = self.capture_data.sidecar
 
         capture_labels["video"].setText(
@@ -494,32 +472,6 @@ class AnalyzerWindow(QMainWindow):
         capture_labels["frame_count"].setText(
             format_value(
                 sidecar.get("frame_count")
-            )
-        )
-
-        component_labels["component_count"].setText(
-            format_value(sidecar.get("component_count"))
-        )
-        component_labels["valid_component_count"].setText(
-            format_value(sidecar.get("valid_component_count"))
-        )
-        component_labels["max_component_area"].setText(
-            format_value(sidecar.get("max_component_area"))
-        )
-        component_labels["max_component_height"].setText(
-            format_value(sidecar.get("max_component_height"))
-        )
-        component_labels["max_component_width"].setText(
-            format_value(sidecar.get("max_component_width"))
-        )
-        component_labels["max_component_aspect"].setText(
-            format_value(sidecar.get("max_component_aspect"))
-        )
-        component_labels["longest_event"].setText(
-            format_number(
-                sidecar.get("longest_event_ms"),
-                1,
-                " ms",
             )
         )
 

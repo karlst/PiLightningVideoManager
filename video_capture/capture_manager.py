@@ -74,14 +74,7 @@ class CaptureManager:
                         "url": f"/capture_files/{path.name}",
                         "size_bytes": path.stat().st_size,
                         "modified_time": path.stat().st_mtime,
-                        "longest_event_ms": sidecar.get(
-                            "longest_event_ms",
-                            None
-                        ),
-                        "valid_component_count": sidecar.get(
-                            "valid_component_count",
-                            None
-                        ),
+                        
                         "analysis": sidecar
                     }
                 )

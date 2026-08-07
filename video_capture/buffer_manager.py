@@ -8,7 +8,6 @@ trigger evaluation, and event logging.
 import cv2
 
 from video_capture.brightness_plugin import BrightnessPlugin
-from video_capture.bright_component_analyzer import BrightComponentAnalyzer
 from video_capture.cam_config import CamConfig
 from video_capture.camera_reader import CameraFrame
 from video_capture.camera_reader import CameraReader
@@ -20,6 +19,7 @@ from video_capture.motion_plugin import MotionPlugin
 from video_capture.ring_buffer import RingBuffer
 from video_capture.trigger_manager import TriggerManager
 from video_capture.capture_manager import CaptureManager
+from video_capture.sidecar_writer import SidecarWriter
 
 
 # ## Owns camera buffering, analysis, trigger, and capture components.
@@ -73,9 +73,7 @@ class BufferManager:
             )
         )
 
-        self._bright_component_analyzer = BrightComponentAnalyzer(
-            config
-        )
+        self._sidecar_writer = SidecarWriter()
 
         self._camera_reader = CameraReader(
             config,
@@ -218,7 +216,7 @@ class BufferManager:
             if output_file:
                 try:
                     sidecar_data = (
-                        self._bright_component_analyzer.write_sidecar(
+                        self._sidecar_writer.write_sidecar(
                             frames,
                             output_file,
                             sidecar_metadata
