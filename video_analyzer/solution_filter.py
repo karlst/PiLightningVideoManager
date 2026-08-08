@@ -6,6 +6,7 @@ import numpy as np
 
 from video_analyzer.brightness_noise_filter import BrightnessNoiseFilter
 from video_analyzer.frame_dropout_filter import FrameDropoutFilter
+from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
 from video_analyzer.steady_state_change_filter import SteadyStateChangeFilter
 from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
@@ -18,7 +19,7 @@ class SolutionFilter:
 
     def __init__(
         self,
-        config: SolutionConfig,
+        config: SolutionConfig = SOLUTION_CONFIG,
     ) -> None:
         self._filters: list[SolutionRule] = [
             BrightnessNoiseFilter(

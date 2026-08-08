@@ -20,6 +20,7 @@ from video_capture.ring_buffer import RingBuffer
 from video_capture.trigger_manager import TriggerManager
 from video_capture.capture_manager import CaptureManager
 from video_capture.sidecar_writer import SidecarWriter
+from common.candidate_config import CANDIDATE_CONFIG
 
 
 # ## Owns camera buffering, analysis, trigger, and capture components.
@@ -90,6 +91,7 @@ class BufferManager:
         self._last_metric_time_monotonic: float = 0.0
         self._last_health_log_time_monotonic: float = 0.0
         self._last_logged_error: str = ""
+        self._previous_trigger_gray_frame = None
 
         # Auto-trigger capture state.
         #
@@ -473,6 +475,7 @@ class BufferManager:
             )
 
     # ## Analyze one frame using the cheap every-frame trigger metric.
+    # ## Analyze one frame using the cheap every-frame trigger metric.
     def _analyze_trigger_frame(
         self,
         camera_frame: CameraFrame
@@ -487,6 +490,7 @@ class BufferManager:
         )
 
         brightness_delta_adjacent = 0.0
+        bright_pixel_fraction = 0.0
 
         if self._previous_trigger_mean_brightness is not None:
             brightness_delta_adjacent = (
@@ -494,19 +498,60 @@ class BufferManager:
                 self._previous_trigger_mean_brightness
             )
 
-        self._previous_trigger_mean_brightness = mean_brightness
+        if self._previous_trigger_gray_frame is not None:
+            candidate_config = (
+                self._trigger_manager.get_candidate_config()
+            )
+
+            positive_delta = cv2.subtract(
+                gray_frame,
+                self._previous_trigger_gray_frame
+            )
+
+            threshold_mask = cv2.compare(
+                positive_delta,
+                candidate_config.
+                candidate_bright_pixel_delta_threshold,
+                cv2.CMP_GE
+            )
+
+            bright_pixel_count = (
+                cv2.countNonZero(
+                    threshold_mask
+                )
+            )
+
+            bright_pixel_fraction = (
+                float(bright_pixel_count) /
+                float(positive_delta.size)
+            )
+
+        self._previous_trigger_mean_brightness = (
+            mean_brightness
+        )
+
+        self._previous_trigger_gray_frame = (
+            gray_frame
+        )
 
         metric = {
-            "sequence_number": camera_frame.sequence_number,
-            "timestamp_utc": camera_frame.timestamp_utc,
-            "timestamp_monotonic": camera_frame.timestamp_monotonic,
-            "mean_brightness": mean_brightness,
-            "brightness_delta_adjacent": brightness_delta_adjacent,
+            "sequence_number":
+                camera_frame.sequence_number,
+            "timestamp_utc":
+                camera_frame.timestamp_utc,
+            "timestamp_monotonic":
+                camera_frame.timestamp_monotonic,
+            "mean_brightness":
+                mean_brightness,
+            "brightness_delta_adjacent":
+                brightness_delta_adjacent,
 
-            # Keep the legacy key populated so existing trigger/status code
-            # keeps working while the meaning is now adjacent-frame delta.
-            "brightness_delta": brightness_delta_adjacent,
-            "changed_pixel_fraction": 0.0
+            # Legacy key retained for existing graph/status code.
+            "brightness_delta":
+                brightness_delta_adjacent,
+
+            "bright_pixel_fraction":
+                bright_pixel_fraction
         }
 
         return metric
@@ -759,6 +804,7 @@ class BufferManager:
         return frame_index
 
     # ## Convert trigger reason text into stable sidecar labels.
+    # ## Convert trigger reason text into stable sidecar labels.
     def _get_trigger_identity(
         self,
         trigger_reason: str
@@ -768,17 +814,17 @@ class BufferManager:
 
         reason_lower = trigger_reason.lower()
 
-        if "brightness delta" in reason_lower:
+        if "brightness delta trigger" in reason_lower:
             trigger_type = "brightness_delta"
             trigger_display = "Δ Bright"
+
+        elif "bright pixel trigger" in reason_lower:
+            trigger_type = "bright_pixel"
+            trigger_display = "Bright Pixels"
 
         elif "brightness trigger" in reason_lower:
             trigger_type = "brightness"
             trigger_display = "Brightness"
-
-        elif "motion trigger" in reason_lower:
-            trigger_type = "motion"
-            trigger_display = "Motion"
 
         return trigger_type, trigger_display
 
@@ -847,6 +893,7 @@ class BufferManager:
         # Reset the every-frame trigger baseline. The next frame establishes a
         # fresh adjacent-frame reference and cannot immediately retrigger.
         self._previous_trigger_mean_brightness = None
+        self._previous_trigger_gray_frame = None
 
     # ## Reset pending auto-trigger state.
     def _clear_pending_trigger(self) -> None:

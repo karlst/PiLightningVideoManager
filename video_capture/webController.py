@@ -233,14 +233,27 @@ def register_routes(
         return jsonify(
             {
                 "success": True,
+
                 "default": {
                     "candidate_brightness_delta_threshold":
-                        CANDIDATE_CONFIG.candidate_brightness_delta_threshold
+                        CANDIDATE_CONFIG.
+                        candidate_brightness_delta_threshold,
+
+                    "candidate_bright_pixel_delta_threshold":
+                        CANDIDATE_CONFIG.
+                        candidate_bright_pixel_delta_threshold,
+
+                    "candidate_bright_pixel_fraction_threshold":
+                        CANDIDATE_CONFIG.
+                        candidate_bright_pixel_fraction_threshold
                 },
+
                 "active":
-                    services.trigger_manager.get_candidate_config_dict()
+                    services.trigger_manager.
+                    get_candidate_config_dict()
             }
         )
+
 
     @app.route(
         "/candidate_settings",
@@ -252,11 +265,24 @@ def register_routes(
         ) or {}
 
         try:
-            threshold = float(
+            brightness_delta_threshold = float(
                 body[
                     "candidate_brightness_delta_threshold"
                 ]
             )
+
+            bright_pixel_delta_threshold = float(
+                body[
+                    "candidate_bright_pixel_delta_threshold"
+                ]
+            )
+
+            bright_pixel_fraction_threshold = float(
+                body[
+                    "candidate_bright_pixel_fraction_threshold"
+                ]
+            )
+
         except (
             KeyError,
             TypeError,
@@ -266,13 +292,16 @@ def register_routes(
                 {
                     "success": False,
                     "message":
-                        "Invalid brightness delta threshold"
+                        "Invalid candidate threshold value"
                 }
             ), 400
 
         success, message = (
-            services.trigger_manager.set_brightness_delta_threshold(
-                threshold
+            services.trigger_manager.
+            set_candidate_thresholds(
+                brightness_delta_threshold,
+                bright_pixel_delta_threshold,
+                bright_pixel_fraction_threshold
             )
         )
 
@@ -280,7 +309,7 @@ def register_routes(
             services.event_log.add(
                 message,
                 event_type="trigger",
-                summary=message
+                summary="Candidate settings updated"
             )
 
         return jsonify(
@@ -288,9 +317,15 @@ def register_routes(
                 "success": success,
                 "message": message,
                 "active":
-                    services.trigger_manager.get_candidate_config_dict()
+                    services.trigger_manager.
+                    get_candidate_config_dict()
             }
+        ), (
+            200
+            if success
+            else 400
         )
+
 
     @app.route(
         "/candidate_settings_reset",
@@ -298,7 +333,8 @@ def register_routes(
     )
     def reset_candidate_settings():
         success, message = (
-            services.trigger_manager.reset_candidate_config()
+            services.trigger_manager.
+            reset_candidate_config()
         )
 
         if success:
@@ -313,10 +349,10 @@ def register_routes(
                 "success": success,
                 "message": message,
                 "active":
-                    services.trigger_manager.get_candidate_config_dict()
+                    services.trigger_manager.
+                    get_candidate_config_dict()
             }
         )
-
     @app.route(
         "/event_log"
     )

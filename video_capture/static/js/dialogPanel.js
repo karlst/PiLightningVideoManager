@@ -160,26 +160,8 @@ export class DialogPanel
 
         this._clearBody();
 
-        const container =
-            document.createElement(
-                "div"
-            );
-
-        const status =
-            document.createElement(
-                "div"
-            );
-
-        status.textContent =
-            "Loading...";
-
-        container.appendChild(
-            status
-        );
-
-        this._body.appendChild(
-            container
-        );
+        this._body.textContent =
+            "Loading candidate settings...";
 
         this._dialog.showModal();
 
@@ -190,80 +172,190 @@ export class DialogPanel
                     "/candidate_settings"
                 );
 
-            const activeThreshold =
-                Number(
-                    result.active?.candidate_brightness_delta_threshold
-                );
+            if (!result.success)
+            {
+                this._body.textContent =
+                    "Unable to load candidate settings.";
 
-            const defaultThreshold =
-                Number(
-                    result.default?.candidate_brightness_delta_threshold
-                );
+                return;
+            }
 
-            container.replaceChildren();
+            this._clearBody();
 
-            const label =
-                document.createElement(
-                    "label"
-                );
-
-            label.textContent =
-                "Delta Brightness Threshold";
-
-            const input =
-                document.createElement(
-                    "input"
-                );
-
-            input.type =
-                "number";
-
-            input.step =
-                "0.1";
-
-            input.min =
-                "0";
-
-            input.value =
-                Number.isFinite(activeThreshold)
-                    ? activeThreshold
-                    : "";
-
-            const defaultText =
+            const container =
                 document.createElement(
                     "div"
                 );
 
-            defaultText.textContent =
+            container.style.display =
+                "grid";
+
+            container.style.gridTemplateColumns =
+                "minmax(190px, 1fr) 140px";
+
+            container.style.gap =
+                "10px";
+
+            container.style.alignItems =
+                "center";
+
+            this._body.appendChild(
+                container
+            );
+
+
+            const addSetting =
                 (
-                    "Default: " +
-                    (
-                        Number.isFinite(defaultThreshold)
-                            ? defaultThreshold
-                            : "--"
-                    )
+                    labelText,
+                    inputId,
+                    minimum,
+                    maximum,
+                    step
+                ) =>
+                {
+                    const label =
+                        document.createElement(
+                            "label"
+                        );
+
+                    label.htmlFor =
+                        inputId;
+
+                    label.textContent =
+                        labelText;
+
+                    const input =
+                        document.createElement(
+                            "input"
+                        );
+
+                    input.id =
+                        inputId;
+
+                    input.type =
+                        "number";
+
+                    input.min =
+                        String(
+                            minimum
+                        );
+
+                    input.max =
+                        String(
+                            maximum
+                        );
+
+                    input.step =
+                        String(
+                            step
+                        );
+
+                    container.appendChild(
+                        label
+                    );
+
+                    container.appendChild(
+                        input
+                    );
+
+                    return input;
+                };
+
+
+            const brightnessDeltaInput =
+                addSetting(
+                    "Brightness delta:",
+                    "candidate-brightness-delta",
+                    0,
+                    999,
+                    0.1
                 );
 
-            const message =
+            const brightPixelDeltaInput =
+                addSetting(
+                    "Bright pixel delta:",
+                    "candidate-bright-pixel-delta",
+                    0,
+                    255,
+                    1
+                );
+
+            const brightPixelFractionInput =
+                addSetting(
+                    "Bright pixel fraction:",
+                    "candidate-bright-pixel-fraction",
+                    0,
+                    1,
+                    0.0001
+                );
+
+
+            const setInputValues =
+                (config) =>
+                {
+                    brightnessDeltaInput.value =
+                        Number(
+                            config.
+                            candidate_brightness_delta_threshold
+                        ).toFixed(
+                            3
+                        );
+
+                    brightPixelDeltaInput.value =
+                        Number(
+                            config.
+                            candidate_bright_pixel_delta_threshold
+                        ).toFixed(
+                            3
+                        );
+
+                    brightPixelFractionInput.value =
+                        Number(
+                            config.
+                            candidate_bright_pixel_fraction_threshold
+                        ).toFixed(
+                            6
+                        );
+                };
+
+
+            setInputValues(
+                result.active
+            );
+
+
+            const buttonRow =
                 document.createElement(
                     "div"
                 );
 
-            const buttonBar =
-                document.createElement(
-                    "div"
-                );
+            buttonRow.style.gridColumn =
+                "1 / -1";
 
-            const saveButton =
+            buttonRow.style.display =
+                "flex";
+
+            buttonRow.style.gap =
+                "8px";
+
+            buttonRow.style.marginTop =
+                "8px";
+
+
+            const applyButton =
                 document.createElement(
                     "button"
                 );
 
-            saveButton.type =
+            applyButton.type =
                 "button";
 
-            saveButton.textContent =
-                "Save";
+            applyButton.className =
+                "ccButton";
+
+            applyButton.textContent =
+                "Apply";
+
 
             const resetButton =
                 document.createElement(
@@ -273,25 +365,63 @@ export class DialogPanel
             resetButton.type =
                 "button";
 
-            resetButton.textContent =
-                "Reset Default";
+            resetButton.className =
+                "ccButton ccButtonSecondary";
 
-            saveButton.addEventListener(
+            resetButton.textContent =
+                "Reset Defaults";
+
+
+            buttonRow.appendChild(
+                applyButton
+            );
+
+            buttonRow.appendChild(
+                resetButton
+            );
+
+            container.appendChild(
+                buttonRow
+            );
+
+
+            const message =
+                document.createElement(
+                    "div"
+                );
+
+            message.style.gridColumn =
+                "1 / -1";
+
+            message.style.marginTop =
+                "4px";
+
+            container.appendChild(
+                message
+            );
+
+
+            applyButton.addEventListener(
                 "click",
                 async () =>
                 {
-                    const threshold =
-                        Number(
-                            input.value
-                        );
-
-                    if (!Number.isFinite(threshold) || threshold < 0.0)
+                    const payload =
                     {
-                        message.textContent =
-                            "Enter a number greater than or equal to 0.";
+                        candidate_brightness_delta_threshold:
+                            Number(
+                                brightnessDeltaInput.value
+                            ),
 
-                        return;
-                    }
+                        candidate_bright_pixel_delta_threshold:
+                            Number(
+                                brightPixelDeltaInput.value
+                            ),
+
+                        candidate_bright_pixel_fraction_threshold:
+                            Number(
+                                brightPixelFractionInput.value
+                            )
+                    };
 
                     try
                     {
@@ -300,39 +430,37 @@ export class DialogPanel
                                 "/candidate_settings",
                                 {
                                     method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json"
+
+                                    headers:
+                                    {
+                                        "Content-Type":
+                                            "application/json"
                                     },
-                                    body: JSON.stringify(
-                                        {
-                                            candidate_brightness_delta_threshold:
-                                                threshold
-                                        }
-                                    )
+
+                                    body:
+                                        JSON.stringify(
+                                            payload
+                                        )
                                 }
                             );
 
-                        const result =
+                        const saveResult =
                             await response.json();
 
                         message.textContent =
-                            result.message ||
-                            (
-                                response.ok
-                                    ? "Saved"
-                                    : "Save failed"
-                            );
+                            saveResult.message;
 
-                        if (response.ok && result.success)
+                        if (saveResult.success)
                         {
-                            input.value =
-                                result.active.candidate_brightness_delta_threshold;
+                            setInputValues(
+                                saveResult.active
+                            );
                         }
                     }
                     catch (error)
                     {
                         message.textContent =
-                            "Save failed.";
+                            "Candidate settings update failed.";
 
                         console.error(
                             error
@@ -340,6 +468,7 @@ export class DialogPanel
                     }
                 }
             );
+
 
             resetButton.addEventListener(
                 "click",
@@ -351,31 +480,28 @@ export class DialogPanel
                             await fetch(
                                 "/candidate_settings_reset",
                                 {
-                                    method: "POST"
+                                    method:
+                                        "POST"
                                 }
                             );
 
-                        const result =
+                        const resetResult =
                             await response.json();
 
                         message.textContent =
-                            result.message ||
-                            (
-                                response.ok
-                                    ? "Reset"
-                                    : "Reset failed"
-                            );
+                            resetResult.message;
 
-                        if (response.ok && result.success)
+                        if (resetResult.success)
                         {
-                            input.value =
-                                result.active.candidate_brightness_delta_threshold;
+                            setInputValues(
+                                resetResult.active
+                            );
                         }
                     }
                     catch (error)
                     {
                         message.textContent =
-                            "Reset failed.";
+                            "Candidate settings reset failed.";
 
                         console.error(
                             error
@@ -383,52 +509,17 @@ export class DialogPanel
                     }
                 }
             );
-
-            buttonBar.appendChild(
-                saveButton
-            );
-
-            buttonBar.appendChild(
-                resetButton
-            );
-
-            container.appendChild(
-                label
-            );
-
-            container.appendChild(
-                document.createElement(
-                    "br"
-                )
-            );
-
-            container.appendChild(
-                input
-            );
-
-            container.appendChild(
-                defaultText
-            );
-
-            container.appendChild(
-                buttonBar
-            );
-
-            container.appendChild(
-                message
-            );
         }
         catch (error)
         {
-            status.textContent =
-                "Failed to load trigger settings.";
+            this._body.textContent =
+                "Unable to load candidate settings.";
 
             console.error(
                 error
             );
         }
     }
-
 
     // ## Show placeholder camera settings dialog content.
     showCameraSettings()

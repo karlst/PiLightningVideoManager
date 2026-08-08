@@ -84,54 +84,98 @@ class TriggerManager:
             self._candidate_config
         )
 
-    def set_brightness_delta_threshold(
+    def set_candidate_thresholds(
         self,
-        threshold: float
+        brightness_delta_threshold: float,
+        bright_pixel_delta_threshold: float,
+        bright_pixel_fraction_threshold: float
     ) -> tuple[bool, str]:
-        threshold = float(
-            threshold
+
+        brightness_delta_threshold = float(
+            brightness_delta_threshold
         )
 
-        if threshold < 0.0:
+        bright_pixel_delta_threshold = float(
+            bright_pixel_delta_threshold
+        )
+
+        bright_pixel_fraction_threshold = float(
+            bright_pixel_fraction_threshold
+        )
+
+        if brightness_delta_threshold < 0.0:
             return (
                 False,
                 "Brightness delta threshold must be >= 0"
             )
 
-        self._candidate_config = replace(
-            self._candidate_config,
-            candidate_brightness_delta_threshold=
-                threshold
-        )
+        if not (
+            0.0 <=
+            bright_pixel_delta_threshold <=
+            255.0
+        ):
+            return (
+                False,
+                "Bright pixel delta threshold must be between 0 and 255"
+            )
 
-        self._candidate_finder = CandidateFinder(
-            self._candidate_config
+        if not (
+            0.0 <=
+            bright_pixel_fraction_threshold <=
+            1.0
+        ):
+            return (
+                False,
+                "Bright pixel fraction threshold must be between 0 and 1"
+            )
+
+        new_config = replace(
+            self._candidate_config,
+            candidate_brightness_delta_threshold=(
+                brightness_delta_threshold
+            ),
+            candidate_bright_pixel_delta_threshold=(
+                bright_pixel_delta_threshold
+            ),
+            candidate_bright_pixel_fraction_threshold=(
+                bright_pixel_fraction_threshold
+            )
         )
 
         try:
-            self._save_candidate_config()
+            self._save_candidate_config(
+                new_config
+            )
         except Exception as error:
             return (
                 False,
                 f"Candidate settings save failed: {error}"
             )
 
+        self._candidate_config = (
+            new_config
+        )
+
+        self._candidate_finder = CandidateFinder(
+            self._candidate_config
+        )
+
         return (
             True,
             (
-                "Brightness delta threshold set to "
-                f"{threshold:.3f}"
+                "Candidate settings updated: "
+                f"brightness delta "
+                f"{brightness_delta_threshold:.3f}, "
+                f"bright pixel delta "
+                f"{bright_pixel_delta_threshold:.3f}, "
+                f"bright pixel fraction "
+                f"{bright_pixel_fraction_threshold:.6f}"
             )
         )
 
     def reset_candidate_config(
         self
     ) -> tuple[bool, str]:
-        self._candidate_config = CANDIDATE_CONFIG
-        self._candidate_finder = CandidateFinder(
-            self._candidate_config
-        )
-
         try:
             self._config.candidate_settings_file.unlink(
                 missing_ok=True
@@ -141,6 +185,14 @@ class TriggerManager:
                 False,
                 f"Candidate settings reset failed: {error}"
             )
+
+        self._candidate_config = (
+            CANDIDATE_CONFIG
+        )
+
+        self._candidate_finder = CandidateFinder(
+            self._candidate_config
+        )
 
         return (
             True,
@@ -155,16 +207,24 @@ class TriggerManager:
                 if self._enabled
                 else "Disabled"
             ),
-            "candidate_config": self.get_candidate_config_dict(),
-            "last_trigger_reason": self._last_trigger_reason,
-            "last_trigger_time_monotonic": self._last_trigger_time_monotonic
+            "candidate_config":
+                self.get_candidate_config_dict(),
+            "last_trigger_reason":
+                self._last_trigger_reason,
+            "last_trigger_time_monotonic":
+                self._last_trigger_time_monotonic
         }
 
     def _load_candidate_config(
         self
     ) -> CandidateConfig:
-        candidate_config = CANDIDATE_CONFIG
-        path = self._config.candidate_settings_file
+        candidate_config = (
+            CANDIDATE_CONFIG
+        )
+
+        path = (
+            self._config.candidate_settings_file
+        )
 
         if path.exists():
             try:
@@ -176,22 +236,46 @@ class TriggerManager:
 
                 candidate_config = replace(
                     CANDIDATE_CONFIG,
+
                     candidate_brightness_delta_threshold=float(
                         data.get(
                             "candidate_brightness_delta_threshold",
-                            CANDIDATE_CONFIG.candidate_brightness_delta_threshold
+                            CANDIDATE_CONFIG.
+                            candidate_brightness_delta_threshold
+                        )
+                    ),
+
+                    candidate_bright_pixel_delta_threshold=float(
+                        data.get(
+                            "candidate_bright_pixel_delta_threshold",
+                            CANDIDATE_CONFIG.
+                            candidate_bright_pixel_delta_threshold
+                        )
+                    ),
+
+                    candidate_bright_pixel_fraction_threshold=float(
+                        data.get(
+                            "candidate_bright_pixel_fraction_threshold",
+                            CANDIDATE_CONFIG.
+                            candidate_bright_pixel_fraction_threshold
                         )
                     )
                 )
+
             except Exception:
-                candidate_config = CANDIDATE_CONFIG
+                candidate_config = (
+                    CANDIDATE_CONFIG
+                )
 
         return candidate_config
 
     def _save_candidate_config(
-        self
+        self,
+        candidate_config: CandidateConfig
     ) -> None:
-        path = self._config.candidate_settings_file
+        path = (
+            self._config.candidate_settings_file
+        )
 
         path.parent.mkdir(
             parents=True,
@@ -200,7 +284,16 @@ class TriggerManager:
 
         data = {
             "candidate_brightness_delta_threshold":
-                self._candidate_config.candidate_brightness_delta_threshold
+                candidate_config.
+                candidate_brightness_delta_threshold,
+
+            "candidate_bright_pixel_delta_threshold":
+                candidate_config.
+                candidate_bright_pixel_delta_threshold,
+
+            "candidate_bright_pixel_fraction_threshold":
+                candidate_config.
+                candidate_bright_pixel_fraction_threshold
         }
 
         path.write_text(
@@ -222,5 +315,6 @@ class TriggerManager:
             (
                 timestamp_monotonic -
                 self._last_trigger_time_monotonic
-            ) >= self._config.trigger_cooldown_seconds
+            ) >=
+            self._config.trigger_cooldown_seconds
         )
