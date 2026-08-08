@@ -9,7 +9,7 @@ from common.candidate_config import CandidateConfig
 
 # ## Evaluates camera metrics against configured trigger thresholds.
 class CandidateFinder:
-    # ## Initialize trigger state and tracked maximum metric values.
+    # ## Store candidate thresholds.
     def __init__(
         self,
         config: CandidateConfig
@@ -28,9 +28,6 @@ class CandidateFinder:
             )
         )
 
-        # The preferred lightning trigger metric is now adjacent-frame mean
-        # brightness delta, computed on every frame by BufferManager. Fall back
-        # to the legacy key so older metric records do not break evaluation.
         brightness_delta = float(
             metric.get(
                 "brightness_delta_adjacent",
@@ -41,17 +38,13 @@ class CandidateFinder:
             )
         )
 
-        changed_pixel_fraction = float(
+        bright_pixel_fraction = float(
             metric.get(
-                "changed_pixel_fraction",
+                "bright_pixel_fraction",
                 0.0
             )
         )
 
-        should_fire = False
-        reason = ""
-
-        
         should_fire, reason = (
             self._check_brightness(
                 brightness
@@ -67,8 +60,8 @@ class CandidateFinder:
 
         if not should_fire:
             should_fire, reason = (
-                self._check_changed_pixel_fraction(
-                    changed_pixel_fraction
+                self._check_bright_pixel_fraction(
+                    bright_pixel_fraction
                 )
             )
 
@@ -100,7 +93,10 @@ class CandidateFinder:
         should_fire = False
         reason = ""
 
-        if brightness_delta >= self._config.candidate_brightness_delta_threshold:
+        if (
+            brightness_delta >=
+            self._config.candidate_brightness_delta_threshold
+        ):
             should_fire = True
             reason = (
                 f"Brightness delta trigger: "
@@ -110,25 +106,25 @@ class CandidateFinder:
 
         return should_fire, reason
 
-    # ## Check changed-pixel fraction threshold.
-    def _check_changed_pixel_fraction(
+    # ## Check fraction of pixels with a strong positive adjacent-frame change.
+    def _check_bright_pixel_fraction(
         self,
-        changed_pixel_fraction: float
+        bright_pixel_fraction: float
     ) -> tuple[bool, str]:
         should_fire = False
         reason = ""
 
         if (
-            changed_pixel_fraction >=
-            self._config.candidate_changed_pixel_fraction_threshold
+            bright_pixel_fraction >=
+            self._config.candidate_bright_pixel_fraction_threshold
         ):
             should_fire = True
             reason = (
-                f"Motion trigger: "
-                f"{changed_pixel_fraction:.5f} >= "
-                f"{self._config.candidate_changed_pixel_fraction_threshold:.5f}"
+                f"Bright pixel trigger: "
+                f"{bright_pixel_fraction:.6f} >= "
+                f"{self._config.candidate_bright_pixel_fraction_threshold:.6f} "
+                f"at pixel delta >= "
+                f"{self._config.candidate_bright_pixel_delta_threshold:.1f}"
             )
 
         return should_fire, reason
-
-    

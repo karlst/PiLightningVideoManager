@@ -11,8 +11,20 @@ class SteadyStateChangeFilter:
     """Reject a brightness jump followed by a sustained new steady state."""
 
     _JUMP_THRESHOLD = 4.0
-    _NEIGHBORHOOD = 2.0
+
+    _BASELINE_FRAMES = 10
+
+    _STEADY_NEIGHBORHOOD = 2.0
+
     _MIN_STEADY_FRAMES = 100
+
+    def __init__(
+        self,
+        baseline_tolerance: float = 10.0,
+    ) -> None:
+        self._baseline_tolerance = float(
+            baseline_tolerance
+        )
 
     def evaluate(
         self,
@@ -30,8 +42,8 @@ class SteadyStateChangeFilter:
         if result is not None:
             (
                 jump_frame,
-                original_brightness,
-                new_brightness,
+                baseline_brightness,
+                steady_brightness,
             ) = result
 
             return SolutionResult(
@@ -40,8 +52,12 @@ class SteadyStateChangeFilter:
                 reason=(
                     "Steady-state brightness change detected: "
                     f"frame {jump_frame + 1}, "
-                    f"{original_brightness:.3f} -> "
-                    f"{new_brightness:.3f}"
+                    f"baseline {baseline_brightness:.3f} -> "
+                    f"steady {steady_brightness:.3f}; "
+                    f"difference "
+                    f"{abs(steady_brightness - baseline_brightness):.3f} "
+                    f"> tolerance "
+                    f"{self._baseline_tolerance:.3f}"
                 ),
             )
 
@@ -58,48 +74,92 @@ class SteadyStateChangeFilter:
 
         frame_count = len(brightness)
 
-        if frame_count < self._MIN_STEADY_FRAMES + 1:
+        minimum_frames = (
+            self._BASELINE_FRAMES +
+            self._MIN_STEADY_FRAMES
+        )
+
+        if frame_count < minimum_frames:
             return None
 
-        for index in range(1, frame_count):
-            original_brightness = float(
+        for index in range(
+            self._BASELINE_FRAMES,
+            frame_count,
+        ):
+            previous_brightness = float(
                 brightness[index - 1]
             )
 
-            new_brightness = float(
+            transition_brightness = float(
                 brightness[index]
             )
 
             jump = abs(
-                new_brightness -
-                original_brightness
+                transition_brightness -
+                previous_brightness
             )
 
             if jump < self._JUMP_THRESHOLD:
                 continue
 
-            end_index = (
+            baseline_start = (
+                index -
+                self._BASELINE_FRAMES
+            )
+
+            baseline_frames = brightness[
+                baseline_start:index
+            ]
+
+            baseline_brightness = float(
+                np.mean(
+                    baseline_frames
+                )
+            )
+
+            steady_end = (
                 index +
                 self._MIN_STEADY_FRAMES
             )
 
-            if end_index > frame_count:
+            if steady_end > frame_count:
                 continue
 
             steady_frames = brightness[
-                index:end_index
+                index:steady_end
             ]
 
-            if np.all(
+            steady_brightness = float(
+                np.mean(
+                    steady_frames
+                )
+            )
+
+            is_steady = np.all(
                 np.abs(
                     steady_frames -
-                    new_brightness
-                ) <= self._NEIGHBORHOOD
+                    steady_brightness
+                ) <= self._STEADY_NEIGHBORHOOD
+            )
+
+            if not is_steady:
+                continue
+
+            baseline_difference = abs(
+                steady_brightness -
+                baseline_brightness
+            )
+
+            if (
+                baseline_difference <=
+                self._baseline_tolerance
             ):
-                return (
-                    index,
-                    original_brightness,
-                    new_brightness,
-                )
+                continue
+
+            return (
+                index,
+                baseline_brightness,
+                steady_brightness,
+            )
 
         return None

@@ -1,4 +1,4 @@
-"""Reject candidates containing sustained brightness-delta oscillation."""
+"""Reject candidates containing sustained brightness-delta noise."""
 
 from __future__ import annotations
 
@@ -10,10 +10,23 @@ from video_analyzer.solution_types import SolutionResult
 
 
 class BrightnessNoiseFilter:
-    """Reject candidates with strongly oscillating brightness delta."""
+    """Reject candidates with noisy brightness-delta behavior."""
 
     _WINDOW_FRAMES = 100
     _MIN_SIGN_CHANGES = 80
+
+    def __init__(
+        self,
+        pre_trigger_window_frames: int = 50,
+        max_pre_trigger_mean_abs_delta: float = 0.750,
+    ) -> None:
+        self._pre_trigger_window_frames = int(
+            pre_trigger_window_frames
+        )
+
+        self._max_pre_trigger_mean_abs_delta = float(
+            max_pre_trigger_mean_abs_delta
+        )
 
     def evaluate(
         self,
@@ -22,7 +35,29 @@ class BrightnessNoiseFilter:
         trigger_frame_index: int | None,
     ) -> SolutionResult:
         _ = brightness
-        _ = trigger_frame_index
+
+        pre_trigger_noise = (
+            self._get_pre_trigger_mean_absolute_delta(
+                brightness_delta,
+                trigger_frame_index,
+            )
+        )
+
+        if (
+            pre_trigger_noise is not None
+            and pre_trigger_noise
+            >= self._max_pre_trigger_mean_abs_delta
+        ):
+            return SolutionResult(
+                is_solution=False,
+                category=CATEGORY_BRIGHT_NOISE,
+                reason=(
+                    "Pre-trigger brightness noise detected: "
+                    f"mean |delta| {pre_trigger_noise:.3f} >= "
+                    f"{self._max_pre_trigger_mean_abs_delta:.3f} "
+                    f"over {self._pre_trigger_window_frames} frames"
+                ),
+            )
 
         max_sign_changes = self._find_max_sign_changes(
             brightness_delta
@@ -45,12 +80,42 @@ class BrightnessNoiseFilter:
             reason="Brightness noise filter passed",
         )
 
+    def _get_pre_trigger_mean_absolute_delta(
+        self,
+        brightness_delta: np.ndarray,
+        trigger_frame_index: int | None,
+    ) -> float | None:
+        if trigger_frame_index is None:
+            return None
+
+        if trigger_frame_index <= 0:
+            return None
+
+        start_index = max(
+            0,
+            trigger_frame_index -
+            self._pre_trigger_window_frames,
+        )
+
+        window = brightness_delta[
+            start_index:trigger_frame_index
+        ]
+
+        if len(window) == 0:
+            return None
+
+        return float(
+            np.mean(
+                np.abs(
+                    window
+                )
+            )
+        )
+
     def _find_max_sign_changes(
         self,
         brightness_delta: np.ndarray,
     ) -> int:
-        """Return the largest sign-change count in any 100-frame window."""
-
         frame_count = len(brightness_delta)
 
         if frame_count < self._WINDOW_FRAMES:
@@ -83,9 +148,9 @@ class BrightnessNoiseFilter:
                 )
 
                 if (
-                    previous_sign != 0 and
-                    current_sign != 0 and
-                    current_sign != previous_sign
+                    previous_sign != 0
+                    and current_sign != 0
+                    and current_sign != previous_sign
                 ):
                     sign_changes += 1
 

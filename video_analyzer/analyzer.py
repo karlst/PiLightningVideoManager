@@ -6,9 +6,11 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
+from common.candidate_config import CANDIDATE_CONFIG
 from video_analyzer.analyzer_window import AnalyzerWindow
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
+from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_filter import SolutionFilter
 
 
@@ -36,18 +38,13 @@ def main() -> int:
             arguments.capture
         )
 
-        # Replay starts with the exact CandidateConfig recorded by the Pi.
-        # The analyzer may later modify a separate replay config interactively.
-        replay_config = (
-            capture_data.capture_candidate_config
-        )
-
         candidate_result = replay_candidate_finder(
-            capture_data.sidecar,
-            replay_config,
+            capture_data,
+            CANDIDATE_CONFIG,
         )
-
-        solution_filter = SolutionFilter()
+        solution_filter = SolutionFilter(
+            SOLUTION_CONFIG
+        )
         solution_result = solution_filter.evaluate(
             capture_data.pi_brightness,
             capture_data.pi_brightness_delta,
@@ -60,7 +57,6 @@ def main() -> int:
             capture_data=capture_data,
             candidate_result=candidate_result,
             solution_result=solution_result,
-            initial_candidate_config=replay_config,
         )
 
         window.show()

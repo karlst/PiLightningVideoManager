@@ -1,13 +1,17 @@
-"""Replay archived Pi frame metrics through the shared CandidateFinder."""
+"""Replay archived/reconstructed frame metrics through CandidateFinder."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
+
 from common.candidate_config import CANDIDATE_CONFIG
 from common.candidate_config import CandidateConfig
 from common.candidate_finder import CandidateFinder
+from video_analyzer.capture_data import CaptureData
+from video_analyzer.capture_data import build_bright_pixel_fraction
 
 
 @dataclass(frozen=True)
@@ -21,7 +25,7 @@ class CandidateReplayResult:
 
 
 def replay_candidate_finder(
-    sidecar: dict[str, Any] | None,
+    capture_data: CaptureData,
     config: CandidateConfig = CANDIDATE_CONFIG,
 ) -> CandidateReplayResult:
     """Return the first trigger frame found using the supplied config."""
@@ -30,38 +34,28 @@ def replay_candidate_finder(
         config
     )
 
-    if sidecar is None:
-        return CandidateReplayResult(
-            frame_index=None,
-            reason="",
-        )
-
-    frame_records = sidecar.get(
-        "frame_records",
-        [],
+    bright_pixel_fraction = build_bright_pixel_fraction(
+        capture_data.positive_delta_histograms,
+        config.candidate_bright_pixel_delta_threshold,
     )
 
-    if not isinstance(frame_records, list):
-        return CandidateReplayResult(
-            frame_index=None,
-            reason="",
-        )
-
-    for list_index, record in enumerate(frame_records):
-        if not isinstance(record, dict):
-            continue
-
+    for frame_index in range(
+        capture_data.frame_count
+    ):
         metric = {
-            "mean_brightness": _float_value(
-                record.get("mean_brightness"),
-                0.0,
+            "mean_brightness": _array_value(
+                capture_data.pi_brightness,
+                capture_data.replay_brightness,
+                frame_index,
             ),
-            "brightness_delta_adjacent": _float_value(
-                record.get("brightness_delta_adjacent"),
-                0.0,
+            "brightness_delta_adjacent": _array_value(
+                capture_data.pi_brightness_delta,
+                capture_data.replay_brightness_delta,
+                frame_index,
             ),
-            "changed_pixel_fraction": _float_value(
-                record.get("changed_pixel_fraction"),
+            "bright_pixel_fraction": _array_item(
+                bright_pixel_fraction,
+                frame_index,
                 0.0,
             ),
         }
@@ -71,13 +65,6 @@ def replay_candidate_finder(
         )
 
         if found:
-            try:
-                frame_index = int(
-                    record.get("frame_index", list_index)
-                )
-            except (TypeError, ValueError):
-                frame_index = list_index
-
             return CandidateReplayResult(
                 frame_index=frame_index,
                 reason=reason,
@@ -89,11 +76,50 @@ def replay_candidate_finder(
     )
 
 
-def _float_value(
-    value: Any,
+def get_bright_pixel_fraction(
+    capture_data: CaptureData,
+    config: CandidateConfig,
+) -> np.ndarray:
+    """Build the playback bright-pixel fraction array for display/inspection."""
+
+    return build_bright_pixel_fraction(
+        capture_data.positive_delta_histograms,
+        config.candidate_bright_pixel_delta_threshold,
+    )
+
+
+def _array_value(
+    preferred: np.ndarray,
+    fallback: np.ndarray,
+    frame_index: int,
+) -> float:
+    value = _array_item(
+        preferred,
+        frame_index,
+        np.nan,
+    )
+
+    if np.isfinite(value):
+        return value
+
+    return _array_item(
+        fallback,
+        frame_index,
+        0.0,
+    )
+
+
+def _array_item(
+    values: np.ndarray,
+    frame_index: int,
     default: float,
 ) -> float:
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return default
+    if 0 <= frame_index < len(values):
+        try:
+            return float(
+                values[frame_index]
+            )
+        except (TypeError, ValueError):
+            pass
+
+    return float(default)

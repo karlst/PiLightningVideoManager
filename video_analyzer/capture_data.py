@@ -12,9 +12,6 @@ import cv2
 import numpy as np
 import os
 
-from common.candidate_config import CANDIDATE_CONFIG
-from common.candidate_config import CandidateConfig
-
 
 @dataclass
 class CaptureData:
@@ -24,11 +21,11 @@ class CaptureData:
     sidecar: dict[str, Any] | None
     replay_brightness: np.ndarray
     replay_brightness_delta: np.ndarray
+    positive_delta_histograms: np.ndarray
     pi_brightness: np.ndarray
     pi_brightness_delta: np.ndarray
     frame_records: dict[int, dict[str, Any]]
     original_trigger_frame_index: int | None
-    capture_candidate_config: CandidateConfig
 
     @property
     def frame_count(self) -> int:
@@ -59,7 +56,11 @@ def load_capture(path: Path) -> CaptureData:
     sidecar = read_sidecar(sidecar_path)
 
     print("Analyzing clip brightness...")
-    replay_brightness, replay_brightness_delta = analyze_clip(
+    (
+        replay_brightness,
+        replay_brightness_delta,
+        positive_delta_histograms,
+    ) = analyze_clip(
         video_path
     )
 
@@ -75,19 +76,11 @@ def load_capture(path: Path) -> CaptureData:
         len(replay_brightness),
     )
 
-    capture_candidate_config = get_capture_candidate_config(
-        sidecar
-    )
-
     print(
         f"Decoded frames: {len(replay_brightness)}"
     )
     print(
         f"ffprobe frames: {len(frame_info)}"
-    )
-    print(
-        "Capture candidate delta threshold: "
-        f"{capture_candidate_config.candidate_brightness_delta_threshold:.3f}"
     )
 
     return CaptureData(
@@ -97,11 +90,11 @@ def load_capture(path: Path) -> CaptureData:
         sidecar=sidecar,
         replay_brightness=replay_brightness,
         replay_brightness_delta=replay_brightness_delta,
+        positive_delta_histograms=positive_delta_histograms,
         pi_brightness=pi_brightness,
         pi_brightness_delta=pi_brightness_delta,
         frame_records=frame_records,
         original_trigger_frame_index=original_trigger_frame_index,
-        capture_candidate_config=capture_candidate_config,
     )
 
 
@@ -147,7 +140,7 @@ def read_frame_info(filename: Path) -> list[dict[str, Any]]:
             capture_output=True,
             text=True,
             check=True,
-            creationflags=creationflags,
+            creationflags = creationflags,
         )
     except FileNotFoundError:
         raise RuntimeError("ffprobe was not found in PATH.") from None
@@ -192,7 +185,7 @@ def read_sidecar(filename: Path) -> dict[str, Any] | None:
 
 def analyze_clip(
     filename: Path,
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     capture = cv2.VideoCapture(str(filename))
 
     if not capture.isOpened():
@@ -201,6 +194,8 @@ def analyze_clip(
         )
 
     brightness_values: list[float] = []
+    positive_delta_histograms: list[np.ndarray] = []
+    previous_gray: np.ndarray | None = None
 
     while True:
         success, frame = capture.read()
@@ -217,6 +212,31 @@ def analyze_clip(
             float(gray.mean())
         )
 
+        if previous_gray is None:
+            histogram = np.zeros(
+                256,
+                dtype=np.int64,
+            )
+            histogram[0] = gray.size
+        else:
+            positive_delta = cv2.subtract(
+                gray,
+                previous_gray,
+            )
+
+            histogram = np.bincount(
+                positive_delta.ravel(),
+                minlength=256,
+            ).astype(
+                np.int64,
+                copy=False,
+            )
+
+        positive_delta_histograms.append(
+            histogram
+        )
+        previous_gray = gray
+
     capture.release()
 
     if not brightness_values:
@@ -228,12 +248,64 @@ def analyze_clip(
     )
 
     brightness_delta = np.zeros_like(brightness)
-
     brightness_delta[1:] = (
         brightness[1:] - brightness[:-1]
     )
 
-    return brightness, brightness_delta
+    histograms = np.stack(
+        positive_delta_histograms,
+        axis=0,
+    )
+
+    return brightness, brightness_delta, histograms
+
+
+def build_bright_pixel_fraction(
+    positive_delta_histograms: np.ndarray,
+    pixel_delta_threshold: float,
+) -> np.ndarray:
+    """Return fraction of pixels brightening by at least the threshold."""
+
+    if positive_delta_histograms.size == 0:
+        return np.asarray([], dtype=np.float64)
+
+    threshold = int(
+        np.ceil(
+            max(
+                0.0,
+                min(255.0, float(pixel_delta_threshold)),
+            )
+        )
+    )
+
+    pixel_counts = positive_delta_histograms.sum(
+        axis=1
+    ).astype(
+        np.float64
+    )
+
+    bright_counts = positive_delta_histograms[
+        :,
+        threshold:
+    ].sum(
+        axis=1
+    ).astype(
+        np.float64
+    )
+
+    fractions = np.zeros_like(
+        pixel_counts,
+        dtype=np.float64,
+    )
+
+    np.divide(
+        bright_counts,
+        pixel_counts,
+        out=fractions,
+        where=pixel_counts > 0.0,
+    )
+
+    return fractions
 
 
 def build_pi_metric_arrays(
@@ -325,49 +397,6 @@ def build_frame_record_map(
     return records
 
 
-def get_capture_candidate_config(
-    sidecar: dict[str, Any] | None,
-) -> CandidateConfig:
-    """Return the exact Pi CandidateConfig stored with the capture."""
-
-    if sidecar is None:
-        return CANDIDATE_CONFIG
-
-    candidate = sidecar.get("candidate")
-
-    if not isinstance(candidate, dict):
-        return CANDIDATE_CONFIG
-
-    raw_config = candidate.get("config")
-
-    if not isinstance(raw_config, dict):
-        return CANDIDATE_CONFIG
-
-    try:
-        return CandidateConfig(
-            candidate_brightness_threshold=float(
-                raw_config.get(
-                    "candidate_brightness_threshold",
-                    CANDIDATE_CONFIG.candidate_brightness_threshold,
-                )
-            ),
-            candidate_brightness_delta_threshold=float(
-                raw_config.get(
-                    "candidate_brightness_delta_threshold",
-                    CANDIDATE_CONFIG.candidate_brightness_delta_threshold,
-                )
-            ),
-            candidate_changed_pixel_fraction_threshold=float(
-                raw_config.get(
-                    "candidate_changed_pixel_fraction_threshold",
-                    CANDIDATE_CONFIG.candidate_changed_pixel_fraction_threshold,
-                )
-            ),
-        )
-    except (TypeError, ValueError):
-        return CANDIDATE_CONFIG
-
-
 def get_trigger_frame_index(
     sidecar: dict[str, Any] | None,
     frame_count: int,
@@ -375,20 +404,9 @@ def get_trigger_frame_index(
     if sidecar is None:
         return None
 
-    value = None
-
-    candidate = sidecar.get("candidate")
-
-    if isinstance(candidate, dict):
-        value = candidate.get(
-            "trigger_frame_index"
-        )
-
-    # Old sidecar compatibility.
-    if value is None:
-        value = sidecar.get(
-            "trigger_frame_index"
-        )
+    value = sidecar.get(
+        "trigger_frame_index"
+    )
 
     if value is None:
         frame_number = sidecar.get(
