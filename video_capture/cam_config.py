@@ -5,7 +5,7 @@ from pathlib import Path
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
-    app_version: str = "0.67"
+    app_version: str = "0.68"
 
     # Set once by create_app() for the lifetime of the capture application.
     application_start_utc: str = ""
