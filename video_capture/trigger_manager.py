@@ -1,138 +1,216 @@
 """
 @file trigger_manager.py
 
-@brief Threshold-based logic for identifying candidates.
+@brief Pi-specific CandidateFinder orchestration and persistent settings.
 """
 
-import time
+from dataclasses import asdict
+from dataclasses import replace
+import json
 
-from video_capture.cam_config import CamConfig
-from common.candidate_finder import CandidateFinder
 from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import CandidateConfig
+from common.candidate_finder import CandidateFinder
+from video_capture.cam_config import CamConfig
 
 
-# ## Evaluates camera metrics against configured trigger thresholds.
 class TriggerManager:
-    # ## Initialize trigger state and tracked maximum metric values.
     def __init__(
         self,
         config: CamConfig
     ) -> None:
         self._config = config
         self._enabled = config.trigger_enabled
-        self._candidate_finder = CandidateFinder(CANDIDATE_CONFIG)
+
+        self._candidate_config = (
+            self._load_candidate_config()
+        )
+
+        self._candidate_finder = CandidateFinder(
+            self._candidate_config
+        )
 
         self._last_trigger_time_monotonic: float | None = None
         self._last_trigger_reason: str = ""
 
-    # ## Enable automatic trigger evaluation.
     def enable(self) -> tuple[bool, str]:
         self._enabled = True
         return True, "Trigger enabled"
 
-    # ## Disable automatic trigger evaluation.
     def disable(self) -> tuple[bool, str]:
         self._enabled = False
         return True, "Trigger disabled"
 
-    # ## Return whether automatic triggers are enabled.
     def is_enabled(self) -> bool:
         return self._enabled
 
-    # ## Evaluate one metric sample and return whether capture should fire.
     def evaluate(
         self,
         metric: dict,
         timestamp_monotonic: float
     ) -> tuple[bool, str]:
-
         should_fire = False
         reason = ""
 
-        if self._enabled and self._cooldown_elapsed(timestamp_monotonic):
-            should_fire, reason = self._candidate_finder.evaluate(metric)
+        if (
+            self._enabled and
+            self._cooldown_elapsed(
+                timestamp_monotonic
+            )
+        ):
+            should_fire, reason = (
+                self._candidate_finder.evaluate(
+                    metric
+                )
+            )
 
         if should_fire:
             self._last_trigger_time_monotonic = (
                 timestamp_monotonic
             )
-
             self._last_trigger_reason = reason
 
         return should_fire, reason
 
-    # ## Return trigger status values for UI and health logging.
-    #TODO- fix max_brightness, etc
+    def get_candidate_config(
+        self
+    ) -> CandidateConfig:
+        return self._candidate_config
+
+    def get_candidate_config_dict(
+        self
+    ) -> dict:
+        return asdict(
+            self._candidate_config
+        )
+
+    def set_brightness_delta_threshold(
+        self,
+        threshold: float
+    ) -> tuple[bool, str]:
+        threshold = float(
+            threshold
+        )
+
+        if threshold < 0.0:
+            return (
+                False,
+                "Brightness delta threshold must be >= 0"
+            )
+
+        self._candidate_config = replace(
+            self._candidate_config,
+            candidate_brightness_delta_threshold=
+                threshold
+        )
+
+        self._candidate_finder = CandidateFinder(
+            self._candidate_config
+        )
+
+        try:
+            self._save_candidate_config()
+        except Exception as error:
+            return (
+                False,
+                f"Candidate settings save failed: {error}"
+            )
+
+        return (
+            True,
+            (
+                "Brightness delta threshold set to "
+                f"{threshold:.3f}"
+            )
+        )
+
+    def reset_candidate_config(
+        self
+    ) -> tuple[bool, str]:
+        self._candidate_config = CANDIDATE_CONFIG
+        self._candidate_finder = CandidateFinder(
+            self._candidate_config
+        )
+
+        try:
+            self._config.candidate_settings_file.unlink(
+                missing_ok=True
+            )
+        except Exception as error:
+            return (
+                False,
+                f"Candidate settings reset failed: {error}"
+            )
+
+        return (
+            True,
+            "Candidate settings reset to defaults"
+        )
+
     def get_status(self) -> dict:
         return {
             "enabled": self._enabled,
-            "state": "Enabled" if self._enabled else "Disabled",
-            "max_brightness": 99,
-            "max_brightness_delta": 99,
-            "max_changed_pixel_fraction": 1,
+            "state": (
+                "Enabled"
+                if self._enabled
+                else "Disabled"
+            ),
+            "candidate_config": self.get_candidate_config_dict(),
             "last_trigger_reason": self._last_trigger_reason,
             "last_trigger_time_monotonic": self._last_trigger_time_monotonic
         }
 
-    # ## Check absolute mean brightness threshold.
-    def _check_brightness(
-        self,
-        brightness: float
-    ) -> tuple[bool, str]:
-        should_fire = False
-        reason = ""
+    def _load_candidate_config(
+        self
+    ) -> CandidateConfig:
+        candidate_config = CANDIDATE_CONFIG
+        path = self._config.candidate_settings_file
 
-        if brightness >= self._config.trigger_brightness_threshold:
-            should_fire = True
-            reason = (
-                f"Brightness trigger: "
-                f"{brightness:.3f} >= "
-                f"{self._config.trigger_brightness_threshold:.3f}"
-            )
+        if path.exists():
+            try:
+                data = json.loads(
+                    path.read_text(
+                        encoding="utf-8"
+                    )
+                )
 
-        return should_fire, reason
+                candidate_config = replace(
+                    CANDIDATE_CONFIG,
+                    candidate_brightness_delta_threshold=float(
+                        data.get(
+                            "candidate_brightness_delta_threshold",
+                            CANDIDATE_CONFIG.candidate_brightness_delta_threshold
+                        )
+                    )
+                )
+            except Exception:
+                candidate_config = CANDIDATE_CONFIG
 
-    # ## Check adjacent-frame mean brightness delta threshold.
-    def _check_brightness_delta(
-        self,
-        brightness_delta: float
-    ) -> tuple[bool, str]:
-        should_fire = False
-        reason = ""
+        return candidate_config
 
-        if brightness_delta >= self._config.trigger_brightness_delta_threshold:
-            should_fire = True
-            reason = (
-                f"Brightness delta trigger: "
-                f"{brightness_delta:.3f} >= "
-                f"{self._config.trigger_brightness_delta_threshold:.3f}"
-            )
+    def _save_candidate_config(
+        self
+    ) -> None:
+        path = self._config.candidate_settings_file
 
-        return should_fire, reason
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True
+        )
 
-    # ## Check changed-pixel fraction threshold.
-    def _check_changed_pixel_fraction(
-        self,
-        changed_pixel_fraction: float
-    ) -> tuple[bool, str]:
-        should_fire = False
-        reason = ""
+        data = {
+            "candidate_brightness_delta_threshold":
+                self._candidate_config.candidate_brightness_delta_threshold
+        }
 
-        if (
-            changed_pixel_fraction >=
-            self._config.trigger_changed_pixel_fraction_threshold
-        ):
-            should_fire = True
-            reason = (
-                f"Motion trigger: "
-                f"{changed_pixel_fraction:.5f} >= "
-                f"{self._config.trigger_changed_pixel_fraction_threshold:.5f}"
-            )
+        path.write_text(
+            json.dumps(
+                data,
+                indent=4
+            ) + "\n",
+            encoding="utf-8"
+        )
 
-        return should_fire, reason
-
-    
-    # ## Return whether trigger cooldown has elapsed.
     def _cooldown_elapsed(
         self,
         timestamp_monotonic: float

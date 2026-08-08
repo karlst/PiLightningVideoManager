@@ -1,5 +1,7 @@
 from flask import Flask
 from pathlib import Path
+from datetime import datetime
+from datetime import timezone
 
 from video_capture.trigger_manager import TriggerManager
 from video_capture.cam_config import CamConfig
@@ -17,6 +19,17 @@ import atexit
 
 def create_app() -> Flask:
     config = CamConfig()
+
+    config.application_start_utc = (
+        datetime.now(
+            timezone.utc
+        ).isoformat(
+            timespec="milliseconds"
+        ).replace(
+            "+00:00",
+            "Z"
+        )
+    )
 
     log = logging.getLogger("werkzeug")
 
@@ -60,8 +73,7 @@ def create_app() -> Flask:
     )
 
     trigger_manager = TriggerManager(
-        CamConfig
-    
+        config
     )
 
     buffer_manager = BufferManager(

@@ -5,6 +5,7 @@ from flask import jsonify
 from flask import make_response
 from flask import render_template
 from flask import send_from_directory
+from flask import request
 
 from video_capture.buffer_manager import BufferManager
 from video_capture.cam_capture import CamCapture
@@ -20,6 +21,8 @@ import os
 import psutil
 
 from pathlib import Path
+
+from common.candidate_config import CANDIDATE_CONFIG
 
 
 @dataclass
@@ -224,6 +227,97 @@ def register_routes(
         )
 
     @app.route(
+        "/candidate_settings"
+    )
+    def candidate_settings():
+        return jsonify(
+            {
+                "success": True,
+                "default": {
+                    "candidate_brightness_delta_threshold":
+                        CANDIDATE_CONFIG.candidate_brightness_delta_threshold
+                },
+                "active":
+                    services.trigger_manager.get_candidate_config_dict()
+            }
+        )
+
+    @app.route(
+        "/candidate_settings",
+        methods=["POST"]
+    )
+    def update_candidate_settings():
+        body = request.get_json(
+            silent=True
+        ) or {}
+
+        try:
+            threshold = float(
+                body[
+                    "candidate_brightness_delta_threshold"
+                ]
+            )
+        except (
+            KeyError,
+            TypeError,
+            ValueError
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        "Invalid brightness delta threshold"
+                }
+            ), 400
+
+        success, message = (
+            services.trigger_manager.set_brightness_delta_threshold(
+                threshold
+            )
+        )
+
+        if success:
+            services.event_log.add(
+                message,
+                event_type="trigger",
+                summary=message
+            )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message,
+                "active":
+                    services.trigger_manager.get_candidate_config_dict()
+            }
+        )
+
+    @app.route(
+        "/candidate_settings_reset",
+        methods=["POST"]
+    )
+    def reset_candidate_settings():
+        success, message = (
+            services.trigger_manager.reset_candidate_config()
+        )
+
+        if success:
+            services.event_log.add(
+                message,
+                event_type="trigger",
+                summary=message
+            )
+
+        return jsonify(
+            {
+                "success": success,
+                "message": message,
+                "active":
+                    services.trigger_manager.get_candidate_config_dict()
+            }
+        )
+
+    @app.route(
         "/event_log"
     )
     def event_log():
@@ -422,6 +516,9 @@ def register_routes(
                 "app_version":
                     services.config.app_version,
 
+                "application_start_utc":
+                    services.config.application_start_utc,
+
                 "server_time_utc": datetime.now(
                     timezone.utc
                 ).strftime(
@@ -442,6 +539,9 @@ def register_routes(
 
                 "camera_name":
                     services.config.camera_name,
+
+                "camera_type":
+                    services.config.camera_type,
 
                 "camera_format":
                     services.config.input_format.upper(),

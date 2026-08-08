@@ -23,8 +23,7 @@
         <header class="topPanel systemOk">
 
             <div class="titleBlock">
-                <h1>Karl's Lightning Camera Capture v</h1>
-                <span id="header-version-value">--</span>
+                <h1>Karl's Lightning Camera Capture v <span id="header-version-value">--</span></h1>
             </div>
 
             <div class="liveSummaryBlock">
@@ -156,12 +155,8 @@
                 </div>
 
                 <div class="metricGraph">
-                    <div class="metricGraphTitle">Delta Brightness</div>
+                    <div class="metricGraphTitle">Trigger Metric</div>
                     <canvas class="historyGraph" id="brightness-delta-graph"></canvas>
-                </div>
-
-                <div class="sharedXAxis">
-                    one shared time axis for graph stack
                 </div>
 
             </section>
@@ -247,6 +242,7 @@
                     id="system-summary-panel">
 
                     <div>Version</div><div id="summary-version-value">--</div>
+                    <div>Started UTC</div><div id="summary-started-value">--</div>
                     <div>Trigger</div><div id="summary-trigger-value">--</div>
                     <div>FPS</div><div id="summary-fps-value">--</div>
                     <div>Chip Temp</div><div id="summary-chip-temp-value">-- °C</div>
@@ -265,11 +261,6 @@
                     <div>Capture</div><div id="analysis-capture-value">--</div>
                     <div>Duration</div><div id="analysis-duration-value">--</div>
                     <div>Frames</div><div id="analysis-frames-value">--</div>
-                    <div>Components</div><div id="analysis-components-value">--</div>
-                    <div>Valid</div><div id="analysis-valid-value">--</div>
-                    <div>Max Area</div><div id="analysis-area-value">--</div>
-                    <div>Max H/W</div><div id="analysis-height-width-value">--</div>
-                    <div>Aspect</div><div id="analysis-aspect-value">--</div>
 
                 </div>
 

@@ -63,18 +63,23 @@ class CaptureManager:
                                 sidecar,
                                 path
                             ),
-                        "trigger_type": sidecar.get(
+                        "trigger_type": self._get_trigger_value(
+                            sidecar,
                             "trigger_type",
                             "unknown"
                         ),
-                        "trigger_display": sidecar.get(
+                        "trigger_display": self._get_trigger_value(
+                            sidecar,
                             "trigger_display",
                             "--"
                         ),
                         "url": f"/capture_files/{path.name}",
                         "size_bytes": path.stat().st_size,
                         "modified_time": path.stat().st_mtime,
-                        
+                        "capture_duration_ms":
+                            self._get_capture_duration_ms(
+                                sidecar
+                            ),
                         "analysis": sidecar
                     }
                 )
@@ -171,25 +176,111 @@ class CaptureManager:
 
         return sidecar
 
+    # ## Read a trigger field from new nested or older flat sidecars.
+    def _get_trigger_value(
+        self,
+        sidecar: dict,
+        key: str,
+        default
+    ):
+        candidate = sidecar.get(
+            "candidate"
+        )
+
+        if isinstance(
+            candidate,
+            dict
+        ):
+            return candidate.get(
+                key,
+                default
+            )
+
+        return sidecar.get(
+            key,
+            default
+        )
+
+    # ## Read clip duration from new nested or older flat sidecars.
+    def _get_capture_duration_ms(
+        self,
+        sidecar: dict
+    ):
+        capture = sidecar.get(
+            "capture"
+        )
+
+        if isinstance(
+            capture,
+            dict
+        ):
+            return capture.get(
+                "duration_ms"
+            )
+
+        return sidecar.get(
+            "capture_duration_ms"
+        )
+
     # ## Prefer trigger UTC, then capture start UTC, then filename fallback.
     def _get_capture_time_utc(
         self,
         sidecar: dict,
         path: Path
     ) -> str:
-        capture_time = str(
-            sidecar.get(
-                "trigger_utc",
-                ""
-            ) or
-            sidecar.get(
-                "capture_start_utc",
-                ""
-            ) or
-            self._get_filename_time_utc(
-                path
-            )
+        candidate = sidecar.get(
+            "candidate",
+            {}
         )
+
+        capture = sidecar.get(
+            "capture",
+            {}
+        )
+
+        capture_time = ""
+
+        if isinstance(
+            candidate,
+            dict
+        ):
+            capture_time = str(
+                candidate.get(
+                    "trigger_utc",
+                    ""
+                ) or ""
+            )
+
+        if (
+            not capture_time and
+            isinstance(
+                capture,
+                dict
+            )
+        ):
+            capture_time = str(
+                capture.get(
+                    "start_utc",
+                    ""
+                ) or ""
+            )
+
+        if not capture_time:
+            capture_time = str(
+                sidecar.get(
+                    "trigger_utc",
+                    ""
+                )
+                or
+                sidecar.get(
+                    "capture_start_utc",
+                    ""
+                )
+                or
+                self._get_filename_time_utc(
+                    path
+                )
+            )
 
         return capture_time
 

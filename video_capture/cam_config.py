@@ -1,12 +1,14 @@
 from dataclasses import dataclass
 from pathlib import Path
-from common.candidate_config import CANDIDATE_CONFIG
 
 
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
     app_version: str = "0.67"
+
+    # Set once by create_app() for the lifetime of the capture application.
+    application_start_utc: str = ""
 
     video_device: str = "/dev/video0"
     input_format: str = "mjpeg"
@@ -42,6 +44,12 @@ class CamConfig:
         "logs"
     )
 
+    # Pi-local persistent CandidateFinder overrides.
+    candidate_settings_file: Path = (
+        root_directory /
+        "candidate_settings.json"
+    )
+
     event_log_file: Path = (
         event_log_directory /
         "event_log.jsonl"
@@ -64,8 +72,8 @@ class CamConfig:
     metric_history_sample_seconds: float = 1.0
     motion_changed_pixel_threshold: int = 25
 
-    
     camera_name: str = "ELP USB Camera"
+    camera_type: str = "ELP USB High Speed"
     camera_latitude_degrees: float = 32.2225600
     camera_longitude_degrees: float = -111.5919100
     camera_bearing_degrees: float = 0.0
@@ -75,20 +83,8 @@ class CamConfig:
 
     trigger_enabled: bool = True
 
-     # Minimum time between automatic trigger events.
+    # Minimum time between automatic trigger events.
     trigger_cooldown_seconds: float = 1.0
-
-    trigger_brightness_threshold: float = (
-        CANDIDATE_CONFIG.candidate_brightness_threshold
-    )
-
-    trigger_brightness_delta_threshold: float = (
-        CANDIDATE_CONFIG.candidate_brightness_delta_threshold
-    )
-
-    trigger_changed_pixel_fraction_threshold: float = (
-        CANDIDATE_CONFIG.candidate_changed_pixel_fraction_threshold
-    )
 
     capture_max_files: int = 100
     capture_protect_recent_seconds: float = 60.0

@@ -89,7 +89,6 @@ class SidecarWriter:
             frame_records.append(
                 {
                     "frame_index": frame_index,
-                    "frame_number": frame_index + 1,
                     "sequence_number":
                         camera_frame.sequence_number,
                     "timestamp_utc":
@@ -110,14 +109,16 @@ class SidecarWriter:
             )
 
         result = {
-            "analysis_version": 3,
-            "frame_count": len(frames),
-            "frame_records": frame_records
+            "sidecar_version": 1
         }
 
         if metadata is not None:
             result.update(
                 metadata
             )
+
+        result["frame_records"] = (
+            frame_records
+        )
 
         return result

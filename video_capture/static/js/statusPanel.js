@@ -60,9 +60,19 @@ export class StatusPanel
     // ## Initialize status callbacks.
     constructor()
     {
-        
+        this._systemSampleHandler =
+            null;
+
         this._systemStatusHandler =
             null;
+    }
+
+
+    // ## Register a callback for graph/system samples.
+    setSystemSampleHandler(handler)
+    {
+        this._systemSampleHandler =
+            handler;
     }
 
 
@@ -117,7 +127,12 @@ export class StatusPanel
                 );
             }
 
-            
+            if (this._systemSampleHandler !== null)
+            {
+                this._systemSampleHandler(
+                    result
+                );
+            }
         }
         catch (error)
         {
@@ -232,13 +247,6 @@ export class StatusPanel
                 "--"
             );
 
-        const chipTemperature =
-            formatNumber(
-                result.chip_temperature_c,
-                1,
-                "--"
-            );
-            
         const memoryMb =
             formatNumber(
                 result.memory_mb,
@@ -246,10 +254,12 @@ export class StatusPanel
                 "--"
             );
 
-        setElementText(
-            "summary-version-value",
-            result.app_version ?? "--"
-        );
+        const chipTemperature =
+            formatNumber(
+                result.chip_temperature_c,
+                1,
+                "--"
+            );
 
         setElementText(
             "header-version-value",
@@ -257,8 +267,13 @@ export class StatusPanel
         );
 
         setElementText(
-            "summary-chip-temp-value",
-            `${chipTemperature} °C`
+            "summary-version-value",
+            result.app_version ?? "--"
+        );
+
+        setElementText(
+            "summary-started-value",
+            result.application_start_utc ?? "--"
         );
 
         setElementText(
@@ -269,6 +284,11 @@ export class StatusPanel
         setElementText(
             "summary-fps-value",
             fps
+        );
+
+        setElementText(
+            "summary-chip-temp-value",
+            `${chipTemperature} °C`
         );
 
         setElementText(

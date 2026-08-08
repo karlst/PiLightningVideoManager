@@ -172,11 +172,17 @@ class BufferManager:
         trigger_reason: str = "Manual capture",
         trigger_sequence_number: int | None = None,
         trigger_timestamp_utc: str = "",
-        trigger_time_monotonic: float | None = None
+        trigger_time_monotonic: float | None = None,
+        candidate_config: dict | None = None
     ) -> tuple[bool, str, dict]:
         frames = (
             self._ring_buffer.snapshot()
         )
+
+        if candidate_config is None:
+            candidate_config = (
+                self._trigger_manager.get_candidate_config_dict()
+            )
 
         # Manual captures use the newest buffered frame as their practical
         # trigger reference. Auto captures pass the original trigger primitive
@@ -208,7 +214,8 @@ class BufferManager:
                 trigger_reason=trigger_reason,
                 trigger_sequence_number=trigger_sequence_number,
                 trigger_timestamp_utc=trigger_timestamp_utc,
-                trigger_time_monotonic=trigger_time_monotonic
+                trigger_time_monotonic=trigger_time_monotonic,
+                candidate_config=candidate_config
             )
 
             # Analyze the raw captured frames directly and write the JSON
@@ -349,8 +356,6 @@ class BufferManager:
             "metric_history_overwrite_count": metric_status["overwrite_count"],
             "trigger_enabled": trigger_status["enabled"],
             "trigger_state": trigger_status["state"],
-            "trigger_max_brightness_delta": trigger_status["max_brightness_delta"],
-            "trigger_max_changed_pixel_fraction": trigger_status["max_changed_pixel_fraction"],
             "last_trigger_reason": trigger_status["last_trigger_reason"],
             "last_trigger_time_monotonic": trigger_status["last_trigger_time_monotonic"],
             "capture_state": self._capture_state,
@@ -394,9 +399,8 @@ class BufferManager:
                 f"buffer={buffer_status['count']}/{buffer_status['capacity']}, "
                 f"metrics={metric_status['count']}/{metric_status['capacity']}, "
                 f"metric_overwrites={metric_status['overwrite_count']}, "
-                f"trig_bright={trigger_status['max_brightness']}, "
-                f"trig_delta={trigger_status['max_brightness_delta']}, "
-                f"trig_motion={trigger_status['max_changed_pixel_fraction']}"
+                f"candidate_delta_threshold="
+                f"{trigger_status['candidate_config']['candidate_brightness_delta_threshold']}"
             ),
             event_type="health",
             summary=(
@@ -529,7 +533,9 @@ class BufferManager:
             "trigger_sequence_number": trigger_frame.sequence_number,
             "trigger_timestamp_utc": trigger_frame.timestamp_utc,
             "trigger_time_monotonic": trigger_frame.timestamp_monotonic,
-            "armed_time_monotonic": trigger_frame.timestamp_monotonic
+            "armed_time_monotonic": trigger_frame.timestamp_monotonic,
+            "candidate_config":
+                self._trigger_manager.get_candidate_config_dict()
         }
 
         self._capture_state = "WAITING_FOR_POST"
@@ -591,6 +597,9 @@ class BufferManager:
                         ],
                         trigger_time_monotonic=pending_trigger[
                             "trigger_time_monotonic"
+                        ],
+                        candidate_config=pending_trigger[
+                            "candidate_config"
                         ]
                     )
                 )
@@ -639,7 +648,7 @@ class BufferManager:
 
         return captured_pending_trigger
 
-    # ## Build sidecar metadata that describes capture timing and trigger cause.
+    # ## Build the portable clip-level sidecar metadata.
     def _create_sidecar_metadata(
         self,
         frames: list[CameraFrame],
@@ -649,80 +658,88 @@ class BufferManager:
         trigger_reason: str,
         trigger_sequence_number: int | None,
         trigger_timestamp_utc: str,
-        trigger_time_monotonic: float | None
+        trigger_time_monotonic: float | None,
+        candidate_config: dict
     ) -> dict:
-        metadata = {
-            "capture_start_utc": "",
-            "capture_end_utc": "",
-            "capture_duration_ms": 0.0,
-            "saved_utc": writer_status.get(
-                "saved_utc",
-                ""
-            ),
-            "trigger_type": trigger_type,
-            "trigger_display": trigger_display,
-            "trigger_reason": trigger_reason,
-            "trigger_utc": trigger_timestamp_utc,
-            "trigger_sequence_number": trigger_sequence_number,
-            "trigger_frame_index": None,
-            "trigger_frame_number": None,
-            "trigger_offset_ms": None
-        }
+        capture_start_utc = ""
+        capture_end_utc = ""
+        capture_duration_ms = 0.0
+
+        trigger_frame_index = None
+        trigger_offset_ms = None
 
         if len(frames) > 0:
             first_frame = frames[0]
             last_frame = frames[-1]
 
-            metadata.update(
-                {
-                    "capture_start_utc": first_frame.timestamp_utc,
-                    "capture_end_utc": last_frame.timestamp_utc,
-                    "capture_duration_ms": round(
-                        (
-                            last_frame.timestamp_monotonic -
-                            first_frame.timestamp_monotonic
-                        ) *
-                        1000.0,
-                        3
-                    )
-                }
+            capture_start_utc = first_frame.timestamp_utc
+            capture_end_utc = last_frame.timestamp_utc
+            capture_duration_ms = round(
+                (
+                    last_frame.timestamp_monotonic -
+                    first_frame.timestamp_monotonic
+                ) * 1000.0,
+                3
             )
 
         if trigger_sequence_number is not None:
-            # Store the trigger frame relative to the saved capture, not only
-            # the absolute camera sequence number. This is the value the UI
-            # should display during playback review.
             trigger_frame_index = self._get_frame_index(
                 frames,
                 trigger_sequence_number
             )
 
-            if trigger_frame_index is not None:
-                metadata.update(
-                    {
-                        "trigger_frame_index": trigger_frame_index,
-                        "trigger_frame_number": trigger_frame_index + 1
-                    }
-                )
-
             if (
                 trigger_time_monotonic is not None and
                 len(frames) > 0
             ):
-                metadata.update(
-                    {
-                        "trigger_offset_ms": round(
-                            (
-                                trigger_time_monotonic -
-                                frames[0].timestamp_monotonic
-                            ) *
-                            1000.0,
-                            3
-                        )
-                    }
+                trigger_offset_ms = round(
+                    (
+                        trigger_time_monotonic -
+                        frames[0].timestamp_monotonic
+                    ) * 1000.0,
+                    3
                 )
 
-        return metadata
+        return {
+            "application": {
+                "name": "Pi Camera Capture",
+                "version": self._config.app_version,
+                "start_utc": self._config.application_start_utc
+            },
+            "camera": {
+                "name": self._config.camera_name,
+                "type": self._config.camera_type,
+                "input_format": self._config.input_format,
+                "frame_width_pixels": self._config.frame_width_pixels,
+                "frame_height_pixels": self._config.frame_height_pixels,
+                "frame_rate_fps": self._config.frame_rate_fps,
+                "latitude_degrees": self._config.camera_latitude_degrees,
+                "longitude_degrees": self._config.camera_longitude_degrees,
+                "bearing_degrees": self._config.camera_bearing_degrees,
+                "hfov_degrees": self._config.camera_hfov_degrees,
+                "vfov_degrees": self._config.camera_vfov_degrees
+            },
+            "capture": {
+                "saved_utc": writer_status.get(
+                    "saved_utc",
+                    ""
+                ),
+                "start_utc": capture_start_utc,
+                "end_utc": capture_end_utc,
+                "duration_ms": capture_duration_ms,
+                "frame_count": len(frames)
+            },
+            "candidate": {
+                "trigger_type": trigger_type,
+                "trigger_display": trigger_display,
+                "trigger_reason": trigger_reason,
+                "trigger_utc": trigger_timestamp_utc,
+                "trigger_sequence_number": trigger_sequence_number,
+                "trigger_frame_index": trigger_frame_index,
+                "trigger_offset_ms": trigger_offset_ms,
+                "config": candidate_config
+            }
+        }
 
     # ## Find a camera sequence number within the saved capture frame list.
     def _get_frame_index(
@@ -777,23 +794,31 @@ class BufferManager:
             {}
         )
 
-        trigger_frame_number = sidecar.get(
-            "trigger_frame_number",
-            None
+        candidate = sidecar.get(
+            "candidate",
+            {}
         )
 
-        frame_count = sidecar.get(
-            "frame_count",
-            None
+        capture = sidecar.get(
+            "capture",
+            {}
+        )
+
+        trigger_frame_index = candidate.get(
+            "trigger_frame_index"
+        )
+
+        frame_count = capture.get(
+            "frame_count"
         )
 
         if (
-            trigger_frame_number is not None and
+            trigger_frame_index is not None and
             frame_count is not None
         ):
             text = (
                 f"trigger frame "
-                f"{trigger_frame_number}/{frame_count}"
+                f"{int(trigger_frame_index) + 1}/{frame_count}"
             )
 
         return text

@@ -151,13 +151,282 @@ export class DialogPanel
     }
 
 
-    // ## Show placeholder trigger settings dialog content.
-    showTriggerSettings()
+    // ## Show editable CandidateFinder trigger settings.
+    async showTriggerSettings()
     {
-        this._showText(
-            "Trigger Settings",
-            "TODO\n\nBrightness delta threshold\nMotion threshold\nPre-trigger seconds\nPost-trigger seconds"
+        this._setTitle(
+            "Trigger Settings"
         );
+
+        this._clearBody();
+
+        const container =
+            document.createElement(
+                "div"
+            );
+
+        const status =
+            document.createElement(
+                "div"
+            );
+
+        status.textContent =
+            "Loading...";
+
+        container.appendChild(
+            status
+        );
+
+        this._body.appendChild(
+            container
+        );
+
+        this._dialog.showModal();
+
+        try
+        {
+            const result =
+                await getJson(
+                    "/candidate_settings"
+                );
+
+            const activeThreshold =
+                Number(
+                    result.active?.candidate_brightness_delta_threshold
+                );
+
+            const defaultThreshold =
+                Number(
+                    result.default?.candidate_brightness_delta_threshold
+                );
+
+            container.replaceChildren();
+
+            const label =
+                document.createElement(
+                    "label"
+                );
+
+            label.textContent =
+                "Delta Brightness Threshold";
+
+            const input =
+                document.createElement(
+                    "input"
+                );
+
+            input.type =
+                "number";
+
+            input.step =
+                "0.1";
+
+            input.min =
+                "0";
+
+            input.value =
+                Number.isFinite(activeThreshold)
+                    ? activeThreshold
+                    : "";
+
+            const defaultText =
+                document.createElement(
+                    "div"
+                );
+
+            defaultText.textContent =
+                (
+                    "Default: " +
+                    (
+                        Number.isFinite(defaultThreshold)
+                            ? defaultThreshold
+                            : "--"
+                    )
+                );
+
+            const message =
+                document.createElement(
+                    "div"
+                );
+
+            const buttonBar =
+                document.createElement(
+                    "div"
+                );
+
+            const saveButton =
+                document.createElement(
+                    "button"
+                );
+
+            saveButton.type =
+                "button";
+
+            saveButton.textContent =
+                "Save";
+
+            const resetButton =
+                document.createElement(
+                    "button"
+                );
+
+            resetButton.type =
+                "button";
+
+            resetButton.textContent =
+                "Reset Default";
+
+            saveButton.addEventListener(
+                "click",
+                async () =>
+                {
+                    const threshold =
+                        Number(
+                            input.value
+                        );
+
+                    if (!Number.isFinite(threshold) || threshold < 0.0)
+                    {
+                        message.textContent =
+                            "Enter a number greater than or equal to 0.";
+
+                        return;
+                    }
+
+                    try
+                    {
+                        const response =
+                            await fetch(
+                                "/candidate_settings",
+                                {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json"
+                                    },
+                                    body: JSON.stringify(
+                                        {
+                                            candidate_brightness_delta_threshold:
+                                                threshold
+                                        }
+                                    )
+                                }
+                            );
+
+                        const result =
+                            await response.json();
+
+                        message.textContent =
+                            result.message ||
+                            (
+                                response.ok
+                                    ? "Saved"
+                                    : "Save failed"
+                            );
+
+                        if (response.ok && result.success)
+                        {
+                            input.value =
+                                result.active.candidate_brightness_delta_threshold;
+                        }
+                    }
+                    catch (error)
+                    {
+                        message.textContent =
+                            "Save failed.";
+
+                        console.error(
+                            error
+                        );
+                    }
+                }
+            );
+
+            resetButton.addEventListener(
+                "click",
+                async () =>
+                {
+                    try
+                    {
+                        const response =
+                            await fetch(
+                                "/candidate_settings_reset",
+                                {
+                                    method: "POST"
+                                }
+                            );
+
+                        const result =
+                            await response.json();
+
+                        message.textContent =
+                            result.message ||
+                            (
+                                response.ok
+                                    ? "Reset"
+                                    : "Reset failed"
+                            );
+
+                        if (response.ok && result.success)
+                        {
+                            input.value =
+                                result.active.candidate_brightness_delta_threshold;
+                        }
+                    }
+                    catch (error)
+                    {
+                        message.textContent =
+                            "Reset failed.";
+
+                        console.error(
+                            error
+                        );
+                    }
+                }
+            );
+
+            buttonBar.appendChild(
+                saveButton
+            );
+
+            buttonBar.appendChild(
+                resetButton
+            );
+
+            container.appendChild(
+                label
+            );
+
+            container.appendChild(
+                document.createElement(
+                    "br"
+                )
+            );
+
+            container.appendChild(
+                input
+            );
+
+            container.appendChild(
+                defaultText
+            );
+
+            container.appendChild(
+                buttonBar
+            );
+
+            container.appendChild(
+                message
+            );
+        }
+        catch (error)
+        {
+            status.textContent =
+                "Failed to load trigger settings.";
+
+            console.error(
+                error
+            );
+        }
     }
 
 
@@ -257,7 +526,7 @@ export class DialogPanel
                         button.appendChild(
                             this._createCaptureCell(
                                 this._formatDuration(
-                                    captureFile.longest_event_ms
+                                    captureFile.capture_duration_ms
                                 )
                             )
                         );
@@ -337,6 +606,8 @@ export class DialogPanel
 
         let text =
             captureFile?.capture_time_display ||
+            analysis.candidate?.trigger_utc ||
+            analysis.capture?.start_utc ||
             analysis.trigger_utc ||
             analysis.capture_start_utc ||
             "--";
@@ -361,6 +632,7 @@ export class DialogPanel
 
         const text =
             captureFile?.trigger_display ||
+            analysis.candidate?.trigger_display ||
             analysis.trigger_display ||
             "--";
 
