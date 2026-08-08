@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from common.candidate_config import CANDIDATE_CONFIG
 from common.candidate_config import CandidateConfig
 from video_analyzer.candidate_replay import CandidateReplayResult
 from video_analyzer.candidate_replay import replay_candidate_finder
@@ -65,13 +64,17 @@ class AnalyzerWindow(QMainWindow):
         capture_data: CaptureData,
         candidate_result: CandidateReplayResult,
         solution_result: SolutionResult,
+        initial_candidate_config: CandidateConfig,
     ) -> None:
         super().__init__()
 
         self.capture_data = capture_data
         self.candidate_result = candidate_result
         self.solution_result = solution_result
-        self.candidate_config = CANDIDATE_CONFIG
+        self.capture_candidate_config = (
+            capture_data.capture_candidate_config
+        )
+        self.candidate_config = initial_candidate_config
         self.frame_number = 0
         self.updating_slider = False
 
@@ -189,6 +192,8 @@ class AnalyzerWindow(QMainWindow):
             ("capture_start", "Capture start UTC"),
             ("capture_duration", "Duration"),
             ("trigger", "Trigger"),
+            ("capture_delta_threshold", "Captured delta threshold"),
+            ("replay_delta_threshold", "Replay delta threshold"),
             ("trigger_frame", "Pi trigger frame"),
             ("replay_trigger_frame", "Replay trigger frame"),
             ("replay_result", "Replay result"),
@@ -267,8 +272,9 @@ class AnalyzerWindow(QMainWindow):
 
         self.candidate_settings_panel = (
             CandidateSettingsPanel(
-                self.candidate_config,
-                self.apply_candidate_settings,
+                replay_config=self.candidate_config,
+                capture_config=self.capture_candidate_config,
+                on_apply=self.apply_candidate_settings,
             )
         )
 
@@ -422,25 +428,61 @@ class AnalyzerWindow(QMainWindow):
             else "Not found"
         )
 
+        capture_labels["capture_delta_threshold"].setText(
+            format_number(
+                self.capture_candidate_config.
+                candidate_brightness_delta_threshold,
+                3,
+            )
+        )
+
+        capture_labels["replay_delta_threshold"].setText(
+            format_number(
+                self.candidate_config.
+                candidate_brightness_delta_threshold,
+                3,
+            )
+        )
+
         if sidecar is None:
             self.update_trigger_replay_information()
             return
 
+        capture = sidecar.get("capture", {})
+        candidate = sidecar.get("candidate", {})
+
+        if not isinstance(capture, dict):
+            capture = {}
+
+        if not isinstance(candidate, dict):
+            candidate = {}
+
+        capture_start = (
+            capture.get("start_utc")
+            or sidecar.get("capture_start_utc")
+        )
+        capture_duration = (
+            capture.get("duration_ms")
+            if "duration_ms" in capture
+            else sidecar.get("capture_duration_ms")
+        )
+
         capture_labels["capture_start"].setText(
-            format_value(
-                sidecar.get("capture_start_utc")
-            )
+            format_value(capture_start)
         )
         capture_labels["capture_duration"].setText(
             format_number(
-                sidecar.get("capture_duration_ms"),
+                capture_duration,
                 3,
                 " ms",
             )
         )
 
         trigger_display = (
-            sidecar.get("trigger_display")
+            candidate.get("trigger_display")
+            or candidate.get("trigger_type")
+            or candidate.get("trigger_reason")
+            or sidecar.get("trigger_display")
             or sidecar.get("trigger_type")
             or sidecar.get("trigger_reason")
         )
@@ -462,23 +504,42 @@ class AnalyzerWindow(QMainWindow):
             format_value(trigger_frame_number)
         )
 
+        trigger_offset = (
+            candidate.get("trigger_offset_ms")
+            if "trigger_offset_ms" in candidate
+            else sidecar.get("trigger_offset_ms")
+        )
+
         capture_labels["trigger_offset"].setText(
             format_number(
-                sidecar.get("trigger_offset_ms"),
+                trigger_offset,
                 3,
                 " ms",
             )
         )
+
+        frame_count = (
+            capture.get("frame_count")
+            if "frame_count" in capture
+            else sidecar.get("frame_count")
+        )
+
         capture_labels["frame_count"].setText(
-            format_value(
-                sidecar.get("frame_count")
-            )
+            format_value(frame_count)
         )
 
         self.update_trigger_replay_information()
 
     def update_trigger_replay_information(self) -> None:
         capture_labels = self.capture_value_labels
+
+        capture_labels["replay_delta_threshold"].setText(
+            format_number(
+                self.candidate_config.
+                candidate_brightness_delta_threshold,
+                3,
+            )
+        )
         trigger_frame_index = (
             self.capture_data.original_trigger_frame_index
         )

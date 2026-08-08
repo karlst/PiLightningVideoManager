@@ -12,6 +12,9 @@ import cv2
 import numpy as np
 import os
 
+from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import CandidateConfig
+
 
 @dataclass
 class CaptureData:
@@ -25,6 +28,7 @@ class CaptureData:
     pi_brightness_delta: np.ndarray
     frame_records: dict[int, dict[str, Any]]
     original_trigger_frame_index: int | None
+    capture_candidate_config: CandidateConfig
 
     @property
     def frame_count(self) -> int:
@@ -71,11 +75,19 @@ def load_capture(path: Path) -> CaptureData:
         len(replay_brightness),
     )
 
+    capture_candidate_config = get_capture_candidate_config(
+        sidecar
+    )
+
     print(
         f"Decoded frames: {len(replay_brightness)}"
     )
     print(
         f"ffprobe frames: {len(frame_info)}"
+    )
+    print(
+        "Capture candidate delta threshold: "
+        f"{capture_candidate_config.candidate_brightness_delta_threshold:.3f}"
     )
 
     return CaptureData(
@@ -89,6 +101,7 @@ def load_capture(path: Path) -> CaptureData:
         pi_brightness_delta=pi_brightness_delta,
         frame_records=frame_records,
         original_trigger_frame_index=original_trigger_frame_index,
+        capture_candidate_config=capture_candidate_config,
     )
 
 
@@ -134,7 +147,7 @@ def read_frame_info(filename: Path) -> list[dict[str, Any]]:
             capture_output=True,
             text=True,
             check=True,
-            creationflags = creationflags,
+            creationflags=creationflags,
         )
     except FileNotFoundError:
         raise RuntimeError("ffprobe was not found in PATH.") from None
@@ -312,6 +325,49 @@ def build_frame_record_map(
     return records
 
 
+def get_capture_candidate_config(
+    sidecar: dict[str, Any] | None,
+) -> CandidateConfig:
+    """Return the exact Pi CandidateConfig stored with the capture."""
+
+    if sidecar is None:
+        return CANDIDATE_CONFIG
+
+    candidate = sidecar.get("candidate")
+
+    if not isinstance(candidate, dict):
+        return CANDIDATE_CONFIG
+
+    raw_config = candidate.get("config")
+
+    if not isinstance(raw_config, dict):
+        return CANDIDATE_CONFIG
+
+    try:
+        return CandidateConfig(
+            candidate_brightness_threshold=float(
+                raw_config.get(
+                    "candidate_brightness_threshold",
+                    CANDIDATE_CONFIG.candidate_brightness_threshold,
+                )
+            ),
+            candidate_brightness_delta_threshold=float(
+                raw_config.get(
+                    "candidate_brightness_delta_threshold",
+                    CANDIDATE_CONFIG.candidate_brightness_delta_threshold,
+                )
+            ),
+            candidate_changed_pixel_fraction_threshold=float(
+                raw_config.get(
+                    "candidate_changed_pixel_fraction_threshold",
+                    CANDIDATE_CONFIG.candidate_changed_pixel_fraction_threshold,
+                )
+            ),
+        )
+    except (TypeError, ValueError):
+        return CANDIDATE_CONFIG
+
+
 def get_trigger_frame_index(
     sidecar: dict[str, Any] | None,
     frame_count: int,
@@ -319,9 +375,20 @@ def get_trigger_frame_index(
     if sidecar is None:
         return None
 
-    value = sidecar.get(
-        "trigger_frame_index"
-    )
+    value = None
+
+    candidate = sidecar.get("candidate")
+
+    if isinstance(candidate, dict):
+        value = candidate.get(
+            "trigger_frame_index"
+        )
+
+    # Old sidecar compatibility.
+    if value is None:
+        value = sidecar.get(
+            "trigger_frame_index"
+        )
 
     if value is None:
         frame_number = sidecar.get(
