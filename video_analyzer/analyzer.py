@@ -23,6 +23,7 @@ from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_filter import SolutionFilter
+from video_analyzer.solution_filter import failed_candidate_result
 
 # ## Parse the requested capture, perform initial analysis, and start the Qt event loop.
 def main() -> int:
@@ -53,14 +54,19 @@ def main() -> int:
             capture_data,
             CANDIDATE_CONFIG,
         )
-        solution_filter = SolutionFilter(
-            SOLUTION_CONFIG
-        )
-        solution_result = solution_filter.evaluate(
-            capture_data.pi_brightness,
-            capture_data.pi_brightness_delta,
-            capture_data.original_trigger_frame_index,
-        )
+        # Stage 2 runs only when the replayed CandidateFinder selected a
+        # Candidate under the current Candidate settings.
+        if candidate_result.frame_index is None:
+            solution_result = failed_candidate_result()
+        else:
+            solution_filter = SolutionFilter(
+                SOLUTION_CONFIG
+            )
+            solution_result = solution_filter.evaluate(
+                capture_data.pi_brightness,
+                capture_data.pi_brightness_delta,
+                candidate_result.frame_index,
+            )
 
         application = QApplication(sys.argv)
 

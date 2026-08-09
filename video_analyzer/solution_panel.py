@@ -10,6 +10,7 @@ from PySide6.QtWidgets import (
 )
 
 from video_analyzer.solution_filter import SolutionResult
+from video_analyzer.solution_types import CATEGORY_FAILED_CANDIDATE
 
 
 class SolutionPanel(QGroupBox):
@@ -53,6 +54,10 @@ class SolutionPanel(QGroupBox):
             self._solution_label.setText("YES")
             background = "#d9f2d9"
             border = "#4f9b4f"
+        elif result.category == CATEGORY_FAILED_CANDIDATE:
+            self._solution_label.setText("NO — NOT A CANDIDATE")
+            background = "#eeeeee"
+            border = "#888888"
         else:
             self._solution_label.setText("NO — FALSE POSITIVE")
             background = "#dbeafe"

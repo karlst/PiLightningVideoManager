@@ -30,9 +30,20 @@ from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
 from video_analyzer.steady_state_change_filter import SteadyStateChangeFilter
 from video_analyzer.strong_transient_filter import StrongTransientFilter
+from video_analyzer.solution_types import CATEGORY_FAILED_CANDIDATE
 from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
 from video_analyzer.solution_types import SolutionResult
 from video_analyzer.solution_types import SolutionRule
+
+
+def failed_candidate_result() -> SolutionResult:
+    """Return the pipeline result used when Stage 1 selects no Candidate."""
+
+    return SolutionResult(
+        is_solution=False,
+        category=CATEGORY_FAILED_CANDIDATE,
+        reason="Failed candidate selection",
+    )
 
 
 class SolutionFilter:

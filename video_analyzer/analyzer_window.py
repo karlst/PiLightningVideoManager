@@ -43,6 +43,7 @@ from video_analyzer.graph_panel import GraphPanel
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
 from video_analyzer.solution_filter import SolutionFilter
+from video_analyzer.solution_filter import failed_candidate_result
 from video_analyzer.solution_filter import SolutionResult
 from video_analyzer.solution_panel import SolutionPanel
 from video_analyzer.solution_settings_panel import SolutionSettingsPanel
@@ -74,6 +75,42 @@ def format_number(
         return str(value)
 
     return f"{number:.{decimals}f}{suffix}"
+
+
+# ## Read a current nested sidecar field with fallback to an older flat field.
+def sidecar_value(
+    sidecar: dict[str, Any] | None,
+    section_name: str,
+    key: str,
+    legacy_key: str | None = None,
+    default: Any = None,
+) -> Any:
+    if sidecar is None:
+        return default
+
+    section = sidecar.get(
+        section_name
+    )
+
+    if isinstance(
+        section,
+        dict,
+    ) and key in section:
+        return section.get(
+            key,
+            default,
+        )
+
+    fallback_key = (
+        legacy_key
+        if legacy_key is not None
+        else key
+    )
+
+    return sidecar.get(
+        fallback_key,
+        default,
+    )
 
 
 class AnalyzerWindow(QMainWindow):
@@ -210,6 +247,7 @@ class AnalyzerWindow(QMainWindow):
             ("capture_start", "Capture start UTC"),
             ("capture_duration", "Duration"),
             ("trigger", "Trigger"),
+            ("trigger_reason", "Trigger reason"),
             ("trigger_frame", "Pi trigger frame"),
             ("replay_trigger_frame", "Replay trigger frame"),
             ("replay_result", "Replay result"),
@@ -393,15 +431,19 @@ class AnalyzerWindow(QMainWindow):
 
         self.solution_config = config
 
-        solution_filter = SolutionFilter(
-            config
-        )
+        # Stage 2 uses the Candidate selected by the CURRENT replay settings.
+        if self.candidate_result.frame_index is None:
+            self.solution_result = failed_candidate_result()
+        else:
+            solution_filter = SolutionFilter(
+                config
+            )
 
-        self.solution_result = solution_filter.evaluate(
-            self.capture_data.pi_brightness,
-            self.capture_data.pi_brightness_delta,
-            self.capture_data.original_trigger_frame_index,
-        )
+            self.solution_result = solution_filter.evaluate(
+                self.capture_data.pi_brightness,
+                self.capture_data.pi_brightness_delta,
+                self.candidate_result.frame_index,
+            )
 
         self.solution_panel.set_result(
             self.solution_result
@@ -425,6 +467,12 @@ class AnalyzerWindow(QMainWindow):
         )
 
         self.update_trigger_replay_information()
+
+        # CandidateFinder is Stage 1. Changing Candidate settings must rerun
+        # Stage 2 so the Solution result stays consistent with the replay.
+        self.apply_solution_settings(
+            self.solution_config
+        )
 
     # ## Convert an OpenCV BGR frame into a Qt pixmap for display.
     def frame_to_pixmap(
@@ -486,25 +534,61 @@ class AnalyzerWindow(QMainWindow):
 
         capture_labels["capture_start"].setText(
             format_value(
-                sidecar.get("capture_start_utc")
+                sidecar_value(
+                    sidecar,
+                    "capture",
+                    "start_utc",
+                    "capture_start_utc",
+                )
             )
         )
         capture_labels["capture_duration"].setText(
             format_number(
-                sidecar.get("capture_duration_ms"),
+                sidecar_value(
+                    sidecar,
+                    "capture",
+                    "duration_ms",
+                    "capture_duration_ms",
+                ),
                 3,
                 " ms",
             )
         )
 
         trigger_display = (
-            sidecar.get("trigger_display")
-            or sidecar.get("trigger_type")
-            or sidecar.get("trigger_reason")
+            sidecar_value(
+                sidecar,
+                "candidate",
+                "trigger_display",
+                "trigger_display",
+            )
+            or sidecar_value(
+                sidecar,
+                "candidate",
+                "trigger_type",
+                "trigger_type",
+            )
+            or sidecar_value(
+                sidecar,
+                "candidate",
+                "trigger_reason",
+                "trigger_reason",
+            )
         )
 
         capture_labels["trigger"].setText(
             format_value(trigger_display)
+        )
+
+        capture_labels["trigger_reason"].setText(
+            format_value(
+                sidecar_value(
+                    sidecar,
+                    "candidate",
+                    "trigger_reason",
+                    "trigger_reason",
+                )
+            )
         )
 
         trigger_frame_index = (
@@ -522,14 +606,24 @@ class AnalyzerWindow(QMainWindow):
 
         capture_labels["trigger_offset"].setText(
             format_number(
-                sidecar.get("trigger_offset_ms"),
+                sidecar_value(
+                    sidecar,
+                    "candidate",
+                    "trigger_offset_ms",
+                    "trigger_offset_ms",
+                ),
                 3,
                 " ms",
             )
         )
         capture_labels["frame_count"].setText(
             format_value(
-                sidecar.get("frame_count")
+                sidecar_value(
+                    sidecar,
+                    "capture",
+                    "frame_count",
+                    "frame_count",
+                )
             )
         )
 

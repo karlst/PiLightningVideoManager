@@ -47,6 +47,8 @@ import cv2
 import numpy as np
 import os
 
+from video_analyzer.tool_paths import resolve_external_tool
+
 
 @dataclass
 class CaptureData:
@@ -151,8 +153,12 @@ def resolve_capture_paths(path: Path) -> tuple[Path, Path]:
 
 # ## Read encoded per-frame metadata from the MP4 using ffprobe.
 def read_frame_info(filename: Path) -> list[dict[str, Any]]:
+    ffprobe_path = resolve_external_tool(
+        "ffprobe"
+    )
+
     command = [
-        "ffprobe",
+        ffprobe_path,
         "-v",
         "error",
         "-select_streams",
@@ -431,6 +437,50 @@ def build_frame_record_map(
 
     return records
 
+# ## Read a current nested sidecar field with fallback to an older flat field.
+def get_sidecar_value(
+    sidecar: dict[str, Any] | None,
+    section_name: str,
+    key: str,
+    legacy_key: str | None = None,
+    default: Any = None,
+) -> Any:
+    """
+    Sidecar format compatibility helper.
+
+    Current sidecars group clip-level fields under sections such as "capture"
+    and "candidate". Older sidecars stored many of those fields at the top
+    level. Prefer the current nested field, but fall back to the older flat
+    field so Analyzer can continue to open archived captures.
+    """
+    if sidecar is None:
+        return default
+
+    section = sidecar.get(
+        section_name
+    )
+
+    if isinstance(
+        section,
+        dict,
+    ) and key in section:
+        return section.get(
+            key,
+            default,
+        )
+
+    fallback_key = (
+        legacy_key
+        if legacy_key is not None
+        else key
+    )
+
+    return sidecar.get(
+        fallback_key,
+        default,
+    )
+
+
 # ## Recover and validate the original Candidate trigger frame from the sidecar.
 def get_trigger_frame_index(
     sidecar: dict[str, Any] | None,
@@ -439,13 +489,19 @@ def get_trigger_frame_index(
     if sidecar is None:
         return None
 
-    value = sidecar.get(
-        "trigger_frame_index"
+    value = get_sidecar_value(
+        sidecar,
+        "candidate",
+        "trigger_frame_index",
+        "trigger_frame_index",
     )
 
     if value is None:
-        frame_number = sidecar.get(
-            "trigger_frame_number"
+        frame_number = get_sidecar_value(
+            sidecar,
+            "candidate",
+            "trigger_frame_number",
+            "trigger_frame_number",
         )
 
         if frame_number is not None:
