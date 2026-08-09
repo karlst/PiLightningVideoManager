@@ -2,6 +2,23 @@
 @file clip_writer.py
 
 @brief Writes buffered camera frames to one MP4/H.264 file using FFmpeg.
+
+ClipWriter is the final video-output stage of the buffered capture pipeline.
+BufferManager keeps recent CameraFrame objects in memory. When a manual or
+automatic capture is saved, BufferManager passes a snapshot of those frames to
+ClipWriter.
+
+The frames held in memory are OpenCV BGR images, not an already encoded video
+stream. ClipWriter starts an FFmpeg process and writes the raw BGR pixel bytes
+to FFmpeg through standard input. FFmpeg then encodes those frames as H.264
+video inside an MP4 container.
+
+ClipWriter writes only the video pixels. Per-frame timing, trigger information,
+camera metadata, and analysis measurements are stored separately in the JSON
+sidecar written by SidecarWriter.
+
+This class does not read directly from the camera and does not decide when a
+capture should occur; CameraReader and BufferManager handle those jobs.
 """
 
 from datetime import datetime

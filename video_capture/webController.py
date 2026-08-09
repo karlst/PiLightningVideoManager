@@ -1,3 +1,22 @@
+"""
+@file webController.py
+
+@brief Connects the Flask web server to the Pi Camera Capture application.
+
+Flask serves web pages by mapping browser requests (URLs) to ordinary Python
+functions called routes. register_routes() defines those mappings. A browser
+request such as GET /system_status runs the matching Python function, which
+reads application state from WebServices and returns HTML, JSON, an image, or
+a capture file to the browser. POST routes work in the opposite direction:
+they let buttons and controls on the web page ask the Python application to
+perform actions such as enabling triggers, changing candidate settings, or
+saving a capture.
+
+WebServices is simply the collection of application objects that these route
+functions need in order to talk to the rest of Pi Camera Capture.
+"""
+
+
 from dataclasses import dataclass
 
 from flask import Flask

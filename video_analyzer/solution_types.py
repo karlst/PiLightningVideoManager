@@ -1,4 +1,15 @@
-"""Shared types for playback solution filtering."""
+"""
+Shared result types and interface used by desktop Solution filters.
+
+Individual Solution filters all return SolutionResult so the rest of the
+Analyzer can handle different rejection rules uniformly. SolutionRule is a
+Python Protocol describing the evaluate() method a filter must provide; a class
+does not need to inherit from SolutionRule as long as it implements that
+compatible method.
+
+The category constants provide stable names used by the GUI and batch
+classifier.
+"""
 
 from __future__ import annotations
 

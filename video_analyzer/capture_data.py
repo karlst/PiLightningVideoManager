@@ -1,4 +1,39 @@
-"""Load and hold capture data used by the desktop video analyzer."""
+"""
+@file capture_data.py
+
+@brief Load a saved Candidate capture and prepare the data used by the
+desktop video Analyzer.
+
+A Candidate capture normally consists of two files with the same basename:
+
+    trigger_20260809T120000Z.mp4
+    trigger_20260809T120000Z.json
+
+The MP4 contains the encoded video. The JSON sidecar contains information
+recorded by the Raspberry Pi while the original frames were being captured,
+including per-frame brightness measurements and the original trigger.
+
+This module is the Analyzer's main loading layer. It resolves the MP4/JSON
+pair, reads encoded-frame metadata with ffprobe, reads the sidecar, and
+decodes the MP4 with OpenCV to reconstruct measurements useful during
+desktop replay.
+
+In particular, analyze_clip() builds a histogram of positive pixel-brightness
+changes for every frame. Keeping the histogram rather than one already-
+thresholded value lets the Analyzer experiment with different CandidateFinder
+bright-pixel thresholds without decoding the video again.
+build_bright_pixel_fraction() converts those histograms into the metric
+required by CandidateFinder for the currently selected threshold.
+
+The resulting CaptureData object contains both Pi measurements preserved in
+the sidecar and replay measurements reconstructed from the encoded MP4.
+Analyzer and candidate-replay code consume CaptureData rather than each
+independently reopening and interpreting the capture files.
+
+For a packaged Windows Analyzer, ffprobe is shipped with the application.
+tool_paths.resolve_external_tool() finds that bundled copy while still
+allowing a normal ffprobe installation to be used during source development.
+"""
 
 from __future__ import annotations
 
@@ -31,7 +66,7 @@ class CaptureData:
     def frame_count(self) -> int:
         return len(self.replay_brightness)
 
-
+# ## Load one Candidate MP4/sidecar pair and assemble all Analyzer data.
 def load_capture(path: Path) -> CaptureData:
     video_path, sidecar_path = resolve_capture_paths(path)
 
@@ -97,7 +132,7 @@ def load_capture(path: Path) -> CaptureData:
         original_trigger_frame_index=original_trigger_frame_index,
     )
 
-
+# ## Resolve a basename, MP4 path, or JSON path into the matching file pair.
 def resolve_capture_paths(path: Path) -> tuple[Path, Path]:
     suffix = path.suffix.lower()
 
@@ -114,7 +149,7 @@ def resolve_capture_paths(path: Path) -> tuple[Path, Path]:
         f"Unsupported capture extension: {path.suffix}"
     )
 
-
+# ## Read encoded per-frame metadata from the MP4 using ffprobe.
 def read_frame_info(filename: Path) -> list[dict[str, Any]]:
     command = [
         "ffprobe",
@@ -160,7 +195,7 @@ def read_frame_info(filename: Path) -> list[dict[str, Any]]:
 
     return frames
 
-
+# ## Read the JSON sidecar if one exists for this capture.
 def read_sidecar(filename: Path) -> dict[str, Any] | None:
     if not filename.is_file():
         return None
@@ -182,7 +217,7 @@ def read_sidecar(filename: Path) -> dict[str, Any] | None:
 
     return data
 
-
+# ## Decode the MP4 and reconstruct brightness and positive-delta histograms.
 def analyze_clip(
     filename: Path,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -307,7 +342,7 @@ def build_bright_pixel_fraction(
 
     return fractions
 
-
+# ## Build frame-aligned arrays from brightness metrics recorded by the Pi.
 def build_pi_metric_arrays(
     sidecar: dict[str, Any] | None,
     frame_count: int,
@@ -361,7 +396,7 @@ def build_pi_metric_arrays(
 
     return pi_brightness, pi_brightness_delta
 
-
+# ## Index sidecar frame records by frame index for quick Analyzer lookup.
 def build_frame_record_map(
     sidecar: dict[str, Any] | None,
 ) -> dict[int, dict[str, Any]]:
@@ -396,7 +431,7 @@ def build_frame_record_map(
 
     return records
 
-
+# ## Recover and validate the original Candidate trigger frame from the sidecar.
 def get_trigger_frame_index(
     sidecar: dict[str, Any] | None,
     frame_count: int,

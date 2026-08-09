@@ -1,4 +1,15 @@
-"""Candidate threshold controls for the desktop video analyzer."""
+"""
+Qt controls for experimenting with CandidateFinder thresholds.
+
+This panel displays editable numeric controls for CandidateFinder settings.
+Pressing Apply constructs a temporary CandidateConfig and sends it back to
+AnalyzerWindow through the supplied callback. AnalyzerWindow then replays the
+saved capture with the shared CandidateFinder and updates the graphs/result.
+
+These desktop changes are experimental playback settings; they do not change
+the configuration that was used by the Pi when the clip was captured.
+"""
+
 
 from __future__ import annotations
 

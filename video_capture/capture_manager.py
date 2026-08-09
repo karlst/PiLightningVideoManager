@@ -1,8 +1,29 @@
 """
 @file capture_manager.py
 
-@brief Manages saved capture files.
+@brief Manages the collection of saved MP4 captures and their JSON sidecars.
+
+CaptureManager is the file-management layer for captures that have already
+been written to disk. A capture normally consists of a matching pair of files:
+an MP4 containing the video and a JSON sidecar containing the capture metadata
+and analysis data.
+
+The class scans the configured capture directory and builds the capture list
+used by the web interface. While doing that it reads each JSON sidecar and
+combines useful information from the MP4 file, sidecar, and filename into one
+record that the browser can display.
+
+CaptureManager also enforces the configured maximum number of saved captures.
+When cleanup is required, it deletes the oldest eligible MP4 files together
+with their matching JSON sidecars, while protecting captures that were saved
+too recently.
+
+This class does not create video clips or sidecars and does not decide when a
+capture occurs. Those responsibilities belong to the capture pipeline. Its job
+begins after capture files exist on disk: list them, describe them, and remove
+old ones when necessary.
 """
+
 
 from pathlib import Path
 import json

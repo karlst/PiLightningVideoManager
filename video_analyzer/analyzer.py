@@ -1,4 +1,15 @@
-"""Entry point for the desktop video analyzer."""
+"""
+Desktop Video Analyzer program entry point.
+
+This module is intentionally small. It parses the capture filename supplied on
+the command line, loads the MP4/JSON capture pair, replays CandidateFinder
+against the archived metrics, runs the desktop-only SolutionFilter, then starts
+the Qt graphical application and creates AnalyzerWindow.
+
+Keeping startup here and most GUI behavior in AnalyzerWindow makes the program
+easier to package and keeps command-line/error handling separate from the user
+interface.
+"""
 
 import argparse
 from pathlib import Path
@@ -13,7 +24,7 @@ from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_filter import SolutionFilter
 
-
+# ## Parse the requested capture, perform initial analysis, and start the Qt event loop.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(

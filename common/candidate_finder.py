@@ -2,6 +2,15 @@
 @file candidate_finder.py
 
 @brief Threshold-based logic for identifying candidates.
+
+A candidate is a captured video clip that might contain a frame showing
+lightning. CandidateFinder examines frame metrics and applies the configured
+thresholds to decide whether a frame is interesting enough to create such a
+candidate. The same CandidateFinder is used during live capture on the Pi and
+by the desktop analyzer when candidate detection is replayed from saved data.
+It deliberately identifies possible lightning rather than deciding whether a
+clip is actually a true lightning solution; that later decision belongs to
+the analyzer's SolutionFilter.
 """
 
 from common.candidate_config import CandidateConfig

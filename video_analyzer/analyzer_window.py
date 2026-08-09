@@ -1,4 +1,17 @@
-"""Qt main window for the desktop video analyzer."""
+"""
+Main Qt window for the desktop Video Analyzer.
+
+AnalyzerWindow is the coordinator for the desktop GUI. It displays one decoded
+video frame at a time, capture and frame metadata, brightness graphs, the
+original Pi trigger, the replayed CandidateFinder trigger, SolutionFilter
+classification, and the editable Candidate/Solution settings panels.
+
+Qt is event driven: buttons, sliders, keyboard events, window resize events,
+and settings-panel callbacks invoke methods on this class. AnalyzerWindow does
+not itself decode the whole video or implement candidate/solution algorithms;
+it delegates those jobs to VideoReader, CaptureData, CandidateFinder replay,
+GraphPanel, and SolutionFilter.
+"""
 
 from __future__ import annotations
 
@@ -36,7 +49,7 @@ from video_analyzer.solution_settings_panel import SolutionSettingsPanel
 from video_analyzer.version import VERSION
 from video_analyzer.video_reader import VideoReader
 
-
+# ## Format a possibly missing metadata value for display.
 def format_value(
     value: Any,
     default: str = "—",
@@ -46,7 +59,7 @@ def format_value(
 
     return str(value)
 
-
+# ## Format a numeric metadata value with optional units.
 def format_number(
     value: Any,
     decimals: int = 3,
@@ -64,6 +77,7 @@ def format_number(
 
 
 class AnalyzerWindow(QMainWindow):
+    # ## Initialize Analyzer state, video access, widgets, and the first displayed frame.
     def __init__(
         self,
         capture_data: CaptureData,
@@ -95,6 +109,7 @@ class AnalyzerWindow(QMainWindow):
         self.update_capture_information()
         self.set_frame(0, force=True)
 
+    # ## Build a reusable two-column group of metadata labels.
     def create_information_group(
         self,
         title: str,
@@ -143,6 +158,7 @@ class AnalyzerWindow(QMainWindow):
 
         return group, value_labels
 
+    # ## Construct the complete Analyzer window layout and child panels.
     def create_ui(self) -> None:
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -344,6 +360,7 @@ class AnalyzerWindow(QMainWindow):
             controls_layout
         )
 
+    # ## Connect buttons and slider signals to frame-navigation methods.
     def connect_controls(self) -> None:
         self.first_button.clicked.connect(
             lambda: self.set_frame(0)
@@ -367,6 +384,7 @@ class AnalyzerWindow(QMainWindow):
             self.on_slider_changed
         )
 
+    # ## Reclassify the loaded Candidate using temporary Solution settings.
     def apply_solution_settings(
         self,
         config: SolutionConfig,
@@ -389,6 +407,7 @@ class AnalyzerWindow(QMainWindow):
             self.solution_result
         )
 
+    # ## Replay CandidateFinder using temporary Candidate thresholds.
     def apply_candidate_settings(
         self,
         config: CandidateConfig,
@@ -407,6 +426,7 @@ class AnalyzerWindow(QMainWindow):
 
         self.update_trigger_replay_information()
 
+    # ## Convert an OpenCV BGR frame into a Qt pixmap for display.
     def frame_to_pixmap(
         self,
         frame: np.ndarray,
@@ -429,6 +449,7 @@ class AnalyzerWindow(QMainWindow):
 
         return QPixmap.fromImage(image)
 
+    # ## Scale one decoded frame to the image area while preserving aspect ratio.
     def display_frame(
         self,
         frame: np.ndarray,
@@ -445,6 +466,7 @@ class AnalyzerWindow(QMainWindow):
             scaled_pixmap
         )
 
+    # ## Populate clip-level information from CaptureData and the sidecar.
     def update_capture_information(self) -> None:
         capture_labels = self.capture_value_labels
         sidecar = self.capture_data.sidecar
@@ -513,6 +535,7 @@ class AnalyzerWindow(QMainWindow):
 
         self.update_trigger_replay_information()
 
+    # ## Compare the replay trigger with the trigger originally recorded by the Pi.
     def update_trigger_replay_information(self) -> None:
         capture_labels = self.capture_value_labels
         trigger_frame_index = (
@@ -546,6 +569,7 @@ class AnalyzerWindow(QMainWindow):
             replay_result
         )
 
+    # ## Populate metadata and Pi metrics for the currently displayed frame.
     def update_frame_information(self) -> None:
         labels = self.frame_value_labels
         frame_count = self.capture_data.frame_count
@@ -632,6 +656,7 @@ class AnalyzerWindow(QMainWindow):
             else "—"
         )
 
+    # ## Clamp, decode, display, and synchronize the requested frame.
     def set_frame(
         self,
         frame_number: int,
@@ -667,6 +692,7 @@ class AnalyzerWindow(QMainWindow):
         )
         self.update_slider()
 
+    # ## Synchronize the slider and frame-count label without recursive callbacks.
     def update_slider(self) -> None:
         self.slider_frame_label.setText(
             f"{self.frame_number + 1} / "
@@ -685,6 +711,7 @@ class AnalyzerWindow(QMainWindow):
         finally:
             self.updating_slider = False
 
+    # ## Display the frame selected by a user-driven slider change.
     def on_slider_changed(
         self,
         value: int,
@@ -694,6 +721,7 @@ class AnalyzerWindow(QMainWindow):
 
         self.set_frame(value)
 
+    # ## Handle keyboard shortcuts for frame navigation and closing the Analyzer.
     def keyPressEvent(self, event) -> None:
         key = event.key()
 
@@ -738,6 +766,7 @@ class AnalyzerWindow(QMainWindow):
 
         super().keyPressEvent(event)
 
+    # ## Redisplay the current frame at the new window size.
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
 
@@ -748,6 +777,7 @@ class AnalyzerWindow(QMainWindow):
         if frame is not None:
             self.display_frame(frame)
 
+    # ## Release the OpenCV video resource when the window closes.
     def closeEvent(self, event) -> None:
         self.video_reader.close()
         event.accept()

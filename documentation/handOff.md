@@ -1,332 +1,245 @@
-# Handoff.md
-
-# Pi Camera Capture — ChatGPT Handoff
+# Pi Camera Capture --- ChatGPT Handoff
 
 ## Purpose
 
-This document is **not** user documentation.
+This is a developer handoff document, not end-user documentation.
 
-It exists so ChatGPT (or any new developer) can become productive on this project within a few minutes without rereading months of chat history.
+Its purpose is to let a new developer understand the
+current architecture and the important design decisions.
 
-The source code is the primary documentation.
+## Project Goal
 
-This file records the architectural decisions that are not obvious from the code.
+Detect, capture, and analyze lightning with a Raspberry Pi and a
+high-speed camera while minimizing the chance of missing a real event.
 
----
+The project intentionally separates real-time capture from more
+expensive post-capture classification.
 
-# Project Goal
+Machine learning is not currently part of the design.
 
-Detect and capture cloud-to-ground (CG) lightning using a Raspberry Pi 4 and a high-speed USB camera.
+## Core Architecture: Candidate First, Solution Second
 
-Primary goals:
+The most important architectural concept is the **two-stage detection
+process**.
 
-* Never miss a CG lightning event.
-* Support daylight lightning.
-* Preserve pre-trigger frames.
-* Analyze captures after recording.
-* Build a personal lightning database for future tuning.
+### Candidate
 
-Machine learning is intentionally **not** part of the design.
+A **Candidate** is a saved video clip that might contain a frame showing
+lightning.
 
----
+CandidateFinder does **not** attempt to prove that lightning occurred.
+Its job is to recognize an event that is sufficiently interesting to
+preserve for later analysis.
 
-# Hardware
+False positives at this stage are acceptable. Missing a real lightning
+event is much worse than saving an unnecessary clip.
 
-* Raspberry Pi 4
-* ELP USB camera
-* Typical operating mode:
+### Solution
 
-  * 640 × 360
-  * 260 FPS
+A **Solution** is a Candidate that passes the desktop `SolutionFilter`
+and is classified as a likely true lightning flash.
 
-The Pi hosts the web UI on port **8080**.
+Solution filtering is deliberately separate from real-time Candidate
+detection. It can use the **entire saved clip**, including frames before
+and after the trigger, to identify false-positive patterns that cannot
+be recognized reliably from the triggering frame alone.
 
----
+The conceptual pipeline is:
 
-# General Design Philosophy
+``` text
+Camera frames
+    |
+    v
+CandidateFinder                  real time, Raspberry Pi
+    |
+    v
+Candidate MP4 + JSON sidecar
+    |
+    v
+SolutionFilter                   post-capture, desktop
+    |
+    +---- false positive
+    |
+    v
+Solution / true flash
+```
 
-Capture first.
+The short version is:
 
-Analyze later.
+**CandidateFinder asks whether to save. SolutionFilter asks whether the
+saved Candidate is really lightning.**
 
-Storage is inexpensive.
+## `video_capture`
 
-Missing lightning is expensive.
+`video_capture` runs on the Raspberry Pi.
 
-The system intentionally tolerates false positives during development.
+Its responsibilities include:
 
----
+-   reading the high-speed camera,
+-   maintaining a continuously running ring buffer,
+-   calculating the lightweight metrics needed for real-time Candidate
+    detection,
+-   running CandidateFinder,
+-   preserving pre-trigger and post-trigger frames,
+-   writing Candidate clips as H.264 MP4 files,
+-   writing matching JSON sidecars,
+-   serving the web interface,
+-   managing saved captures.
 
-# UI Philosophy
+The trigger path must remain lightweight enough to run continuously
+without interfering with high-speed capture.
 
-The main screen is an **instrument panel**, not a configuration page.
+### CandidateFinder
 
-Main screen should answer:
+CandidateFinder is shared code used by both the Pi capture application
+and the desktop Analyzer.
 
-* Is the system healthy?
-* Is the camera running?
-* Is triggering enabled?
-* What is happening now?
+It evaluates per-frame metrics and returns when a Candidate trigger
+condition is met. Current Candidate measurements include mean
+brightness, adjacent-frame brightness change, and changed/bright-pixel
+fraction measurements.
 
-Configuration belongs in dialogs.
+Because the same CandidateFinder is used on both sides, the Analyzer can
+replay a capture with the same algorithm used by the Pi.
 
-Playback temporarily replaces operational information with forensic analysis.
+## Ring Buffer and Capture
 
----
+The ring buffer runs continuously and retains the most recent camera
+frames.
 
-# Trigger Philosophy
+When CandidateFinder triggers, the saved Candidate contains a window
+around that event rather than beginning only after detection. This
+preserves the frames leading into the event as well as the trigger and
+post-trigger frames.
 
-Current trigger is intentionally simple.
+The trigger frame must remain identifiable in the saved capture.
 
-Current algorithm:
+## MP4 and JSON Sidecar
 
-Adjacent-frame brightness delta.
+A normal Candidate consists of a matching pair:
 
-Every incoming frame is evaluated.
+trigger_<timestamp>.mp4
+trigger_<timestamp>.json
 
-Graphs are **not** part of trigger evaluation.
 
-Graphs exist only for display.
+The MP4 contains the encoded video.
 
-The trigger path must always remain lightweight.
+The JSON file is a **sidecar**: a separate metadata file that
+accompanies the video. It preserves information such as
+application/configuration, camera and capture metadata,
+Candidate trigger information, CandidateFinder settings, and per-frame
+measurements.
 
-Expensive OpenCV analysis occurs after capture.
+The MP4/JSON pair should be treated as one portable capture record.
 
----
+Sidecars should contain measured facts and provenance rather than
+speculative classifications. Final Solution classification belongs to
+the Analyzer.
 
-# Ring Buffer Philosophy
+`rebuild_sidecars.py` exists to reconstruct missing sidecars from MP4
+files where possible. Reconstruction cannot recover information that
+existed only on the Pi at capture time, so unrecoverable values must not
+be fabricated.
 
-The ring buffer is always running.
+## `video_analyzer`
 
-Captures consist of:
+`video_analyzer` is the desktop forensic-analysis application.
 
-* Pre-trigger frames
-* Trigger frame
-* Post-trigger frames
+It loads a saved MP4 and matching JSON sidecar and provides:
 
-The trigger frame should always be identifiable during playback.
+-   random-access frame-by-frame playback,
+-   capture metadata,
+-   current-frame metadata,
+-   brightness graphs,
+-   original Pi trigger display,
+-   CandidateFinder replay,
+-   experimental Candidate threshold changes,
+-   SolutionFilter classification,
+-   experimental Solution-filter settings.
 
----
+The Analyzer can reconstruct some measurements from the encoded MP4 when
+necessary, but original Pi sidecar measurements are preferred when
+available.
 
-# Frame Analysis Philosophy
+Changes made in Analyzer settings are experimental playback settings.
+They do not modify the original capture.
 
-Frame analysis exists for measurement.
+## Candidate Replay
 
-Not classification.
+The Analyzer replays archived/reconstructed frame metrics through the
+shared CandidateFinder.
 
-Each frame is processed independently.
+This serves two purposes:
 
-Current processing:
+1.  verify or compare the Candidate trigger against the original Pi
+    trigger;
+2.  experiment with Candidate thresholds and see where the trigger would
+    move.
 
-* grayscale
-* absolute brightness threshold
-* local contrast threshold
-* connected components
-* geometry filters
+The original Pi trigger remains part of the capture record and should
+not be overwritten by replay results.
 
-Measurements are written to the sidecar.
+## SolutionFilter
 
-The sidecar should contain facts, not opinions.
+`SolutionFilter` is desktop-only post-capture classification.
 
-Avoid fields like:
+It examines the Candidate after it has safely been recorded and can
+evaluate behavior across the clip rather than being limited to one
+incoming frame.
 
-* lightning_probability
-* continuing_current_candidate
-* ML scores
+The current filter chain includes specialized rejection rules for:
 
-Instead store measurable quantities.
+-   sustained brightness noise,
+-   frame-dropout anomalies,
+-   steady-state brightness changes.
 
----
+Filters run in sequence. The first filter that recognizes a
+false-positive pattern rejects the Candidate and supplies the
+classification reason.
 
-# Playback Philosophy
+If no rejection filter fires, the Candidate is classified as a true
+flash/Solution.
 
-Playback is a forensic tool.
+This architecture is intentional: keep CandidateFinder permissive and
+fast, then use whole-clip context to remove false positives later.
 
-Desired workflow:
+## Batch Classification
 
-Trigger occurs
+`batch_classifier.py` applies SolutionFilter to collections of Candidate
+MP4/JSON pairs and moves them into category directories.
 
-↓
+Current categories include true flashes and known anomaly types.
+Captures without sufficient sidecar information are treated as
+unclassified.
 
-Open capture
+## Web Application
 
-↓
+The Raspberry Pi web application is built with Flask.
 
-Step frame-by-frame
+`webApp.py` assembles the capture services and Flask application.
+`webController.py` registers URL routes that allow the browser to query
+or control those services.
 
-↓
+The web interface is primarily an operational instrument panel: it
+should make camera/capture/trigger status easy to understand without
+turning the main screen into a large configuration form.
 
-Graphs follow playback
+## Hardware
 
-↓
+Current primary hardware:
 
-Read analysis panel
+-   Raspberry Pi 4
+-   ELP high-speed USB camera
+-   typical capture mode: 640 × 360 at approximately 260 FPS
 
-↓
+The Pi web application normally serves on port 8080.
 
-Understand why the trigger fired
+The architecture should not unnecessarily prevent later camera-driver or
+hardware changes.
 
-Playback should help improve triggering.
 
----
 
-# Sidecar Philosophy
 
-Sidecar accompanies every capture.
 
-Purpose:
 
-Preserve measurements that would otherwise require expensive re-analysis.
 
-Examples:
-
-* trigger type
-* trigger frame
-* trigger offset
-* component counts
-* duration
-* frame records
-
-Sidecars should remain versioned.
-
----
-
-# Event Log
-
-Recent Events shows concise summaries.
-
-Dialog shows complete messages.
-
-Every significant event should be logged.
-
-Health entries are periodic.
-
----
-
-# Coding Conventions
-
-Python
-
-Every class:
-
-#
-
-Every method:
-
-#
-
-Paragraph comments encouraged.
-
-Prefer one return statement unless multiple returns improve readability.
-
-Preserve comments.
-
-For substantial changes return complete files.
-
----
-
-JavaScript
-
-Same conventions.
-
-Use
-
-// ##
-
-before classes and methods.
-
-Return complete files for substantial changes.
-
----
-
-# ChatGPT Rules
-
-Never guess.
-
-If source files are needed:
-
-Ask.
-
-Always modify uploaded versions.
-
-Do not regenerate old code from memory.
-
-Preserve comments.
-
-Preserve architecture.
-
----
-
-# Things Already Learned
-
-Several architectural decisions were made after experimentation.
-
-Do not revert them without good reason.
-
-Examples:
-
-* Instrument panel instead of configuration page.
-* Playback replaces live mode.
-* Adjacent-frame trigger instead of moving-average trigger.
-* Sidecars contain measurements only.
-* Trigger first, analyze later.
-* No machine learning.
-* Daylight lightning is a primary requirement.
-
----
-
-# Current State
-
-Implemented:
-
-✓ Ring buffer
-
-✓ MP4 recording
-
-✓ Trigger metadata
-
-✓ JSON sidecars
-
-✓ Frame stepping
-
-✓ Arrow-key playback
-
-✓ Capture analysis panel
-
-✓ Playback graphs
-
-✓ Connected-component analysis
-
-✓ Local contrast
-
-Current work:
-
-Improve trigger quality while avoiding missed lightning.
-
----
-
-# Near-Term Priorities
-
-1. Continue trigger tuning.
-
-2. Improve daylight lightning detection.
-
-3. Add more per-frame metrics to playback graphs.
-
-4. Continue OpenCV-based geometry measurements.
-
-5. Tune connected-component filters using real lightning captures.
-
----
-
-# Long-Term Vision
-
-Eventually the system should become an engineering instrument for studying lightning.
-
-The capture itself is only the first step.
-
-The long-term value comes from building a library of measured lightning events that can be replayed, analyzed, compared, and used to improve future trigger algorithms.
-
-Whenever possible, preserve data instead of throwing it away.
-
-Future algorithms can always re-analyze stored captures.

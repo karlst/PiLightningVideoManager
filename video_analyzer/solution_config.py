@@ -1,9 +1,13 @@
 """
-Configuration for desktop-only Solution filtering.
+Configuration values for desktop-only Solution filtering.
 
-These defaults are used by batch classification and at Analyzer startup.
-The Analyzer UI may create temporary SolutionConfig objects to experiment
-with different values without modifying this file.
+A Candidate is a saved clip that might contain lightning. SolutionFilter applies
+additional desktop analysis to decide whether the Candidate is a likely true
+flash or a known false-positive pattern.
+
+SolutionConfig holds the tunable thresholds used by those filters. The module
+constant SOLUTION_CONFIG supplies the normal defaults; Analyzer settings panels
+may create temporary SolutionConfig objects without changing these defaults.
 """
 
 from __future__ import annotations

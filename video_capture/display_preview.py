@@ -1,8 +1,26 @@
 """
 @file display_preview.py
 
-@brief Starts/stops ffplay preview on the Pi attached monitor.
+@brief Starts and stops a live camera preview on a monitor attached to the Pi.
+
+DisplayPreview provides a local, full-motion view of the camera for setup and
+aiming. It is intended for a monitor physically attached to the Raspberry Pi,
+rather than for the browser-based preview used from another computer or tablet.
+
+The class does not read camera frames in Python. Instead, it starts ffplay as a
+separate process. ffplay is the video-player program supplied with FFmpeg. It
+opens the configured Linux V4L2 camera device directly and displays the live
+video using the configured camera format and resolution.
+
+Because the Pi application may be started as a background service rather than
+from the graphical desktop, start() explicitly sets DISPLAY=:0. This tells
+ffplay to put its window on the Pi's primary graphical display.
+
+DisplayPreview keeps the ffplay process handle so the application can determine
+whether the local preview is running and can terminate it when the user stops
+the preview.
 """
+
 
 import os
 import subprocess

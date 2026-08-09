@@ -1,4 +1,16 @@
-"""Brightness graph panel for the desktop video analyzer."""
+"""
+Qt/pyqtgraph panel that visualizes brightness data for one capture.
+
+GraphPanel draws absolute brightness and adjacent-frame brightness change
+against frame number. When Pi sidecar measurements are available they are
+preferred; reconstructed MP4 measurements are used as a fallback.
+
+The graphs also show reference markers: the Candidate brightness-delta
+threshold, the currently displayed frame, the original trigger recorded by the
+Pi, and the trigger produced by replaying CandidateFinder with the current
+experimental settings.
+"""
+
 
 from __future__ import annotations
 

@@ -1,3 +1,29 @@
+"""
+@file previewServer.py
+
+@brief Starts and stops an FFmpeg process that creates an HLS camera preview.
+
+This class implements the older streaming-preview path for the Pi camera.
+
+HLS means HTTP Live Streaming. Instead of sending one continuous video file to
+the browser, FFmpeg repeatedly writes a small playlist file named stream.m3u8
+plus a rolling set of short video segment files into the configured HLS
+directory. A web browser or video player can request the playlist, then fetch
+the segment files listed inside it as they are produced.
+
+PreviewServer does not itself read or decode camera frames in Python. It starts
+a separate FFmpeg process and gives FFmpeg the camera device, frame rate,
+resolution, and input format. FFmpeg reads the V4L2 camera directly, encodes
+the preview as H.264, and maintains the HLS playlist and segment files.
+
+The class keeps the FFmpeg process handle so the application can determine
+whether preview generation is running and can terminate it cleanly.
+
+This is separate from the newer buffered JPEG preview path, where BufferManager
+provides the latest already-captured CameraFrame to the web application.
+"""
+
+
 import subprocess
 from pathlib import Path
 

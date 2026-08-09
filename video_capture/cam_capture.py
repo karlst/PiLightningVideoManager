@@ -1,3 +1,15 @@
+"""
+@file cam_capture.py
+
+@brief Performs a direct, fixed-duration camera recording using FFmpeg.
+
+CamCapture is a simple camera-recording helper used to ask FFmpeg to capture
+directly from the configured Linux V4L2 camera device. Unlike the normal
+BufferManager/ClipWriter path, it does not use the application's rolling frame
+buffer or trigger logic; FFmpeg reads the camera itself and writes the camera
+stream directly to an MKV file.
+"""
+
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess

@@ -1,4 +1,15 @@
-"""Random-access OpenCV video reader for the desktop analyzer."""
+"""
+Small random-access OpenCV reader used by the desktop Analyzer.
+
+AnalyzerWindow needs to jump directly to arbitrary frames as the user moves the
+slider or presses frame-navigation keys. VideoReader owns one OpenCV
+VideoCapture object, seeks it to the requested zero-based frame index, decodes
+that frame, and returns it as a NumPy/OpenCV image.
+
+It deliberately handles only video-frame access; metadata and sidecar loading
+belong to CaptureData.
+"""
+
 
 from pathlib import Path
 

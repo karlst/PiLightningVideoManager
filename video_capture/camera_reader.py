@@ -1,7 +1,16 @@
 """
 @file camera_reader.py
 
-@brief Background camera frame reader using OpenCV/V4L2.
+@brief Camera-interface layer for the USB high-speed camera.
+
+CameraReader is the lowest application-level interface to the physical camera.
+It performs much the same job as a device driver within Pi Camera Capture:
+it opens the Linux V4L2 camera device through OpenCV, configures the MJPEG
+format, image size, and frame rate required by the ELP High Speed camera,
+then continuously reads frames on a background thread. Each frame is given
+sequence and timing information and passed upward to BufferManager through a
+callback. The implementation is suitable for the current ELP camera and other
+V4L2/OpenCV cameras that support the same capture interface and settings.
 """
 
 from dataclasses import dataclass

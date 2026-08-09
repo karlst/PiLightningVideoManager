@@ -1,4 +1,15 @@
-"""Replay archived/reconstructed frame metrics through CandidateFinder."""
+"""
+Replay a saved capture through the same CandidateFinder used on the Pi.
+
+The Pi uses common.CandidateFinder live, one frame at a time, to decide when a
+possible lightning event is interesting enough to save as a Candidate clip.
+The Analyzer uses this module to feed archived or reconstructed frame metrics
+through that exact same CandidateFinder logic.
+
+This lets Candidate thresholds be changed experimentally on the desktop and
+shows which saved frame would have triggered with those settings. It does not
+alter the original Pi trigger stored in the sidecar.
+"""
 
 from __future__ import annotations
 
@@ -23,7 +34,7 @@ class CandidateReplayResult:
     def found(self) -> bool:
         return self.frame_index is not None
 
-
+# ## Reconstruct per-frame metrics and return the first frame that shared CandidateFinder triggers on.
 def replay_candidate_finder(
     capture_data: CaptureData,
     config: CandidateConfig = CANDIDATE_CONFIG,
@@ -75,7 +86,7 @@ def replay_candidate_finder(
         reason="",
     )
 
-
+# ## Rebuild the bright-pixel fraction series for display or inspection.
 def get_bright_pixel_fraction(
     capture_data: CaptureData,
     config: CandidateConfig,
@@ -87,7 +98,7 @@ def get_bright_pixel_fraction(
         config.candidate_bright_pixel_delta_threshold,
     )
 
-
+# ## Use the preferred Pi value when finite, otherwise fall back to reconstructed data.
 def _array_value(
     preferred: np.ndarray,
     fallback: np.ndarray,
@@ -108,7 +119,7 @@ def _array_value(
         0.0,
     )
 
-
+# ## Safely return one numeric array element or a supplied default.
 def _array_item(
     values: np.ndarray,
     frame_index: int,

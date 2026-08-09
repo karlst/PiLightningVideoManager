@@ -1,4 +1,41 @@
-"""Rebuild missing JSON sidecars from MP4 files."""
+"""
+@file rebuild_sidecars.py
+
+@brief Reconstruct missing JSON sidecars from saved MP4 capture files.
+
+A normal Pi Camera Capture recording consists of an MP4 video plus a matching
+JSON "sidecar". The MP4 contains the encoded video images. The sidecar contains
+the information that was known while the Pi was capturing the original raw
+frames: frame timing and brightness measurements, trigger information, camera
+configuration, application provenance, and the CandidateFinder settings.
+
+If the JSON file has been lost but the MP4 still exists, this utility rebuilds
+as much of that sidecar as can reasonably be reconstructed from the encoded
+video.
+
+There is an important limitation: an MP4 does not contain everything that was
+present in the original live CameraFrame objects or Pi configuration. Exact
+camera-frame UTC timestamps, camera location/bearing/FOV, application version,
+Pi startup time, and original camera sequence numbers cannot be recovered from
+the MP4. Those fields are therefore left blank or null rather than invented.
+
+Brightness and Candidate metrics can be reconstructed by decoding the video.
+The utility uses the current shared CandidateFinder, including the newer
+bright-pixel fraction test, so reconstructed Candidate replay uses the same
+algorithm as the Pi and desktop Analyzer. The Candidate config stored in a
+rebuilt sidecar is the CURRENT config used for reconstruction, not necessarily
+the config that existed when the original video was captured.
+
+Rebuilt sidecars use the current nested clip-level organization:
+
+    application
+    camera
+    capture
+    candidate
+    frame_records
+
+Existing sidecars are never overwritten by this program.
+"""
 
 from __future__ import annotations
 

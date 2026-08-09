@@ -1,7 +1,20 @@
 """
 @file frame_analyzer.py
 
-@brief Plugin-based camera frame analyzer.
+@brief Runs a configurable set of analysis plugins on each camera frame.
+
+FrameAnalyzer provides a small plugin architecture so frame measurements can be
+added or removed without changing the camera capture pipeline.  A plugin is any
+object that implements analyze(camera_frame) and returns a dictionary containing
+the measurements it calculated for that frame.
+
+Plugins are registered with add_plugin().  Each time analyze() is called,
+FrameAnalyzer passes the same CameraFrame to every registered plugin in order.
+The dictionaries returned by the plugins are merged into one result dictionary,
+along with the frame sequence number and timestamps.  This lets independent
+analysis modules contribute metrics such as brightness or other image properties
+while BufferManager and the rest of the capture system consume one combined
+per-frame metric record.
 """
 
 from typing import Protocol

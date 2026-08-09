@@ -1,8 +1,15 @@
 """
 @file buffer_manager.py
 
-@brief Coordinates CameraReader, RingBuffer, ClipWriter, frame analysis,
-trigger evaluation, and event logging.
+@brief Coordinates the live camera capture pipeline.
+
+BufferManager is the central coordinator for camera capture on the Pi. It
+receives every frame from CameraReader, keeps recent frames in the ring
+buffer, calculates the metrics used for candidate detection, asks
+TriggerManager whether a candidate has been found, and saves the buffered
+frames as an MP4 plus JSON sidecar when a capture is triggered. It also
+provides preview images, status information, and sampled metrics used by the
+web interface.
 """
 
 import cv2

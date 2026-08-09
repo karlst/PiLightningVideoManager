@@ -1,7 +1,30 @@
 """
 @file sidecar_writer.py
 
-@brief Writes capture metadata and per-frame brightness data to JSON sidecars.
+@brief Writes the JSON sidecar file that accompanies each saved MP4 capture.
+
+A "sidecar" is a separate metadata file that accompanies another file. In this
+application, every saved video clip can have two files with the same base name:
+
+    trigger_20260809T120000Z.mp4
+    trigger_20260809T120000Z.json
+
+The MP4 contains the actual video images. The JSON sidecar contains information
+about that video that either does not belong in the MP4 or is much easier for
+our software to read from JSON: capture and camera metadata, trigger
+information, application/configuration provenance, and a record for every
+frame.
+
+SidecarWriter builds the per-frame portion of that JSON. For each CameraFrame
+it records frame numbering and timing, calculates mean image brightness, and
+calculates the brightness change from the preceding frame. Additional
+clip-level metadata supplied by BufferManager is merged into the same JSON
+object before it is written.
+
+Keeping this information in a sidecar makes the MP4/JSON pair a portable
+capture record: the video can be played by ordinary video software, while the
+desktop analyzer can load the matching JSON file to reconstruct what the Pi
+knew about the capture when it was recorded.
 """
 
 from pathlib import Path

@@ -2,7 +2,22 @@
 @file ring_buffer.py
 
 @brief Thread-safe fixed-capacity ring buffer.
+
+RingBuffer holds the most recent items produced by the camera pipeline. It has
+a fixed capacity, so memory use does not grow while the application runs.
+Items are written in a circle: after the buffer fills, each new item replaces
+the oldest item. A snapshot is returned in chronological order from oldest to
+newest, regardless of where the internal write position currently sits.
+
+BufferManager uses this class to retain the rolling window of CameraFrame
+objects that becomes a saved video clip when a trigger occurs. The class is
+generic, however, and can hold any Python object.
+
+All public operations use a lock because camera frames may be added by the
+camera-reader thread while other application code is reading buffer contents
+or status.
 """
+
 
 from threading import Lock
 from typing import Any
@@ -139,6 +154,7 @@ class RingBuffer:
 
         return status
 
+    # ## Build physical array indices in chronological order; caller must hold the lock.
     def _get_ordered_indices_locked(self) -> list[int]:
         ordered_indices: list[int] = []
 

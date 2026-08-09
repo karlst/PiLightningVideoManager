@@ -1,4 +1,16 @@
-"""Batch-classify candidate captures and move MP4/JSON pairs into subfolders."""
+"""
+@file batch_classifier.py
+
+@brief Batch-classify Candidate captures and move MP4/JSON pairs into subfolders.
+
+Each Candidate consists of an MP4 plus its matching JSON sidecar. The utility
+runs the desktop SolutionFilter for every Candidate in the requested folder,
+then moves the pair into a classification subfolder.
+
+Existing destination files are never overwritten. If either member of a
+capture pair would collide with an existing destination filename, that entire
+capture is skipped and batch processing continues with the next file.
+"""
 
 from __future__ import annotations
 
