@@ -1,15 +1,29 @@
 """
 @file batch_classifier.py
 
-@brief Batch-classify Candidate captures and move MP4/JSON pairs into subfolders.
+@brief Quickly classify saved Candidate captures using their JSON sidecars.
 
-Each Candidate consists of an MP4 plus its matching JSON sidecar. The utility
-runs the desktop SolutionFilter for every Candidate in the requested folder,
-then moves the pair into a classification subfolder.
+Each Candidate consists of an MP4 plus its matching JSON sidecar. The Pi has
+already run CandidateFinder before saving the clip, so BatchClassifier does
+NOT replay CandidateFinder and does NOT decode the MP4.
 
-Existing destination files are never overwritten. If either member of a
-capture pair would collide with an existing destination filename, that entire
-capture is skipped and batch processing continues with the next file.
+Instead, BatchClassifier trusts the Candidate trigger recorded by the Pi,
+reads the per-frame brightness measurements already stored in the sidecar,
+and runs the desktop SolutionFilter over the complete Candidate clip.
+
+This separation is intentional:
+
+    Pi CandidateFinder -> decides which clips are worth saving.
+    BatchClassifier    -> decides which saved Candidates are Solutions.
+
+Avoiding MP4 decoding makes batch classification very fast even for large
+folders. Experimental re-testing of CandidateFinder settings should be done by
+a separate batch CandidateFinder/replay utility, because bright-pixel replay
+may require decoding the MP4 to reconstruct pixel-change measurements.
+
+The classifier moves each MP4/JSON pair into a category subfolder. Existing
+destination files are never overwritten; if either destination filename
+already exists, that capture is skipped and processing continues.
 """
 
 from __future__ import annotations
@@ -40,6 +54,7 @@ DESTINATION_FOLDERS = {
 }
 
 
+# ## Read and validate one JSON sidecar.
 def read_sidecar(
     sidecar_path: Path,
 ) -> dict[str, Any]:
@@ -57,6 +72,7 @@ def read_sidecar(
     return sidecar
 
 
+# ## Build SolutionFilter input arrays from brightness data already saved by the Pi.
 def build_metric_arrays(
     sidecar: dict[str, Any],
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -111,38 +127,61 @@ def build_metric_arrays(
     )
 
 
+# ## Return the Candidate trigger frame recorded by the Pi.
 def get_trigger_frame_index(
     sidecar: dict[str, Any],
 ) -> int | None:
-    value = sidecar.get(
-        "trigger_frame_index"
+    # Current sidecars store Candidate information in a nested object.
+    candidate = sidecar.get(
+        "candidate"
     )
 
-    if value is None:
-        frame_number = sidecar.get(
+    if isinstance(candidate, dict):
+        value = candidate.get(
+            "trigger_frame_index"
+        )
+
+        if value is not None:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return None
+
+        frame_number = candidate.get(
             "trigger_frame_number"
         )
 
         if frame_number is not None:
             try:
                 return int(frame_number) - 1
-            except (
-                TypeError,
-                ValueError,
-            ):
+            except (TypeError, ValueError):
                 return None
 
-        return None
+    # Legacy/reconstructed sidecars may store trigger fields at the root.
+    value = sidecar.get(
+        "trigger_frame_index"
+    )
 
-    try:
-        return int(value)
-    except (
-        TypeError,
-        ValueError,
-    ):
-        return None
+    if value is not None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
+    frame_number = sidecar.get(
+        "trigger_frame_number"
+    )
+
+    if frame_number is not None:
+        try:
+            return int(frame_number) - 1
+        except (TypeError, ValueError):
+            return None
+
+    return None
 
 
+# ## Create all category destination folders and return their paths.
 def ensure_destination_folders(
     input_directory: Path,
 ) -> dict[str, Path]:
@@ -168,6 +207,7 @@ def ensure_destination_folders(
     return destinations
 
 
+# ## Move one file without ever overwriting an existing destination file.
 def move_file(
     source: Path,
     destination_directory: Path,
@@ -188,13 +228,12 @@ def move_file(
     )
 
 
+# ## Move an MP4 and matching sidecar together, rolling back if the second move fails.
 def move_capture_pair(
     video_path: Path,
     sidecar_path: Path,
     destination_directory: Path,
 ) -> None:
-    # Refuse to start if either destination name already exists so a partial
-    # overwrite cannot occur.
     video_destination = (
         destination_directory /
         video_path.name
@@ -204,6 +243,8 @@ def move_capture_pair(
         sidecar_path.name
     )
 
+    # Check both names before moving anything so we never intentionally create
+    # a half-moved capture pair.
     if video_destination.exists():
         raise RuntimeError(
             f"Destination already exists: {video_destination}"
@@ -229,7 +270,6 @@ def move_capture_pair(
                 destination_directory,
             )
         except Exception:
-            # Put the MP4 back if moving the matching sidecar fails.
             shutil.move(
                 str(video_destination),
                 str(video_path),
@@ -237,6 +277,7 @@ def move_capture_pair(
             raise
 
 
+# ## Classify one saved Candidate using only its sidecar and recorded trigger.
 def classify_capture(
     video_path: Path,
     solution_filter: SolutionFilter,
@@ -269,6 +310,18 @@ def classify_capture(
             )
         )
 
+        if trigger_frame_index is None:
+            return (
+                "UNCLASSIFIED",
+                "Sidecar contains no valid Candidate trigger frame",
+            )
+
+        if not 0 <= trigger_frame_index < len(brightness):
+            return (
+                "UNCLASSIFIED",
+                "Candidate trigger frame is outside frame_records",
+            )
+
         result = solution_filter.evaluate(
             brightness,
             brightness_delta,
@@ -291,6 +344,7 @@ def classify_capture(
         )
 
 
+# ## Move JSON files that have no matching MP4 into the unclassified folder.
 def move_orphan_sidecars(
     input_directory: Path,
     unclassified_directory: Path,
@@ -323,8 +377,10 @@ def move_orphan_sidecars(
     return moved_count
 
 
+# ## Classify every Candidate in one folder and move each pair to its result folder.
 def run_batch(
     input_directory: Path,
+    verbosity: int = 0,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -358,19 +414,27 @@ def run_batch(
             destinations[category]
         )
 
-        move_capture_pair(
-            video_path,
-            sidecar_path,
-            destination_directory,
-        )
+        try:
+            move_capture_pair(
+                video_path,
+                sidecar_path,
+                destination_directory,
+            )
+        except RuntimeError as error:
+            print(
+                f"SKIP  {video_path.name}: "
+                f"{error}"
+            )
+            continue
 
         counts[category] += 1
 
-        print(
-            f"{video_path.name} -> "
-            f"{destination_directory.name}: "
-            f"{reason}"
-        )
+        if verbosity >= 1:
+            print(
+                f"{video_path.name} -> "
+                f"{destination_directory.name}: "
+                f"{reason}"
+            )
 
     orphan_count = move_orphan_sidecars(
         input_directory,
@@ -394,6 +458,10 @@ def run_batch(
         f"{counts[CATEGORY_BRIGHT_NOISE]}"
     )
     print(
+        f"  Steady-state anomalies: "
+        f"{counts[CATEGORY_STEADY_STATE_CHANGE]}"
+    )
+    print(
         f"  Unclassified: "
         f"{counts['UNCLASSIFIED']}"
     )
@@ -401,11 +469,12 @@ def run_batch(
     return 0
 
 
+# ## Parse command-line arguments and run BatchClassifier.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "Classify candidate captures and move "
-            "MP4/JSON pairs into category subfolders."
+            "Classify saved Candidate captures using "
+            "sidecar brightness data and SolutionFilter."
         )
     )
 
@@ -415,11 +484,25 @@ def main() -> int:
         help="Folder containing MP4 captures and JSON sidecars",
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbosity",
+        type=int,
+        default=0,
+        choices=[0, 1, 2],
+        help=(
+            "Verbosity: 0=quiet (default), "
+            "1=one line per capture, "
+            "2=reserved for detailed diagnostics"
+        ),
+    )
+
     arguments = parser.parse_args()
 
     try:
         return run_batch(
-            arguments.folder
+            arguments.folder,
+            verbosity=arguments.verbosity,
         )
 
     except (
