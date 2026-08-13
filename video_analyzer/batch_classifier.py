@@ -233,30 +233,38 @@ def move_capture_pair(
     video_path: Path,
     sidecar_path: Path,
     destination_directory: Path,
+    copy_only: bool = False,
 ) -> None:
-    video_destination = (
-        destination_directory /
-        video_path.name
-    )
-    sidecar_destination = (
-        destination_directory /
-        sidecar_path.name
-    )
+    video_destination = destination_directory / video_path.name
+    sidecar_destination = destination_directory / sidecar_path.name
 
-    # Check both names before moving anything so we never intentionally create
-    # a half-moved capture pair.
     if video_destination.exists():
         raise RuntimeError(
             f"Destination already exists: {video_destination}"
         )
 
-    if (
-        sidecar_path.exists() and
-        sidecar_destination.exists()
-    ):
+    if sidecar_path.exists() and sidecar_destination.exists():
         raise RuntimeError(
             f"Destination already exists: {sidecar_destination}"
         )
+
+    if copy_only:
+        shutil.copy2(
+            video_path,
+            video_destination,
+        )
+
+        if sidecar_path.exists():
+            try:
+                shutil.copy2(
+                    sidecar_path,
+                    sidecar_destination,
+                )
+            except Exception:
+                video_destination.unlink(missing_ok=True)
+                raise
+
+        return
 
     move_file(
         video_path,
@@ -381,6 +389,7 @@ def move_orphan_sidecars(
 def run_batch(
     input_directory: Path,
     verbosity: int = 0,
+    copy_only: bool = False,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -419,6 +428,7 @@ def run_batch(
                 video_path,
                 sidecar_path,
                 destination_directory,
+                copy_only=copy_only,
             )
         except RuntimeError as error:
             print(
@@ -436,9 +446,13 @@ def run_batch(
                 f"{reason}"
             )
 
-    orphan_count = move_orphan_sidecars(
-        input_directory,
-        destinations["UNCLASSIFIED"],
+    orphan_count = (
+        0
+        if copy_only
+        else move_orphan_sidecars(
+            input_directory,
+            destinations["UNCLASSIFIED"],
+        )
     )
 
     counts["UNCLASSIFIED"] += orphan_count
@@ -497,12 +511,22 @@ def main() -> int:
         ),
     )
 
+    parser.add_argument(
+        "--copy",
+        action="store_true",
+        help=(
+            "Copy classified MP4/JSON pairs instead of moving them. "
+            "Useful for repeated experimental runs."
+        ),
+    )
+
     arguments = parser.parse_args()
 
     try:
         return run_batch(
             arguments.folder,
             verbosity=arguments.verbosity,
+            copy_only=arguments.copy,
         )
 
     except (
