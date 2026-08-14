@@ -1,0 +1,15 @@
+[Unit]
+Description=Pi Camera Capture SolutionFilter
+After=pcm.service
+Wants=pcm.service
+
+[Service]
+Type=simple
+User=karlst
+WorkingDirectory=/home/karlst/Documents/videoManager
+ExecStart=/usr/bin/python3 -m video_analyzer.solution_filter_service /home/karlst/captures --interval 60
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

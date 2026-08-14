@@ -1,29 +1,28 @@
 """
-@file batch_classifier.py
+@file batch_solution_filter.py
 
 @brief Quickly classify saved Candidate captures using their JSON sidecars.
 
 Each Candidate consists of an MP4 plus its matching JSON sidecar. The Pi has
-already run CandidateFinder before saving the clip, so BatchClassifier does
+already run CandidateFinder before saving the clip, so BatchSolutionFilter does
 NOT replay CandidateFinder and does NOT decode the MP4.
 
-Instead, BatchClassifier trusts the Candidate trigger recorded by the Pi,
+Instead, BatchSolutionFilter trusts the Candidate trigger recorded by the Pi,
 reads the per-frame brightness measurements already stored in the sidecar,
-and runs the desktop SolutionFilter over the complete Candidate clip.
+and runs the SolutionFilter over the complete Candidate clip.
 
 This separation is intentional:
 
     Pi CandidateFinder -> decides which clips are worth saving.
-    BatchClassifier    -> decides which saved Candidates are Solutions.
+    BatchSolutionFilter    -> decides which saved Candidates are Solutions.
 
-Avoiding MP4 decoding makes batch classification very fast even for large
-folders. Experimental re-testing of CandidateFinder settings should be done by
-a separate batch CandidateFinder/replay utility, because bright-pixel replay
-may require decoding the MP4 to reconstruct pixel-change measurements.
+Avoiding MP4 decoding makes batch filtering very fast even for large
+folders.
 
-The classifier moves each MP4/JSON pair into a category subfolder. Existing
-destination files are never overwritten; if either destination filename
-already exists, that capture is skipped and processing continues.
+By default the classifier moves each MP4/JSON pair into a category subfolder.
+For Pi production use, --delete-rejects keeps only true flashes: TRUE_FLASH
+pairs are moved into true_flashes and every other classified pair is deleted.
+The experimental --copy option remains available for repeated test runs.
 """
 
 from __future__ import annotations
@@ -228,6 +227,20 @@ def move_file(
     )
 
 
+# ## Delete an MP4 and its matching sidecar without touching unrelated files.
+def delete_capture_pair(
+    video_path: Path,
+    sidecar_path: Path,
+) -> None:
+    video_path.unlink(
+        missing_ok=True
+    )
+
+    sidecar_path.unlink(
+        missing_ok=True
+    )
+
+
 # ## Move an MP4 and matching sidecar together, rolling back if the second move fails.
 def move_capture_pair(
     video_path: Path,
@@ -385,22 +398,46 @@ def move_orphan_sidecars(
     return moved_count
 
 
-# ## Classify every Candidate in one folder and move each pair to its result folder.
-def run_batch(
+# ## Classify every Candidate in one folder and move each pair to its result folder (unless delete_rejects).
+def run_batch_solution_filter(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
+    delete_rejects: bool = False,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
             f"Folder not found: {input_directory}"
         )
 
-    destinations = (
-        ensure_destination_folders(
-            input_directory
+    if copy_only and delete_rejects:
+        raise RuntimeError(
+            "--copy and --delete-rejects cannot be used together"
         )
-    )
+
+    if delete_rejects:
+        true_flash_directory = (
+            input_directory /
+            DESTINATION_FOLDERS[
+                CATEGORY_TRUE_FLASH
+            ]
+        )
+
+        true_flash_directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        destinations = {
+            CATEGORY_TRUE_FLASH:
+                true_flash_directory
+        }
+    else:
+        destinations = (
+            ensure_destination_folders(
+                input_directory
+            )
+        )
 
     solution_filter = SolutionFilter()
     counts: Counter[str] = Counter()
@@ -419,17 +456,33 @@ def run_batch(
             solution_filter,
         )
 
-        destination_directory = (
-            destinations[category]
-        )
-
         try:
-            move_capture_pair(
-                video_path,
-                sidecar_path,
-                destination_directory,
-                copy_only=copy_only,
-            )
+            if delete_rejects:
+                if category == CATEGORY_TRUE_FLASH:
+                    move_capture_pair(
+                        video_path,
+                        sidecar_path,
+                        destinations[
+                            CATEGORY_TRUE_FLASH
+                        ],
+                    )
+                else:
+                    delete_capture_pair(
+                        video_path,
+                        sidecar_path,
+                    )
+            else:
+                destination_directory = (
+                    destinations[category]
+                )
+
+                move_capture_pair(
+                    video_path,
+                    sidecar_path,
+                    destination_directory,
+                    copy_only=copy_only,
+                )
+
         except RuntimeError as error:
             print(
                 f"SKIP  {video_path.name}: "
@@ -440,20 +493,30 @@ def run_batch(
         counts[category] += 1
 
         if verbosity >= 1:
-            print(
-                f"{video_path.name} -> "
-                f"{destination_directory.name}: "
-                f"{reason}"
-            )
+            if delete_rejects:
+                action = (
+                    "-> true_flashes"
+                    if category == CATEGORY_TRUE_FLASH
+                    else "-> DELETED"
+                )
+                print(
+                    f"{video_path.name} "
+                    f"{action}: {reason}"
+                )
+            else:
+                print(
+                    f"{video_path.name} -> "
+                    f"{destination_directory.name}: "
+                    f"{reason}"
+                )
 
-    orphan_count = (
-        0
-        if copy_only
-        else move_orphan_sidecars(
+    orphan_count = 0
+
+    if not copy_only and not delete_rejects:
+        orphan_count = move_orphan_sidecars(
             input_directory,
             destinations["UNCLASSIFIED"],
         )
-    )
 
     counts["UNCLASSIFIED"] += orphan_count
 
@@ -480,10 +543,22 @@ def run_batch(
         f"{counts['UNCLASSIFIED']}"
     )
 
+    if delete_rejects:
+        deleted_count = (
+            counts[CATEGORY_FRAME_DROPOUT]
+            + counts[CATEGORY_BRIGHT_NOISE]
+            + counts[CATEGORY_STEADY_STATE_CHANGE]
+            + counts["UNCLASSIFIED"]
+        )
+
+        print(
+            f"  Deleted: {deleted_count}"
+        )
+
     return 0
 
 
-# ## Parse command-line arguments and run BatchClassifier.
+# ## Parse command-line arguments and run BatchSolutionFilter.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -520,13 +595,23 @@ def main() -> int:
         ),
     )
 
+    parser.add_argument(
+        "--delete-rejects",
+        action="store_true",
+        help=(
+            "Pi production mode: move TRUE_FLASH pairs to "
+            "true_flashes and delete all other classified pairs."
+        ),
+    )
+
     arguments = parser.parse_args()
 
     try:
-        return run_batch(
+        return run_batch_solution_filter(
             arguments.folder,
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
+            delete_rejects=arguments.delete_rejects,
         )
 
     except (
@@ -534,7 +619,7 @@ def main() -> int:
         RuntimeError,
     ) as error:
         print(
-            f"Batch classification failed: {error}"
+            f"Batch solution filter failed: {error}"
         )
         return 1
 
