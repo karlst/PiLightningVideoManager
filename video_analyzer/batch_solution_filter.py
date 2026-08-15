@@ -58,6 +58,111 @@ DESTINATION_FOLDERS = {
 # Maximum size of the current PSF activity log before rotation.
 PSF_LOG_MAX_BYTES = 10 * 1024
 
+# Prevent the long-running PSF service from writing a START line on every
+# periodic run_batch() call. This resets naturally whenever the process restarts.
+_psf_start_logged = False
+
+
+# ## Return the PSF activity-log path beside the captures directory.
+def psf_log_path(
+    input_directory: Path,
+) -> Path:
+    return (
+        input_directory.parent /
+        "psf.log"
+    )
+
+
+# ## Rotate psf.log to one archive when the next entry would exceed the size limit.
+def rotate_psf_log_if_needed(
+    log_path: Path,
+    additional_bytes: int,
+) -> None:
+    current_size = 0
+
+    if log_path.exists():
+        try:
+            current_size = log_path.stat().st_size
+        except OSError:
+            current_size = 0
+
+    if (
+        current_size + additional_bytes
+        <= PSF_LOG_MAX_BYTES
+    ):
+        return
+
+    archive_path = log_path.with_name(
+        f"{log_path.name}.archive"
+    )
+
+    archive_path.unlink(
+        missing_ok=True
+    )
+
+    if log_path.exists():
+        log_path.replace(
+            archive_path
+        )
+
+
+# ## Append one compact UTC-stamped event to the PSF activity log.
+def write_psf_log(
+    log_path: Path,
+    category: str,
+    video_name: str = "",
+    action: str = "",
+    detail: str = "",
+) -> None:
+    timestamp = datetime.now(
+        timezone.utc
+    ).strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    fields = [
+        timestamp,
+        category,
+    ]
+
+    if video_name:
+        fields.append(
+            video_name
+        )
+
+    if action:
+        fields.append(
+            action
+        )
+
+    if detail:
+        fields.append(
+            detail
+        )
+
+    line = "  ".join(fields) + "\n"
+    additional_bytes = len(
+        line.encode("utf-8")
+    )
+
+    log_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    rotate_psf_log_if_needed(
+        log_path,
+        additional_bytes,
+    )
+
+    with log_path.open(
+        "a",
+        encoding="utf-8",
+    ) as file:
+        file.write(
+            line
+        )
+
 
 # ## Read and validate one JSON sidecar.
 def read_sidecar(
@@ -421,7 +526,27 @@ def run_batch(
             "--copy and --delete-rejects cannot be used together"
         )
 
-    log_path = psf_log_path(input_directory) if delete_rejects else None
+    global _psf_start_logged
+
+    log_path = (
+        psf_log_path(input_directory)
+        if delete_rejects
+        else None
+    )
+
+    if (
+        delete_rejects
+        and log_path is not None
+        and not _psf_start_logged
+    ):
+        write_psf_log(
+            log_path,
+            "START",
+            detail=(
+                f"captures={input_directory}"
+            ),
+        )
+        _psf_start_logged = True
 
     if delete_rejects:
         true_flash_directory = (
