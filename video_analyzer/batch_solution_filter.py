@@ -4,20 +4,22 @@
 @brief Quickly classify saved Candidate captures using their JSON sidecars.
 
 Each Candidate consists of an MP4 plus its matching JSON sidecar. The Pi has
-already run CandidateFinder before saving the clip, so BatchSolutionFilter does
+already run CandidateFinder before saving the clip, so BatchClassifier does
 NOT replay CandidateFinder and does NOT decode the MP4.
 
-Instead, BatchSolutionFilter trusts the Candidate trigger recorded by the Pi,
+Instead, BatchClassifier trusts the Candidate trigger recorded by the Pi,
 reads the per-frame brightness measurements already stored in the sidecar,
-and runs the SolutionFilter over the complete Candidate clip.
+and runs the desktop SolutionFilter over the complete Candidate clip.
 
 This separation is intentional:
 
     Pi CandidateFinder -> decides which clips are worth saving.
-    BatchSolutionFilter    -> decides which saved Candidates are Solutions.
+    BatchClassifier    -> decides which saved Candidates are Solutions.
 
-Avoiding MP4 decoding makes batch filtering very fast even for large
-folders.
+Avoiding MP4 decoding makes batch classification very fast even for large
+folders. Experimental re-testing of CandidateFinder settings should be done by
+a separate batch CandidateFinder/replay utility, because bright-pixel replay
+may require decoding the MP4 to reconstruct pixel-change measurements.
 
 By default the classifier moves each MP4/JSON pair into a category subfolder.
 For Pi production use, --delete-rejects keeps only true flashes: TRUE_FLASH
@@ -32,6 +34,7 @@ import json
 import shutil
 import sys
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -51,6 +54,9 @@ DESTINATION_FOLDERS = {
     CATEGORY_STEADY_STATE_CHANGE: "steady_state_anomalies",
     "UNCLASSIFIED": "unclassified",
 }
+
+# Maximum size of the current PSF activity log before rotation.
+PSF_LOG_MAX_BYTES = 10 * 1024
 
 
 # ## Read and validate one JSON sidecar.
@@ -398,8 +404,8 @@ def move_orphan_sidecars(
     return moved_count
 
 
-# ## Classify every Candidate in one folder and move each pair to its result folder (unless delete_rejects).
-def run_batch_solution_filter(
+# ## Classify every Candidate in one folder and move each pair to its result folder.
+def run_batch(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
@@ -414,6 +420,8 @@ def run_batch_solution_filter(
         raise RuntimeError(
             "--copy and --delete-rejects cannot be used together"
         )
+
+    log_path = psf_log_path(input_directory) if delete_rejects else None
 
     if delete_rejects:
         true_flash_directory = (
@@ -466,11 +474,25 @@ def run_batch_solution_filter(
                             CATEGORY_TRUE_FLASH
                         ],
                     )
+                    if log_path is not None:
+                        write_psf_log(
+                            log_path,
+                            CATEGORY_TRUE_FLASH,
+                            video_path.name,
+                            "MOVED",
+                        )
                 else:
                     delete_capture_pair(
                         video_path,
                         sidecar_path,
                     )
+                    if log_path is not None:
+                        write_psf_log(
+                            log_path,
+                            category,
+                            video_path.name,
+                            "DELETED",
+                        )
             else:
                 destination_directory = (
                     destinations[category]
@@ -488,6 +510,14 @@ def run_batch_solution_filter(
                 f"SKIP  {video_path.name}: "
                 f"{error}"
             )
+            if delete_rejects and log_path is not None:
+                write_psf_log(
+                    log_path,
+                    "ERROR",
+                    video_path.name,
+                    "SKIPPED",
+                    str(error),
+                )
             continue
 
         counts[category] += 1
@@ -558,7 +588,7 @@ def run_batch_solution_filter(
     return 0
 
 
-# ## Parse command-line arguments and run BatchSolutionFilter.
+# ## Parse command-line arguments and run BatchClassifier.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -607,7 +637,7 @@ def main() -> int:
     arguments = parser.parse_args()
 
     try:
-        return run_batch_solution_filter(
+        return run_batch(
             arguments.folder,
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
@@ -619,7 +649,7 @@ def main() -> int:
         RuntimeError,
     ) as error:
         print(
-            f"Batch solution filter failed: {error}"
+            f"Batch classification failed: {error}"
         )
         return 1
 
