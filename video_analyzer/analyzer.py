@@ -68,6 +68,7 @@ def main() -> int:
                 capture_data.pi_brightness,
                 capture_data.pi_brightness_delta,
                 candidate_result.frame_index,
+                candidate_result.reason,
             )
 
         application = QApplication(sys.argv)

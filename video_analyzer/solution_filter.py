@@ -8,14 +8,23 @@ Filter order is intentional.
    camera anomaly before treating a large positive/negative pair as
    strong lightning evidence.
 
-2. StrongTransientFilter then looks for strong positive evidence of a
+2. StairStepDecayFilter rejects the camera artifact where a large positive
+   jump falls back through several negative steps and returns near baseline.
+
+   It must run before StrongTransientFilter because the same large positive
+   and negative deltas can otherwise resemble strong lightning evidence.
+
+3. StrongTransientFilter then looks for strong positive evidence of a
    real flash near the Candidate trigger.
 
    If found, the Candidate is immediately accepted as a Solution.
    Later rejection filters are NOT allowed to override it.
 
-3. If no strong transient is found, continue with the ordinary
-   false-positive rejection filters:
+4. If the Candidate was selected by the bright-pixel trigger and no strong
+   transient was proven, BrightPixelNoReturnFilter rejects a persistent step
+   away from the pre-trigger brightness trend.
+
+5. Continue with the ordinary false-positive rejection filters:
        - brightness noise
        - steady-state change
 """
@@ -24,10 +33,12 @@ from __future__ import annotations
 
 import numpy as np
 
+from video_analyzer.bright_pixel_no_return_filter import BrightPixelNoReturnFilter
 from video_analyzer.brightness_noise_filter import BrightnessNoiseFilter
 from video_analyzer.frame_dropout_filter import FrameDropoutFilter
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
+from video_analyzer.stair_step_decay_filter import StairStepDecayFilter
 from video_analyzer.steady_state_change_filter import SteadyStateChangeFilter
 from video_analyzer.strong_transient_filter import StrongTransientFilter
 from video_analyzer.solution_types import CATEGORY_FAILED_CANDIDATE
@@ -66,6 +77,18 @@ class SolutionFilter:
         )
 
         # ----------------------------------------------------------
+        # Stair-step decay is a known camera false-positive family.
+        #
+        # It must run before StrongTransient because the stair-step
+        # artifact starts with a large positive jump and then produces
+        # several substantial negative deltas.
+        # ----------------------------------------------------------
+
+        self._stair_step_decay_filter = (
+            StairStepDecayFilter()
+        )
+
+        # ----------------------------------------------------------
         # Strong transient is POSITIVE evidence.
         #
         # If this succeeds, SolutionFilter immediately accepts the
@@ -74,6 +97,15 @@ class SolutionFilter:
 
         self._strong_transient_filter = (
             StrongTransientFilter()
+        )
+
+        # ----------------------------------------------------------
+        # Bright-pixel no-return is specific to Candidates selected
+        # by CandidateFinder's bright-pixel trigger.
+        # ----------------------------------------------------------
+
+        self._bright_pixel_no_return_filter = (
+            BrightPixelNoReturnFilter()
         )
 
         # ----------------------------------------------------------
@@ -143,6 +175,7 @@ class SolutionFilter:
         brightness: np.ndarray,
         brightness_delta: np.ndarray,
         trigger_frame_index: int | None,
+        trigger_reason: str = "",
     ) -> SolutionResult:
 
         # ----------------------------------------------------------
@@ -163,7 +196,24 @@ class SolutionFilter:
             return dropout_result
 
         # ----------------------------------------------------------
-        # STEP 2: Look for strong positive lightning evidence.
+        # STEP 2: Eliminate stair-step decay anomalies.
+        #
+        # This must happen before strong-transient detection.
+        # ----------------------------------------------------------
+
+        stair_step_result = (
+            self._stair_step_decay_filter.evaluate(
+                brightness,
+                brightness_delta,
+                trigger_frame_index,
+            )
+        )
+
+        if not stair_step_result.is_solution:
+            return stair_step_result
+
+        # ----------------------------------------------------------
+        # STEP 3: Look for strong positive lightning evidence.
         #
         # A large positive delta followed within 10 frames by a large
         # negative delta is currently considered sufficiently strong
@@ -182,7 +232,27 @@ class SolutionFilter:
             return transient_result
 
         # ----------------------------------------------------------
-        # STEP 3: No strong transient was proven.
+        # STEP 4: Bright-pixel-specific no-return test.
+        #
+        # CandidateFinder's reason is passed in by the caller. Only
+        # bright-pixel Candidates are subject to this filter.
+        # ----------------------------------------------------------
+
+        if "bright pixel trigger" in trigger_reason.lower():
+            no_return_result = (
+                self._bright_pixel_no_return_filter.evaluate(
+                    brightness,
+                    brightness_delta,
+                    trigger_frame_index,
+                )
+            )
+
+            if not no_return_result.is_solution:
+                return no_return_result
+
+        # ----------------------------------------------------------
+        # STEP 5: No strong transient or bright-pixel no-return
+        # rejection was proven.
         #
         # Allow the normal false-positive filters to examine the
         # Candidate.

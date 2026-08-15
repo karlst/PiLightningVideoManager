@@ -59,7 +59,7 @@ class SolutionConfig:
     steady_state_baseline_tolerance: float = 2.0
 
     # New steady brightness must be at least this far above baseline.
-    steady_state_rise_threshold: float = 4.0
+    steady_state_rise_threshold: float = 3.8
 
     # Allowed variation around the proposed new steady brightness.
     steady_state_neighborhood: float = 2.0

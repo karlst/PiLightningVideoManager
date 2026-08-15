@@ -16,10 +16,11 @@ This separation is intentional:
     Pi CandidateFinder -> decides which clips are worth saving.
     BatchClassifier    -> decides which saved Candidates are Solutions.
 
-Avoiding MP4 decoding makes batch classification very fast even for large
-folders. Experimental re-testing of CandidateFinder settings should be done by
-a separate batch CandidateFinder/replay utility, because bright-pixel replay
-may require decoding the MP4 to reconstruct pixel-change measurements.
+Avoiding MP4 decoding makes normal batch classification very fast even for
+large folders. The optional --findCandidates mode deliberately reruns
+CandidateFinder using the current CandidateConfig. Because bright-pixel replay
+requires reconstructed pixel-change measurements, that mode decodes each MP4
+and is therefore much slower.
 
 By default the classifier moves each MP4/JSON pair into a category subfolder.
 For Pi production use, --delete-rejects keeps only true flashes: TRUE_FLASH
@@ -30,6 +31,8 @@ The experimental --copy option remains available for repeated test runs.
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
 import json
 import shutil
 import sys
@@ -40,8 +43,14 @@ from typing import Any
 
 import numpy as np
 
+from common.candidate_config import CANDIDATE_CONFIG
+from video_analyzer.candidate_replay import replay_candidate_finder
+from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_filter import SolutionFilter
+from video_analyzer.solution_filter import failed_candidate_result
+from video_analyzer.stair_step_decay_filter import CATEGORY_STAIR_STEP_DECAY
 from video_analyzer.solution_types import CATEGORY_BRIGHT_NOISE
+from video_analyzer.solution_types import CATEGORY_FAILED_CANDIDATE
 from video_analyzer.solution_types import CATEGORY_FRAME_DROPOUT
 from video_analyzer.solution_types import CATEGORY_STEADY_STATE_CHANGE
 from video_analyzer.solution_types import CATEGORY_TRUE_FLASH
@@ -52,11 +61,13 @@ DESTINATION_FOLDERS = {
     CATEGORY_FRAME_DROPOUT: "frame_dropout_anomalies",
     CATEGORY_BRIGHT_NOISE: "bright_noise_anomalies",
     CATEGORY_STEADY_STATE_CHANGE: "steady_state_anomalies",
+    CATEGORY_STAIR_STEP_DECAY: "stair_step_decay_anomalies",
+    CATEGORY_FAILED_CANDIDATE: "not_candidates",
     "UNCLASSIFIED": "unclassified",
 }
 
 # Maximum size of the current PSF activity log before rotation.
-PSF_LOG_MAX_BYTES = 100 * 1024
+PSF_LOG_MAX_BYTES = 10 * 1024
 
 # Prevent the long-running PSF service from writing a START line on every
 # periodic run_batch() call. This resets naturally whenever the process restarts.
@@ -68,7 +79,7 @@ def psf_log_path(
     input_directory: Path,
 ) -> Path:
     return (
-        input_directory.parent /
+        input_directory /
         "logs" /
         "psf.log"
     )
@@ -410,10 +421,12 @@ def move_capture_pair(
             raise
 
 
-# ## Classify one saved Candidate using only its sidecar and recorded trigger.
+# ## Classify one capture using either the recorded trigger or current Candidate settings.
 def classify_capture(
     video_path: Path,
     solution_filter: SolutionFilter,
+    find_candidates: bool = False,
+    verbosity: int = 0,
 ) -> tuple[str, str]:
     sidecar_path = video_path.with_suffix(
         ".json"
@@ -426,6 +439,48 @@ def classify_capture(
         )
 
     try:
+        # Experimental mode: rerun CandidateFinder using CURRENT CandidateConfig.
+        # This is intentionally slower because bright-pixel replay requires
+        # decoding the MP4 and reconstructing per-frame pixel-change metrics.
+        if find_candidates:
+            if verbosity >= 2:
+                capture_data = load_capture(
+                    video_path
+                )
+            else:
+                with contextlib.redirect_stdout(
+                    io.StringIO()
+                ):
+                    capture_data = load_capture(
+                        video_path
+                    )
+
+            candidate_result = replay_candidate_finder(
+                capture_data,
+                CANDIDATE_CONFIG,
+            )
+
+            if candidate_result.frame_index is None:
+                result = failed_candidate_result()
+
+                return (
+                    result.category,
+                    result.reason,
+                )
+
+            result = solution_filter.evaluate(
+                capture_data.pi_brightness,
+                capture_data.pi_brightness_delta,
+                candidate_result.frame_index,
+                candidate_result.reason,
+            )
+
+            return (
+                result.category,
+                result.reason,
+            )
+
+        # Normal fast mode: trust the Candidate trigger already recorded by Pi.
         sidecar = read_sidecar(
             sidecar_path
         )
@@ -455,10 +510,35 @@ def classify_capture(
                 "Candidate trigger frame is outside frame_records",
             )
 
+        # Preserve the CandidateFinder reason recorded by the Pi so
+        # trigger-specific SolutionFilter rules can run in the fast path.
+        trigger_reason = ""
+
+        candidate = sidecar.get(
+            "candidate"
+        )
+
+        if isinstance(candidate, dict):
+            trigger_reason = str(
+                candidate.get(
+                    "trigger_reason",
+                    ""
+                )
+            )
+        else:
+            # Legacy/reconstructed sidecars may store trigger fields at root.
+            trigger_reason = str(
+                sidecar.get(
+                    "trigger_reason",
+                    ""
+                )
+            )
+
         result = solution_filter.evaluate(
             brightness,
             brightness_delta,
             trigger_frame_index,
+            trigger_reason,
         )
 
         return (
@@ -511,11 +591,12 @@ def move_orphan_sidecars(
 
 
 # ## Classify every Candidate in one folder and move each pair to its result folder.
-def run_batch_solution_filter(
+def run_batch(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
     delete_rejects: bool = False,
+    find_candidates: bool = False,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -588,6 +669,8 @@ def run_batch_solution_filter(
         category, reason = classify_capture(
             video_path,
             solution_filter,
+            find_candidates=find_candidates,
+            verbosity=verbosity,
         )
 
         try:
@@ -695,6 +778,14 @@ def run_batch_solution_filter(
         f"{counts[CATEGORY_STEADY_STATE_CHANGE]}"
     )
     print(
+        f"  Stair-step decay anomalies: "
+        f"{counts[CATEGORY_STAIR_STEP_DECAY]}"
+    )
+    print(
+        f"  Not candidates: "
+        f"{counts[CATEGORY_FAILED_CANDIDATE]}"
+    )
+    print(
         f"  Unclassified: "
         f"{counts['UNCLASSIFIED']}"
     )
@@ -704,6 +795,8 @@ def run_batch_solution_filter(
             counts[CATEGORY_FRAME_DROPOUT]
             + counts[CATEGORY_BRIGHT_NOISE]
             + counts[CATEGORY_STEADY_STATE_CHANGE]
+            + counts[CATEGORY_STAIR_STEP_DECAY]
+            + counts[CATEGORY_FAILED_CANDIDATE]
             + counts["UNCLASSIFIED"]
         )
 
@@ -760,6 +853,16 @@ def main() -> int:
         ),
     )
 
+    parser.add_argument(
+        "--findCandidates",
+        action="store_true",
+        help=(
+            "Rerun CandidateFinder using the current CandidateConfig before "
+            "SolutionFilter. This decodes MP4 files and is much slower than "
+            "the normal sidecar-only path."
+        ),
+    )
+
     arguments = parser.parse_args()
 
     try:
@@ -768,6 +871,7 @@ def main() -> int:
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
             delete_rejects=arguments.delete_rejects,
+            find_candidates=arguments.findCandidates,
         )
 
     except (

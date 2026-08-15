@@ -218,6 +218,7 @@ class AnalyzerWindow(QMainWindow):
                     new_capture_data.pi_brightness,
                     new_capture_data.pi_brightness_delta,
                     new_candidate_result.frame_index,
+                    new_candidate_result.reason,
                 )
 
             new_video_reader = VideoReader(
