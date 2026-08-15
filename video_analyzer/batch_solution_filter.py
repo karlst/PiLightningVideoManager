@@ -69,6 +69,7 @@ def psf_log_path(
 ) -> Path:
     return (
         input_directory.parent /
+        "logs" /
         "psf.log"
     )
 
@@ -510,7 +511,7 @@ def move_orphan_sidecars(
 
 
 # ## Classify every Candidate in one folder and move each pair to its result folder.
-def run_batch(
+def run_batch_solution_filter(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
