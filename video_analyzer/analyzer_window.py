@@ -20,13 +20,15 @@ from typing import Any
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap
 from PySide6.QtWidgets import (
+    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QSlider,
     QVBoxLayout,
@@ -39,6 +41,7 @@ from video_analyzer.candidate_replay import CandidateReplayResult
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.candidate_settings_panel import CandidateSettingsPanel
 from video_analyzer.capture_data import CaptureData
+from video_analyzer.capture_data import load_capture
 from video_analyzer.graph_panel import GraphPanel
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
@@ -49,6 +52,8 @@ from video_analyzer.solution_panel import SolutionPanel
 from video_analyzer.solution_settings_panel import SolutionSettingsPanel
 from video_analyzer.version import VERSION
 from video_analyzer.video_reader import VideoReader
+from pathlib import Path
+from typing import Any
 
 # ## Format a possibly missing metadata value for display.
 def format_value(
@@ -130,6 +135,9 @@ class AnalyzerWindow(QMainWindow):
         self.solution_config = SOLUTION_CONFIG
         self.frame_number = 0
         self.updating_slider = False
+        self.open_directory = (
+            capture_data.video_path.parent
+        )
 
         self.video_reader = VideoReader(
             capture_data.video_path
@@ -140,11 +148,109 @@ class AnalyzerWindow(QMainWindow):
         )
         self.resize(1500, 1050)
 
+        self.create_menu()
         self.create_ui()
         self.connect_controls()
 
         self.update_capture_information()
         self.set_frame(0, force=True)
+
+    # ## Create the application menu bar and File -> Open command.
+    def create_menu(self) -> None:
+        file_menu = self.menuBar().addMenu(
+            "&File"
+        )
+
+        self.open_action = QAction(
+            "&Open...",
+            self,
+        )
+        self.open_action.setShortcut(
+            QKeySequence.StandardKey.Open
+        )
+        self.open_action.triggered.connect(
+            self.open_capture
+        )
+
+        file_menu.addAction(
+            self.open_action
+        )
+
+    # ## Show a native MP4-only file dialog starting in the last opened directory.
+    def open_capture(self) -> None:
+        filename, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open MP4 file",
+            str(self.open_directory),
+            "MP4 files (*.mp4)",
+        )
+
+        if not filename:
+            return
+
+        self.load_new_capture(
+            Path(filename)
+        )
+
+    # ## Load a new capture, reclassify it, and replace the current Analyzer contents.
+    def load_new_capture(
+        self,
+        video_path: Path,
+    ) -> None:
+        try:
+            new_capture_data = load_capture(
+                video_path
+            )
+
+            new_candidate_result = replay_candidate_finder(
+                new_capture_data,
+                self.candidate_config,
+            )
+
+            if new_candidate_result.frame_index is None:
+                new_solution_result = failed_candidate_result()
+            else:
+                solution_filter = SolutionFilter(
+                    self.solution_config
+                )
+
+                new_solution_result = solution_filter.evaluate(
+                    new_capture_data.pi_brightness,
+                    new_capture_data.pi_brightness_delta,
+                    new_candidate_result.frame_index,
+                )
+
+            new_video_reader = VideoReader(
+                new_capture_data.video_path
+            )
+
+        except RuntimeError as error:
+            QMessageBox.critical(
+                self,
+                "Unable to open capture",
+                str(error),
+            )
+            return
+
+        self.video_reader.close()
+
+        self.capture_data = new_capture_data
+        self.candidate_result = new_candidate_result
+        self.solution_result = new_solution_result
+        self.video_reader = new_video_reader
+        self.open_directory = (
+            new_capture_data.video_path.parent
+        )
+        self.frame_number = 0
+        self.updating_slider = False
+
+        self.create_ui()
+        self.connect_controls()
+        self.update_capture_information()
+        self.set_frame(
+            0,
+            force=True,
+        )
 
     # ## Build a reusable two-column group of metadata labels.
     def create_information_group(

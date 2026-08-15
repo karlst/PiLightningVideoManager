@@ -1,10 +1,12 @@
 """
 Desktop Video Analyzer program entry point.
 
-This module is intentionally small. It parses the capture filename supplied on
-the command line, loads the MP4/JSON capture pair, replays CandidateFinder
-against the archived metrics, runs the desktop-only SolutionFilter, then starts
-the Qt graphical application and creates AnalyzerWindow.
+This module is intentionally small. It parses the initial capture filename
+supplied on the command line, loads the MP4/JSON capture pair, replays
+CandidateFinder against the archived metrics, runs the desktop-only
+SolutionFilter, then starts the Qt graphical application and creates
+AnalyzerWindow. Once running, AnalyzerWindow can load additional MP4 captures
+through File -> Open without restarting the application.
 
 Keeping startup here and most GUI behavior in AnalyzerWindow makes the program
 easier to package and keeps command-line/error handling separate from the user
