@@ -56,7 +56,7 @@ DESTINATION_FOLDERS = {
 }
 
 # Maximum size of the current PSF activity log before rotation.
-PSF_LOG_MAX_BYTES = 10 * 1024
+PSF_LOG_MAX_BYTES = 100 * 1024
 
 # Prevent the long-running PSF service from writing a START line on every
 # periodic run_batch() call. This resets naturally whenever the process restarts.
