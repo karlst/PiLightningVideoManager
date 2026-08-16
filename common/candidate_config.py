@@ -312,4 +312,28 @@ def reset_candidate_settings() -> CandidateConfig:
     )
 
 
+# ## Return the effective thresholds for one named sensitivity profile.
+def get_sensitivity_config(
+    sensitivity: str,
+) -> CandidateConfig:
+    settings = load_candidate_settings()
+
+    normalized = str(
+        sensitivity
+    ).lower()
+
+    if normalized not in SENSITIVITY_INDEX:
+        raise ValueError(
+            "Sensitivity must be high, medium, or low"
+        )
+
+    settings[
+        "sensitivity"
+    ] = normalized
+
+    return candidate_config_from_settings(
+        settings
+    )
+
+
 CANDIDATE_CONFIG = load_candidate_config()
