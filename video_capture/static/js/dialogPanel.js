@@ -151,7 +151,7 @@ export class DialogPanel
     }
 
 
-    // ## Show editable CandidateFinder trigger settings.
+    // ## Show the user-facing CandidateFinder sensitivity setting.
     async showTriggerSettings()
     {
         this._setTitle(
@@ -187,30 +187,58 @@ export class DialogPanel
                     "div"
                 );
 
-            container.style.display =
-                "grid";
+            container.className =
+                "triggerSensitivityPanel";
 
-            container.style.gridTemplateColumns =
-                "minmax(190px, 1fr) 140px";
+            const heading =
+                document.createElement(
+                    "div"
+                );
 
-            container.style.gap =
-                "10px";
+            heading.className =
+                "triggerSensitivityHeading";
 
-            container.style.alignItems =
-                "center";
+            heading.textContent =
+                "Sensitivity";
 
-            this._body.appendChild(
-                container
+            container.appendChild(
+                heading
             );
 
+            const helpText =
+                document.createElement(
+                    "div"
+                );
 
-            const addSetting =
+            helpText.className =
+                "triggerSensitivityHelp";
+
+            helpText.textContent =
+                "Higher sensitivity retains more marginal events and may produce more false positives.";
+
+            container.appendChild(
+                helpText
+            );
+
+            const choices =
+                document.createElement(
+                    "div"
+                );
+
+            choices.className =
+                "triggerSensitivityChoices";
+
+            container.appendChild(
+                choices
+            );
+
+            const radios =
+                new Map();
+
+            const addSensitivityChoice =
                 (
-                    labelText,
-                    inputId,
-                    minimum,
-                    maximum,
-                    step
+                    value,
+                    labelText
                 ) =>
                 {
                     const label =
@@ -218,129 +246,95 @@ export class DialogPanel
                             "label"
                         );
 
-                    label.htmlFor =
-                        inputId;
-
-                    label.textContent =
-                        labelText;
+                    label.className =
+                        "triggerSensitivityChoice";
 
                     const input =
                         document.createElement(
                             "input"
                         );
 
-                    input.id =
-                        inputId;
-
                     input.type =
-                        "number";
+                        "radio";
 
-                    input.min =
-                        String(
-                            minimum
+                    input.name =
+                        "candidate-sensitivity";
+
+                    input.value =
+                        value;
+
+                    const text =
+                        document.createElement(
+                            "span"
                         );
 
-                    input.max =
-                        String(
-                            maximum
-                        );
+                    text.textContent =
+                        labelText;
 
-                    input.step =
-                        String(
-                            step
-                        );
-
-                    container.appendChild(
-                        label
-                    );
-
-                    container.appendChild(
+                    label.appendChild(
                         input
                     );
 
-                    return input;
+                    label.appendChild(
+                        text
+                    );
+
+                    choices.appendChild(
+                        label
+                    );
+
+                    radios.set(
+                        value,
+                        input
+                    );
                 };
 
-
-            const brightnessDeltaInput =
-                addSetting(
-                    "Brightness delta:",
-                    "candidate-brightness-delta",
-                    0,
-                    999,
-                    0.1
-                );
-
-            const brightPixelDeltaInput =
-                addSetting(
-                    "Bright pixel delta:",
-                    "candidate-bright-pixel-delta",
-                    0,
-                    255,
-                    1
-                );
-
-            const brightPixelFractionInput =
-                addSetting(
-                    "Bright pixel fraction:",
-                    "candidate-bright-pixel-fraction",
-                    0,
-                    1,
-                    0.0001
-                );
-
-
-            const setInputValues =
-                (config) =>
-                {
-                    brightnessDeltaInput.value =
-                        Number(
-                            config.
-                            candidate_brightness_delta_threshold
-                        ).toFixed(
-                            3
-                        );
-
-                    brightPixelDeltaInput.value =
-                        Number(
-                            config.
-                            candidate_bright_pixel_delta_threshold
-                        ).toFixed(
-                            3
-                        );
-
-                    brightPixelFractionInput.value =
-                        Number(
-                            config.
-                            candidate_bright_pixel_fraction_threshold
-                        ).toFixed(
-                            6
-                        );
-                };
-
-
-            setInputValues(
-                result.active
+            addSensitivityChoice(
+                "high",
+                "High"
             );
 
+            addSensitivityChoice(
+                "medium",
+                "Medium"
+            );
+
+            addSensitivityChoice(
+                "low",
+                "Low"
+            );
+
+            const setSensitivity =
+                (config) =>
+                {
+                    const sensitivity =
+                        String(
+                            config?.sensitivity || "medium"
+                        ).toLowerCase();
+
+                    const radio =
+                        radios.get(
+                            sensitivity
+                        );
+
+                    if (radio !== undefined)
+                    {
+                        radio.checked =
+                            true;
+                    }
+                };
+
+            setSensitivity(
+                result.active
+            );
 
             const buttonRow =
                 document.createElement(
                     "div"
                 );
 
-            buttonRow.style.gridColumn =
-                "1 / -1";
-
-            buttonRow.style.display =
-                "flex";
-
-            buttonRow.style.gap =
-                "8px";
-
-            buttonRow.style.marginTop =
-                "8px";
-
+            buttonRow.className =
+                "triggerSensitivityButtons";
 
             const applyButton =
                 document.createElement(
@@ -356,7 +350,6 @@ export class DialogPanel
             applyButton.textContent =
                 "Apply";
 
-
             const resetButton =
                 document.createElement(
                     "button"
@@ -371,7 +364,6 @@ export class DialogPanel
             resetButton.textContent =
                 "Reset Defaults";
 
-
             buttonRow.appendChild(
                 applyButton
             );
@@ -384,44 +376,38 @@ export class DialogPanel
                 buttonRow
             );
 
-
             const message =
                 document.createElement(
                     "div"
                 );
 
-            message.style.gridColumn =
-                "1 / -1";
-
-            message.style.marginTop =
-                "4px";
+            message.className =
+                "triggerSensitivityMessage";
 
             container.appendChild(
                 message
             );
 
+            this._body.appendChild(
+                container
+            );
 
             applyButton.addEventListener(
                 "click",
                 async () =>
                 {
-                    const payload =
+                    const selected =
+                        choices.querySelector(
+                            'input[name="candidate-sensitivity"]:checked'
+                        );
+
+                    if (selected === null)
                     {
-                        candidate_brightness_delta_threshold:
-                            Number(
-                                brightnessDeltaInput.value
-                            ),
+                        message.textContent =
+                            "Select a sensitivity level.";
 
-                        candidate_bright_pixel_delta_threshold:
-                            Number(
-                                brightPixelDeltaInput.value
-                            ),
-
-                        candidate_bright_pixel_fraction_threshold:
-                            Number(
-                                brightPixelFractionInput.value
-                            )
-                    };
+                        return;
+                    }
 
                     try
                     {
@@ -439,7 +425,10 @@ export class DialogPanel
 
                                     body:
                                         JSON.stringify(
-                                            payload
+                                            {
+                                                sensitivity:
+                                                    selected.value
+                                            }
                                         )
                                 }
                             );
@@ -452,7 +441,7 @@ export class DialogPanel
 
                         if (saveResult.success)
                         {
-                            setInputValues(
+                            setSensitivity(
                                 saveResult.active
                             );
                         }
@@ -460,7 +449,7 @@ export class DialogPanel
                     catch (error)
                     {
                         message.textContent =
-                            "Candidate settings update failed.";
+                            "Candidate sensitivity update failed.";
 
                         console.error(
                             error
@@ -468,7 +457,6 @@ export class DialogPanel
                     }
                 }
             );
-
 
             resetButton.addEventListener(
                 "click",
@@ -493,7 +481,7 @@ export class DialogPanel
 
                         if (resetResult.success)
                         {
-                            setInputValues(
+                            setSensitivity(
                                 resetResult.active
                             );
                         }
@@ -520,6 +508,7 @@ export class DialogPanel
             );
         }
     }
+
 
     // ## Show placeholder camera settings dialog content.
     showCameraSettings()

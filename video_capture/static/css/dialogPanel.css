@@ -97,3 +97,55 @@
 {
     text-align: right;
 }
+
+/* Trigger Settings: simple High / Medium / Low sensitivity selector. */
+.triggerSensitivityPanel
+{
+    display: grid;
+    gap: 12px;
+}
+
+.triggerSensitivityHeading
+{
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.triggerSensitivityHelp
+{
+    color: #555;
+}
+
+.triggerSensitivityChoices
+{
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+}
+
+.triggerSensitivityChoice
+{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.triggerSensitivityChoice input
+{
+    margin: 0;
+}
+
+.triggerSensitivityButtons
+{
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.triggerSensitivityMessage
+{
+    min-height: 1.4em;
+}
+

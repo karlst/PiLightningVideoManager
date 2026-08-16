@@ -283,51 +283,68 @@ def register_routes(
             silent=True
         ) or {}
 
-        try:
-            brightness_delta_threshold = float(
-                body[
-                    "candidate_brightness_delta_threshold"
-                ]
+        # New simple web-UI path: selecting High / Medium / Low updates
+        # candidate_config.json and the live CandidateFinder immediately.
+        if "sensitivity" in body:
+            success, message = (
+                services.trigger_manager.
+                set_sensitivity(
+                    str(
+                        body[
+                            "sensitivity"
+                        ]
+                    )
+                )
             )
 
-            bright_pixel_delta_threshold = float(
-                body[
-                    "candidate_bright_pixel_delta_threshold"
-                ]
-            )
+        else:
+            # Preserve the existing advanced-threshold API so the current
+            # web UI and any existing callers continue to work unchanged.
+            try:
+                brightness_delta_threshold = float(
+                    body[
+                        "candidate_brightness_delta_threshold"
+                    ]
+                )
 
-            bright_pixel_fraction_threshold = float(
-                body[
-                    "candidate_bright_pixel_fraction_threshold"
-                ]
-            )
+                bright_pixel_delta_threshold = float(
+                    body[
+                        "candidate_bright_pixel_delta_threshold"
+                    ]
+                )
 
-        except (
-            KeyError,
-            TypeError,
-            ValueError
-        ):
-            return jsonify(
-                {
-                    "success": False,
-                    "message":
-                        "Invalid candidate threshold value"
-                }
-            ), 400
+                bright_pixel_fraction_threshold = float(
+                    body[
+                        "candidate_bright_pixel_fraction_threshold"
+                    ]
+                )
 
-        success, message = (
-            services.trigger_manager.
-            set_candidate_thresholds(
-                brightness_delta_threshold,
-                bright_pixel_delta_threshold,
-                bright_pixel_fraction_threshold
+            except (
+                KeyError,
+                TypeError,
+                ValueError
+            ):
+                return jsonify(
+                    {
+                        "success": False,
+                        "message":
+                            "Invalid candidate threshold value"
+                    }
+                ), 400
+
+            success, message = (
+                services.trigger_manager.
+                set_candidate_thresholds(
+                    brightness_delta_threshold,
+                    bright_pixel_delta_threshold,
+                    bright_pixel_fraction_threshold
+                )
             )
-        )
 
         if success:
             services.event_log.add(
                 message,
-                event_type="trigger",
+                event_type="config",
                 summary="Candidate settings updated"
             )
 

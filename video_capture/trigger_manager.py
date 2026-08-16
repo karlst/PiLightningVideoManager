@@ -5,11 +5,14 @@
 """
 
 from dataclasses import asdict
-from dataclasses import replace
-import json
 
-from common.candidate_config import CANDIDATE_CONFIG
 from common.candidate_config import CandidateConfig
+from common.candidate_config import SENSITIVITY_INDEX
+from common.candidate_config import load_candidate_config
+from common.candidate_config import load_candidate_settings
+from common.candidate_config import reset_candidate_settings
+from common.candidate_config import save_candidate_settings
+from common.candidate_config import set_candidate_sensitivity
 from common.candidate_finder import CandidateFinder
 from video_capture.cam_config import CamConfig
 
@@ -23,7 +26,7 @@ class TriggerManager:
         self._enabled = config.trigger_enabled
 
         self._candidate_config = (
-            self._load_candidate_config()
+            load_candidate_config()
         )
 
         self._candidate_finder = CandidateFinder(
@@ -80,9 +83,17 @@ class TriggerManager:
     def get_candidate_config_dict(
         self
     ) -> dict:
-        return asdict(
+        # Preserve the effective threshold fields expected by the current
+        # web UI, while also exposing the persistent sensitivity settings.
+        result = asdict(
             self._candidate_config
         )
+
+        result["settings"] = (
+            load_candidate_settings()
+        )
+
+        return result
 
     def set_candidate_thresholds(
         self,
@@ -90,18 +101,26 @@ class TriggerManager:
         bright_pixel_delta_threshold: float,
         bright_pixel_fraction_threshold: float
     ) -> tuple[bool, str]:
+        """Persist advanced threshold edits and activate them immediately."""
 
-        brightness_delta_threshold = float(
-            brightness_delta_threshold
-        )
-
-        bright_pixel_delta_threshold = float(
-            bright_pixel_delta_threshold
-        )
-
-        bright_pixel_fraction_threshold = float(
-            bright_pixel_fraction_threshold
-        )
+        try:
+            brightness_delta_threshold = float(
+                brightness_delta_threshold
+            )
+            bright_pixel_delta_threshold = float(
+                bright_pixel_delta_threshold
+            )
+            bright_pixel_fraction_threshold = float(
+                bright_pixel_fraction_threshold
+            )
+        except (
+            TypeError,
+            ValueError,
+        ):
+            return (
+                False,
+                "Invalid candidate threshold value"
+            )
 
         if brightness_delta_threshold < 0.0:
             return (
@@ -129,23 +148,44 @@ class TriggerManager:
                 "Bright pixel fraction threshold must be between 0 and 1"
             )
 
-        new_config = replace(
-            self._candidate_config,
-            candidate_brightness_delta_threshold=(
+        try:
+            settings = load_candidate_settings()
+
+            sensitivity = settings[
+                "sensitivity"
+            ]
+
+            sensitivity_index = (
+                SENSITIVITY_INDEX[
+                    sensitivity
+                ]
+            )
+
+            # Advanced edits modify the active sensitivity profile only.
+            settings[
+                "candidate_brightness_delta_thresholds"
+            ][sensitivity_index] = (
                 brightness_delta_threshold
-            ),
-            candidate_bright_pixel_delta_threshold=(
-                bright_pixel_delta_threshold
-            ),
-            candidate_bright_pixel_fraction_threshold=(
+            )
+
+            settings[
+                "candidate_bright_pixel_fraction_thresholds"
+            ][sensitivity_index] = (
                 bright_pixel_fraction_threshold
             )
-        )
 
-        try:
-            self._save_candidate_config(
-                new_config
+            settings[
+                "candidate_bright_pixel_delta_threshold"
+            ] = (
+                bright_pixel_delta_threshold
             )
+
+            new_config = (
+                save_candidate_settings(
+                    settings
+                )
+            )
+
         except Exception as error:
             return (
                 False,
@@ -156,20 +196,61 @@ class TriggerManager:
             new_config
         )
 
-        self._candidate_finder = CandidateFinder(
-            self._candidate_config
+        # CandidateFinder does no file I/O. Swap the immutable config object
+        # so the next frame uses the new thresholds immediately.
+        self._candidate_finder.set_config(
+            new_config
         )
 
         return (
             True,
             (
                 "Candidate settings updated: "
+                f"sensitivity {new_config.sensitivity}, "
                 f"brightness delta "
-                f"{brightness_delta_threshold:.3f}, "
+                f"{new_config.candidate_brightness_delta_threshold:.3f}, "
                 f"bright pixel delta "
-                f"{bright_pixel_delta_threshold:.3f}, "
+                f"{new_config.candidate_bright_pixel_delta_threshold:.3f}, "
                 f"bright pixel fraction "
-                f"{bright_pixel_fraction_threshold:.6f}"
+                f"{new_config.candidate_bright_pixel_fraction_threshold:.6f}"
+            )
+        )
+
+    def set_sensitivity(
+        self,
+        sensitivity: str
+    ) -> tuple[bool, str]:
+        """Persist a sensitivity level and activate its thresholds immediately."""
+
+        try:
+            new_config = (
+                set_candidate_sensitivity(
+                    sensitivity
+                )
+            )
+        except Exception as error:
+            return (
+                False,
+                f"Candidate sensitivity update failed: {error}"
+            )
+
+        self._candidate_config = (
+            new_config
+        )
+
+        self._candidate_finder.set_config(
+            new_config
+        )
+
+        return (
+            True,
+            (
+                "Candidate sensitivity updated: "
+                f"{new_config.sensitivity}; "
+                f"brightness delta "
+                f"{new_config.candidate_brightness_delta_threshold:.3f}, "
+                f"bright pixel fraction "
+                f"{new_config.candidate_bright_pixel_fraction_threshold:.6f}"
             )
         )
 
@@ -177,8 +258,8 @@ class TriggerManager:
         self
     ) -> tuple[bool, str]:
         try:
-            self._config.candidate_settings_file.unlink(
-                missing_ok=True
+            new_config = (
+                reset_candidate_settings()
             )
         except Exception as error:
             return (
@@ -187,11 +268,11 @@ class TriggerManager:
             )
 
         self._candidate_config = (
-            CANDIDATE_CONFIG
+            new_config
         )
 
-        self._candidate_finder = CandidateFinder(
-            self._candidate_config
+        self._candidate_finder.set_config(
+            new_config
         )
 
         return (
@@ -214,95 +295,6 @@ class TriggerManager:
             "last_trigger_time_monotonic":
                 self._last_trigger_time_monotonic
         }
-
-    def _load_candidate_config(
-        self
-    ) -> CandidateConfig:
-        candidate_config = (
-            CANDIDATE_CONFIG
-        )
-
-        path = (
-            self._config.candidate_settings_file
-        )
-
-        if path.exists():
-            try:
-                data = json.loads(
-                    path.read_text(
-                        encoding="utf-8"
-                    )
-                )
-
-                candidate_config = replace(
-                    CANDIDATE_CONFIG,
-
-                    candidate_brightness_delta_threshold=float(
-                        data.get(
-                            "candidate_brightness_delta_threshold",
-                            CANDIDATE_CONFIG.
-                            candidate_brightness_delta_threshold
-                        )
-                    ),
-
-                    candidate_bright_pixel_delta_threshold=float(
-                        data.get(
-                            "candidate_bright_pixel_delta_threshold",
-                            CANDIDATE_CONFIG.
-                            candidate_bright_pixel_delta_threshold
-                        )
-                    ),
-
-                    candidate_bright_pixel_fraction_threshold=float(
-                        data.get(
-                            "candidate_bright_pixel_fraction_threshold",
-                            CANDIDATE_CONFIG.
-                            candidate_bright_pixel_fraction_threshold
-                        )
-                    )
-                )
-
-            except Exception:
-                candidate_config = (
-                    CANDIDATE_CONFIG
-                )
-
-        return candidate_config
-
-    def _save_candidate_config(
-        self,
-        candidate_config: CandidateConfig
-    ) -> None:
-        path = (
-            self._config.candidate_settings_file
-        )
-
-        path.parent.mkdir(
-            parents=True,
-            exist_ok=True
-        )
-
-        data = {
-            "candidate_brightness_delta_threshold":
-                candidate_config.
-                candidate_brightness_delta_threshold,
-
-            "candidate_bright_pixel_delta_threshold":
-                candidate_config.
-                candidate_bright_pixel_delta_threshold,
-
-            "candidate_bright_pixel_fraction_threshold":
-                candidate_config.
-                candidate_bright_pixel_fraction_threshold
-        }
-
-        path.write_text(
-            json.dumps(
-                data,
-                indent=4
-            ) + "\n",
-            encoding="utf-8"
-        )
 
     def _cooldown_elapsed(
         self,

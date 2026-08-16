@@ -8,9 +8,9 @@ lightning. CandidateFinder examines frame metrics and applies the configured
 thresholds to decide whether a frame is interesting enough to create such a
 candidate. The same CandidateFinder is used during live capture on the Pi and
 by the desktop analyzer when candidate detection is replayed from saved data.
-It deliberately identifies possible lightning rather than deciding whether a
-clip is actually a true lightning solution; that later decision belongs to
-the analyzer's SolutionFilter.
+
+CandidateFinder never performs file I/O. Runtime configuration changes replace
+its immutable CandidateConfig object in memory.
 """
 
 from common.candidate_config import CandidateConfig
@@ -24,6 +24,19 @@ class CandidateFinder:
         config: CandidateConfig
     ) -> None:
         self._config = config
+
+    # ## Atomically replace the in-memory CandidateFinder configuration.
+    def set_config(
+        self,
+        config: CandidateConfig,
+    ) -> None:
+        self._config = config
+
+    # ## Return the currently active in-memory configuration.
+    def get_config(
+        self,
+    ) -> CandidateConfig:
+        return self._config
 
     # ## Evaluate one metric sample and return whether capture should fire.
     def evaluate(

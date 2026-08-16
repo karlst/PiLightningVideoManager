@@ -281,6 +281,22 @@ export class StatusPanel
             result.trigger_enabled ? "Enabled" : "Disabled"
         );
 
+        const sensitivity =
+            result.
+                trigger_status?.
+                candidate_config?.
+                sensitivity;
+
+        setElementText(
+            "summary-sensitivity-value",
+            sensitivity
+                ? (
+                    sensitivity.charAt(0).toUpperCase() +
+                    sensitivity.slice(1)
+                )
+                : "--"
+        );
+
         setElementText(
             "summary-fps-value",
             fps
