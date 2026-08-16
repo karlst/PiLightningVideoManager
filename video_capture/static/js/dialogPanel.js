@@ -328,6 +328,53 @@ export class DialogPanel
                 result.active
             );
 
+            const systemSettings =
+                await getJson(
+                    "/system_settings"
+                );
+
+            const saveFalsePositiveLabel =
+                document.createElement(
+                    "label"
+                );
+
+            saveFalsePositiveLabel.className =
+                "triggerSaveFalsePositives";
+
+            const saveFalsePositiveInput =
+                document.createElement(
+                    "input"
+                );
+
+            saveFalsePositiveInput.type =
+                "checkbox";
+
+            saveFalsePositiveInput.checked =
+                Boolean(
+                    systemSettings.
+                        save_filtered_false_positives
+                );
+
+            const saveFalsePositiveText =
+                document.createElement(
+                    "span"
+                );
+
+            saveFalsePositiveText.textContent =
+                "Save filtered false positive candidates";
+
+            saveFalsePositiveLabel.appendChild(
+                saveFalsePositiveInput
+            );
+
+            saveFalsePositiveLabel.appendChild(
+                saveFalsePositiveText
+            );
+
+            container.appendChild(
+                saveFalsePositiveLabel
+            );
+
             const buttonRow =
                 document.createElement(
                     "div"
@@ -444,6 +491,37 @@ export class DialogPanel
                             setSensitivity(
                                 saveResult.active
                             );
+
+                            const systemResponse =
+                                await fetch(
+                                    "/system_settings",
+                                    {
+                                        method: "POST",
+
+                                        headers:
+                                        {
+                                            "Content-Type":
+                                                "application/json"
+                                        },
+
+                                        body:
+                                            JSON.stringify(
+                                                {
+                                                    save_filtered_false_positives:
+                                                        saveFalsePositiveInput.checked
+                                                }
+                                            )
+                                    }
+                                );
+
+                            const systemResult =
+                                await systemResponse.json();
+
+                            if (!systemResult.success)
+                            {
+                                message.textContent =
+                                    systemResult.message;
+                            }
                         }
                     }
                     catch (error)
@@ -484,6 +562,40 @@ export class DialogPanel
                             setSensitivity(
                                 resetResult.active
                             );
+
+                            saveFalsePositiveInput.checked =
+                                false;
+
+                            const systemResponse =
+                                await fetch(
+                                    "/system_settings",
+                                    {
+                                        method: "POST",
+
+                                        headers:
+                                        {
+                                            "Content-Type":
+                                                "application/json"
+                                        },
+
+                                        body:
+                                            JSON.stringify(
+                                                {
+                                                    save_filtered_false_positives:
+                                                        false
+                                                }
+                                            )
+                                    }
+                                );
+
+                            const systemResult =
+                                await systemResponse.json();
+
+                            if (!systemResult.success)
+                            {
+                                message.textContent =
+                                    systemResult.message;
+                            }
                         }
                     }
                     catch (error)

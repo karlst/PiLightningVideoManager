@@ -42,6 +42,8 @@ import psutil
 from pathlib import Path
 
 from common.candidate_config import CANDIDATE_CONFIG
+from common.system_config import load_system_settings
+from common.system_config import set_save_filtered_false_positives
 
 
 @dataclass
@@ -283,8 +285,7 @@ def register_routes(
             silent=True
         ) or {}
 
-        # New simple web-UI path: selecting High / Medium / Low updates
-        # candidate_config.json and the live CandidateFinder immediately.
+        # Simple user-facing path: High / Medium / Low sensitivity.
         if "sensitivity" in body:
             success, message = (
                 services.trigger_manager.
@@ -298,8 +299,7 @@ def register_routes(
             )
 
         else:
-            # Preserve the existing advanced-threshold API so the current
-            # web UI and any existing callers continue to work unchanged.
+            # Preserve the existing advanced-threshold API.
             try:
                 brightness_delta_threshold = float(
                     body[
@@ -376,7 +376,7 @@ def register_routes(
         if success:
             services.event_log.add(
                 message,
-                event_type="trigger",
+                event_type="config",
                 summary=message
             )
 
@@ -389,6 +389,110 @@ def register_routes(
                     get_candidate_config_dict()
             }
         )
+    @app.route(
+        "/system_settings"
+    )
+    def system_settings():
+        try:
+            settings = (
+                load_system_settings()
+            )
+        except RuntimeError as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": str(error)
+                }
+            ), 500
+
+        return jsonify(
+            {
+                "success": True,
+                "save_filtered_false_positives":
+                    bool(
+                        settings.get(
+                            "save_filtered_false_positives",
+                            False
+                        )
+                    )
+            }
+        )
+
+
+    @app.route(
+        "/system_settings",
+        methods=["POST"]
+    )
+    def update_system_settings():
+        body = request.get_json(
+            silent=True
+        ) or {}
+
+        value = body.get(
+            "save_filtered_false_positives"
+        )
+
+        if not isinstance(
+            value,
+            bool
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        "save_filtered_false_positives must be true or false"
+                }
+            ), 400
+
+        try:
+            settings = (
+                set_save_filtered_false_positives(
+                    value
+                )
+            )
+        except (
+            OSError,
+            RuntimeError
+        ) as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        f"System settings update failed: {error}"
+                }
+            ), 500
+
+        enabled = bool(
+            settings[
+                "save_filtered_false_positives"
+            ]
+        )
+
+        message = (
+            "Save filtered false positive candidates "
+            + (
+                "enabled"
+                if enabled
+                else "disabled"
+            )
+        )
+
+        services.event_log.add(
+            message,
+            event_type="config",
+            summary=message
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "message": message,
+                "save_filtered_false_positives":
+                    enabled
+            }
+        )
+
+
     @app.route(
         "/event_log"
     )

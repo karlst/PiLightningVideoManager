@@ -19,6 +19,7 @@ import sys
 import time
 
 from video_analyzer.batch_solution_filter import run_batch_solution_filter
+from common.system_config import load_system_settings
 
 
 _running = True
@@ -83,10 +84,25 @@ def main() -> int:
         started = time.monotonic()
 
         try:
+            # Reload system_config.json on every pass so a web-UI change
+            # takes effect without restarting the independent PSF service.
+            system_settings = (
+                load_system_settings()
+            )
+
+            save_false_positives = bool(
+                system_settings.get(
+                    "save_filtered_false_positives",
+                    False,
+                )
+            )
+
             run_batch_solution_filter(
                 arguments.folder,
                 verbosity=arguments.verbosity,
-                delete_rejects=True,
+                delete_rejects=(
+                    not save_false_positives
+                ),
             )
         except Exception as error:
             print(

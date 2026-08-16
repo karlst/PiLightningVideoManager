@@ -149,3 +149,17 @@
     min-height: 1.4em;
 }
 
+.triggerSaveFalsePositives
+{
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.triggerSaveFalsePositives input
+{
+    margin: 0;
+}
+
