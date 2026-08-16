@@ -1,0 +1,15 @@
+{
+    "sensitivity": "medium",
+    "candidate_brightness_threshold": 999.0,
+    "candidate_brightness_delta_thresholds": [
+        2.0,
+        2.5,
+        4.5
+    ],
+    "candidate_bright_pixel_delta_threshold": 10.0,
+    "candidate_bright_pixel_fraction_thresholds": [
+        0.002,
+        0.01,
+        0.1
+    ]
+}

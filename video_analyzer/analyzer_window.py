@@ -550,6 +550,7 @@ class AnalyzerWindow(QMainWindow):
                 self.capture_data.pi_brightness,
                 self.capture_data.pi_brightness_delta,
                 self.candidate_result.frame_index,
+                self.candidate_result.reason,
             )
 
         self.solution_panel.set_result(

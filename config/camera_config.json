@@ -1,0 +1,14 @@
+{
+    "video_device": "/dev/video0",
+    "input_format": "mjpeg",
+    "frame_rate_fps": 260,
+    "frame_width_pixels": 640,
+    "frame_height_pixels": 360,
+    "camera_name": "ELP USB Camera",
+    "camera_type": "ELP USB High Speed",
+    "camera_latitude_degrees": 32.22256,
+    "camera_longitude_degrees": -111.59191,
+    "camera_bearing_degrees": 0.0,
+    "camera_hfov_degrees": 0.0,
+    "camera_vfov_degrees": 0.0
+}

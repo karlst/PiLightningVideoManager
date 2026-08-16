@@ -26,7 +26,8 @@ Algorithm:
    configured amount above the original baseline.
 
 5. Once sufficiently elevated, determine whether brightness remains
-   within a configured neighborhood for a configured number of frames.
+   within a configured neighborhood for the configured number of frames,
+   or for all remaining post-trigger frames when fewer are available.
 
 6. If it does, reject the Candidate as a steady-state anomaly.
 """
@@ -276,15 +277,27 @@ class SteadyStateChangeFilter:
             # state and examine the following min_steady_frames.
             # ------------------------------------------------------
 
-            steady_end = (
-                index +
-                self._min_steady_frames
+            # Require the configured number of steady frames when they are
+            # available, but do not automatically pass a late Candidate simply
+            # because the clip ends sooner. For a late trigger, use every frame
+            # still available in the configured search region.
+            available_steady_frames = (
+                search_end -
+                index
             )
 
-            # There aren't enough frames left inside our configured
-            # search region to prove that this level persists.
-            if steady_end > search_end:
+            required_steady_frames = min(
+                self._min_steady_frames,
+                available_steady_frames,
+            )
+
+            if required_steady_frames <= 0:
                 continue
+
+            steady_end = (
+                index +
+                required_steady_frames
+            )
 
             steady_samples = brightness[
                 index:steady_end

@@ -24,7 +24,7 @@ class CandidateConfig:
 
     # Fraction of all image pixels that must satisfy the bright-pixel delta
     # threshold. Range is 0.0-1.0. Example: 0.001 means 0.1% of image pixels.
-    candidate_bright_pixel_fraction_threshold: float = 0.01
+    candidate_bright_pixel_fraction_threshold: float = 0.9
 
 
 CANDIDATE_CONFIG = CandidateConfig()
