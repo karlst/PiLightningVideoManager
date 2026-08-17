@@ -1,5 +1,5 @@
 {
-    "sensitivity": "medium",
+    "sensitivity": "high",
     "candidate_brightness_threshold": 999.0,
     "candidate_brightness_delta_thresholds": [
         2.0,
