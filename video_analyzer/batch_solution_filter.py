@@ -18,7 +18,8 @@ This separation is intentional:
 
 Avoiding MP4 decoding makes normal batch classification very fast even for
 large folders. The optional --findCandidates mode deliberately reruns
-CandidateFinder using the current CandidateConfig. Because bright-pixel replay
+CandidateFinder using the current CandidateConfig or a one-run --sensitivity
+override. Because bright-pixel replay
 requires reconstructed pixel-change measurements, that mode decodes each MP4
 and is therefore much slower.
 
@@ -44,6 +45,9 @@ from typing import Any
 import numpy as np
 
 from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import CandidateConfig
+from common.candidate_config import candidate_config_from_settings
+from common.candidate_config import load_candidate_settings
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_filter import SolutionFilter
@@ -425,6 +429,7 @@ def move_capture_pair(
 def classify_capture(
     video_path: Path,
     solution_filter: SolutionFilter,
+    candidate_config: CandidateConfig = CANDIDATE_CONFIG,
     find_candidates: bool = False,
     verbosity: int = 0,
 ) -> tuple[str, str]:
@@ -457,7 +462,7 @@ def classify_capture(
 
             candidate_result = replay_candidate_finder(
                 capture_data,
-                CANDIDATE_CONFIG,
+                candidate_config,
             )
 
             if candidate_result.frame_index is None:
@@ -591,12 +596,13 @@ def move_orphan_sidecars(
 
 
 # ## Classify every Candidate in one folder and move each pair to its result folder.
-def run_batch(
+def run_batch_solution_filter(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
     delete_rejects: bool = False,
     find_candidates: bool = False,
+    candidate_config: CandidateConfig = CANDIDATE_CONFIG,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -669,6 +675,7 @@ def run_batch(
         category, reason = classify_capture(
             video_path,
             solution_filter,
+            candidate_config=candidate_config,
             find_candidates=find_candidates,
             verbosity=verbosity,
         )
@@ -807,6 +814,65 @@ def run_batch(
     return 0
 
 
+# ## Build an optional one-run sensitivity override without changing the JSON file.
+def build_candidate_config(
+    sensitivity: str | None,
+) -> CandidateConfig:
+    if sensitivity is None:
+        return CANDIDATE_CONFIG
+
+    settings = (
+        load_candidate_settings()
+    )
+
+    settings[
+        "sensitivity"
+    ] = sensitivity
+
+    return candidate_config_from_settings(
+        settings
+    )
+
+
+# ## Always report the effective CandidateFinder settings for this batch run.
+def print_candidate_config(
+    config: CandidateConfig,
+    find_candidates: bool,
+) -> None:
+    mode_text = (
+        "used for CandidateFinder replay"
+        if find_candidates
+        else "reported only; normal batch trusts sidecar trigger"
+    )
+
+    print(
+        "CandidateFinder settings "
+        f"({mode_text}):"
+    )
+
+    print(
+        f"  Sensitivity: "
+        f"{config.sensitivity}"
+    )
+
+    print(
+        f"  Brightness delta threshold: "
+        f"{config.candidate_brightness_delta_threshold:.3f}"
+    )
+
+    print(
+        f"  Bright pixel delta threshold: "
+        f"{config.candidate_bright_pixel_delta_threshold:.1f}"
+    )
+
+    print(
+        f"  Bright pixel fraction threshold: "
+        f"{config.candidate_bright_pixel_fraction_threshold:.6f}"
+    )
+
+    print()
+
+
 # ## Parse command-line arguments and run BatchClassifier.
 def main() -> int:
     parser = argparse.ArgumentParser(
@@ -857,21 +923,48 @@ def main() -> int:
         "--findCandidates",
         action="store_true",
         help=(
-            "Rerun CandidateFinder using the current CandidateConfig before "
+            "Rerun CandidateFinder using CandidateConfig before "
             "SolutionFilter. This decodes MP4 files and is much slower than "
             "the normal sidecar-only path."
+        ),
+    )
+
+    parser.add_argument(
+        "--sensitivity",
+        choices=[
+            "high",
+            "medium",
+            "low",
+        ],
+        default=None,
+        help=(
+            "Override CandidateFinder sensitivity for this batch run only. "
+            "Does not modify candidate_config.json. "
+            "If omitted, use the current shared CandidateConfig."
         ),
     )
 
     arguments = parser.parse_args()
 
     try:
+        candidate_config = (
+            build_candidate_config(
+                arguments.sensitivity
+            )
+        )
+
+        print_candidate_config(
+            candidate_config,
+            arguments.findCandidates,
+        )
+
         return run_batch(
             arguments.folder,
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
             delete_rejects=arguments.delete_rejects,
             find_candidates=arguments.findCandidates,
+            candidate_config=candidate_config,
         )
 
     except (
