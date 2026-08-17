@@ -163,3 +163,35 @@
     margin: 0;
 }
 
+.cameraSettingsGrid
+{
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(140px, 180px);
+    gap: 10px 14px;
+    align-items: center;
+}
+
+.cameraSettingsGrid input
+{
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.cameraSettingsButtons,
+.cameraSettingsMessage
+{
+    grid-column: 1 / -1;
+}
+
+.cameraSettingsButtons
+{
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.cameraSettingsMessage
+{
+    min-height: 1.4em;
+}
+

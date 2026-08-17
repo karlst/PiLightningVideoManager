@@ -622,13 +622,320 @@ export class DialogPanel
     }
 
 
-    // ## Show placeholder camera settings dialog content.
-    showCameraSettings()
+    // ## Show editable camera location, bearing, and field-of-view settings.
+    async showCameraSettings()
     {
-        this._showText(
-            "Camera Settings",
-            "TODO\n\nDevice\nFormat\nFrame size\nFPS\nLocation\nBearing\nFOV"
+        this._setTitle(
+            "Camera Settings"
         );
+
+        this._clearBody();
+
+        this._body.textContent =
+            "Loading camera settings...";
+
+        this._dialog.showModal();
+
+        try
+        {
+            const result =
+                await getJson(
+                    "/camera_settings"
+                );
+
+            if (!result.success)
+            {
+                this._body.textContent =
+                    "Unable to load camera settings.";
+
+                return;
+            }
+
+            this._clearBody();
+
+            const container =
+                document.createElement(
+                    "div"
+                );
+
+            container.className =
+                "cameraSettingsGrid";
+
+            const addSetting =
+                (
+                    labelText,
+                    value,
+                    minimum,
+                    maximum,
+                    step,
+                    decimals
+                ) =>
+                {
+                    const label =
+                        document.createElement(
+                            "label"
+                        );
+
+                    label.textContent =
+                        labelText;
+
+                    const input =
+                        document.createElement(
+                            "input"
+                        );
+
+                    input.type =
+                        "number";
+
+                    input.min =
+                        String(
+                            minimum
+                        );
+
+                    input.max =
+                        String(
+                            maximum
+                        );
+
+                    input.step =
+                        String(
+                            step
+                        );
+
+                    input.value =
+                        Number(
+                            value
+                        ).toFixed(
+                            decimals
+                        );
+
+                    container.appendChild(
+                        label
+                    );
+
+                    container.appendChild(
+                        input
+                    );
+
+                    return input;
+                };
+
+            const latitudeInput =
+                addSetting(
+                    "Latitude (°):",
+                    result.camera_latitude_degrees,
+                    -90,
+                    90,
+                    0.0000001,
+                    7
+                );
+
+            const longitudeInput =
+                addSetting(
+                    "Longitude (°):",
+                    result.camera_longitude_degrees,
+                    -180,
+                    180,
+                    0.0000001,
+                    7
+                );
+
+            const bearingInput =
+                addSetting(
+                    "Bearing (°):",
+                    result.camera_bearing_degrees,
+                    0,
+                    359.9,
+                    0.1,
+                    1
+                );
+
+            const hfovInput =
+                addSetting(
+                    "Horizontal FOV (°):",
+                    result.camera_hfov_degrees,
+                    0,
+                    360,
+                    0.1,
+                    1
+                );
+
+            const vfovInput =
+                addSetting(
+                    "Vertical FOV (°):",
+                    result.camera_vfov_degrees,
+                    0,
+                    180,
+                    0.1,
+                    1
+                );
+
+            const buttonRow =
+                document.createElement(
+                    "div"
+                );
+
+            buttonRow.className =
+                "cameraSettingsButtons";
+
+            const applyButton =
+                document.createElement(
+                    "button"
+                );
+
+            applyButton.type =
+                "button";
+
+            applyButton.className =
+                "ccButton";
+
+            applyButton.textContent =
+                "Apply";
+
+            buttonRow.appendChild(
+                applyButton
+            );
+
+            container.appendChild(
+                buttonRow
+            );
+
+            const message =
+                document.createElement(
+                    "div"
+                );
+
+            message.className =
+                "cameraSettingsMessage";
+
+            container.appendChild(
+                message
+            );
+
+            this._body.appendChild(
+                container
+            );
+
+            applyButton.addEventListener(
+                "click",
+                async () =>
+                {
+                    try
+                    {
+                        const response =
+                            await fetch(
+                                "/camera_settings",
+                                {
+                                    method: "POST",
+
+                                    headers:
+                                    {
+                                        "Content-Type":
+                                            "application/json"
+                                    },
+
+                                    body:
+                                        JSON.stringify(
+                                            {
+                                                camera_latitude_degrees:
+                                                    Number(
+                                                        latitudeInput.value
+                                                    ),
+
+                                                camera_longitude_degrees:
+                                                    Number(
+                                                        longitudeInput.value
+                                                    ),
+
+                                                camera_bearing_degrees:
+                                                    Number(
+                                                        bearingInput.value
+                                                    ),
+
+                                                camera_hfov_degrees:
+                                                    Number(
+                                                        hfovInput.value
+                                                    ),
+
+                                                camera_vfov_degrees:
+                                                    Number(
+                                                        vfovInput.value
+                                                    )
+                                            }
+                                        )
+                                }
+                            );
+
+                        const saveResult =
+                            await response.json();
+
+                        message.textContent =
+                            saveResult.message;
+
+                        if (saveResult.success)
+                        {
+                            latitudeInput.value =
+                                Number(
+                                    saveResult.
+                                        camera_latitude_degrees
+                                ).toFixed(
+                                    7
+                                );
+
+                            longitudeInput.value =
+                                Number(
+                                    saveResult.
+                                        camera_longitude_degrees
+                                ).toFixed(
+                                    7
+                                );
+
+                            bearingInput.value =
+                                Number(
+                                    saveResult.
+                                        camera_bearing_degrees
+                                ).toFixed(
+                                    1
+                                );
+
+                            hfovInput.value =
+                                Number(
+                                    saveResult.
+                                        camera_hfov_degrees
+                                ).toFixed(
+                                    1
+                                );
+
+                            vfovInput.value =
+                                Number(
+                                    saveResult.
+                                        camera_vfov_degrees
+                                ).toFixed(
+                                    1
+                                );
+                        }
+                    }
+                    catch (error)
+                    {
+                        message.textContent =
+                            "Camera settings update failed.";
+
+                        console.error(
+                            error
+                        );
+                    }
+                }
+            );
+        }
+        catch (error)
+        {
+            this._body.textContent =
+                "Unable to load camera settings.";
+
+            console.error(
+                error
+            );
+        }
     }
 
 

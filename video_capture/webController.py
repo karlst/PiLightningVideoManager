@@ -29,6 +29,7 @@ from flask import request
 from video_capture.buffer_manager import BufferManager
 from video_capture.cam_capture import CamCapture
 from video_capture.cam_config import CamConfig
+from video_capture.cam_config import update_camera_geometry_settings
 from video_capture.event_log import EventLog
 from video_capture.previewServer import PreviewServer
 from video_capture.trigger_manager import TriggerManager
@@ -389,6 +390,147 @@ def register_routes(
                     get_candidate_config_dict()
             }
         )
+    @app.route(
+        "/camera_settings"
+    )
+    def camera_settings():
+        return jsonify(
+            {
+                "success": True,
+                "camera_latitude_degrees":
+                    services.config.camera_latitude_degrees,
+                "camera_longitude_degrees":
+                    services.config.camera_longitude_degrees,
+                "camera_bearing_degrees":
+                    services.config.camera_bearing_degrees,
+                "camera_hfov_degrees":
+                    services.config.camera_hfov_degrees,
+                "camera_vfov_degrees":
+                    services.config.camera_vfov_degrees
+            }
+        )
+
+
+    @app.route(
+        "/camera_settings",
+        methods=["POST"]
+    )
+    def update_camera_settings():
+        body = request.get_json(
+            silent=True
+        ) or {}
+
+        try:
+            settings = (
+                update_camera_geometry_settings(
+                    body[
+                        "camera_latitude_degrees"
+                    ],
+                    body[
+                        "camera_longitude_degrees"
+                    ],
+                    body[
+                        "camera_bearing_degrees"
+                    ],
+                    body[
+                        "camera_hfov_degrees"
+                    ],
+                    body[
+                        "camera_vfov_degrees"
+                    ],
+                )
+            )
+
+        except (
+            KeyError,
+            TypeError,
+            ValueError
+        ) as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        f"Invalid camera setting: {error}"
+                }
+            ), 400
+
+        except (
+            OSError,
+            RuntimeError
+        ) as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        f"Camera settings update failed: {error}"
+                }
+            ), 500
+
+        # Keep the live CamConfig synchronized with the JSON file so status
+        # and newly written sidecars use the new geometry immediately.
+        services.config.camera_latitude_degrees = float(
+            settings[
+                "camera_latitude_degrees"
+            ]
+        )
+
+        services.config.camera_longitude_degrees = float(
+            settings[
+                "camera_longitude_degrees"
+            ]
+        )
+
+        services.config.camera_bearing_degrees = float(
+            settings[
+                "camera_bearing_degrees"
+            ]
+        )
+
+        services.config.camera_hfov_degrees = float(
+            settings[
+                "camera_hfov_degrees"
+            ]
+        )
+
+        services.config.camera_vfov_degrees = float(
+            settings[
+                "camera_vfov_degrees"
+            ]
+        )
+
+        message = (
+            "Camera geometry updated: "
+            f"lat {services.config.camera_latitude_degrees:.7f}, "
+            f"lon {services.config.camera_longitude_degrees:.7f}, "
+            f"bearing {services.config.camera_bearing_degrees:.1f}, "
+            f"HFOV {services.config.camera_hfov_degrees:.1f}, "
+            f"VFOV {services.config.camera_vfov_degrees:.1f}"
+        )
+
+        services.event_log.add(
+            message,
+            event_type="config",
+            summary="Camera geometry updated"
+        )
+
+        return jsonify(
+            {
+                "success": True,
+                "message": message,
+                "camera_latitude_degrees":
+                    services.config.camera_latitude_degrees,
+                "camera_longitude_degrees":
+                    services.config.camera_longitude_degrees,
+                "camera_bearing_degrees":
+                    services.config.camera_bearing_degrees,
+                "camera_hfov_degrees":
+                    services.config.camera_hfov_degrees,
+                "camera_vfov_degrees":
+                    services.config.camera_vfov_degrees
+            }
+        )
+
+
     @app.route(
         "/system_settings"
     )

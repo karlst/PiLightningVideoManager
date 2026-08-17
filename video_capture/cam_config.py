@@ -75,6 +75,87 @@ def save_camera_settings(
     )
 
 
+
+# ## Validate and atomically persist camera geometry settings.
+def update_camera_geometry_settings(
+    latitude_degrees: float,
+    longitude_degrees: float,
+    bearing_degrees: float,
+    hfov_degrees: float,
+    vfov_degrees: float,
+) -> dict[str, Any]:
+    latitude_degrees = float(
+        latitude_degrees
+    )
+    longitude_degrees = float(
+        longitude_degrees
+    )
+    bearing_degrees = float(
+        bearing_degrees
+    )
+    hfov_degrees = float(
+        hfov_degrees
+    )
+    vfov_degrees = float(
+        vfov_degrees
+    )
+
+    if not -90.0 <= latitude_degrees <= 90.0:
+        raise ValueError(
+            "Latitude must be between -90 and 90 degrees"
+        )
+
+    if not -180.0 <= longitude_degrees <= 180.0:
+        raise ValueError(
+            "Longitude must be between -180 and 180 degrees"
+        )
+
+    if not 0.0 <= bearing_degrees < 360.0:
+        raise ValueError(
+            "Bearing must be at least 0 and less than 360 degrees"
+        )
+
+    if not 0.0 <= hfov_degrees <= 360.0:
+        raise ValueError(
+            "Horizontal FOV must be between 0 and 360 degrees"
+        )
+
+    if not 0.0 <= vfov_degrees <= 180.0:
+        raise ValueError(
+            "Vertical FOV must be between 0 and 180 degrees"
+        )
+
+    settings = (
+        load_camera_settings()
+    )
+
+    settings[
+        "camera_latitude_degrees"
+    ] = latitude_degrees
+
+    settings[
+        "camera_longitude_degrees"
+    ] = longitude_degrees
+
+    settings[
+        "camera_bearing_degrees"
+    ] = bearing_degrees
+
+    settings[
+        "camera_hfov_degrees"
+    ] = hfov_degrees
+
+    settings[
+        "camera_vfov_degrees"
+    ] = vfov_degrees
+
+    save_camera_settings(
+        settings
+    )
+
+    return settings
+
+
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:

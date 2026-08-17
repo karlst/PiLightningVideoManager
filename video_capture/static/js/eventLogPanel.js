@@ -150,7 +150,7 @@ export class EventLogPanel
             const recentEntries =
                 this._entries.slice(
                     -5
-                );
+                ).reverse();
 
             recentEntries.forEach(
                 (entry) =>
@@ -173,8 +173,6 @@ export class EventLogPanel
                 }
             );
 
-            eventLog.scrollTop =
-                eventLog.scrollHeight;
         }
     }
 
@@ -230,7 +228,7 @@ export class EventLogPanel
         log.className =
             "fullEventLog";
 
-        this._entries.forEach(
+        [...this._entries].reverse().forEach(
             (entry) =>
             {
                 const row =

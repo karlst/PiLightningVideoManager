@@ -49,15 +49,22 @@ class CaptureManager:
             config.capture_directory
         )
 
+        # Browse Captures shows only clips accepted by Pi SolutionFilter.
+        # BatchSolutionFilter stores those beneath captures/true_flashes.
+        self._browse_directory = (
+            self._capture_directory /
+            "true_flashes"
+        )
+
         self._config.ensure_directories()
 
     # ## List captures with sidecar summary fields for the browser UI.
     def list_captures(self) -> list[dict]:
         files: list[dict] = []
 
-        if self._capture_directory.exists():
+        if self._browse_directory.exists():
             for path in sorted(
-                self._capture_directory.glob(
+                self._browse_directory.glob(
                     "*.mp4"
                 ),
                 key=lambda item: item.stat().st_mtime,
@@ -164,9 +171,9 @@ class CaptureManager:
                 f"Capture cleanup deleted {deleted_count} old file(s)"
             )
 
-    # ## Return the directory containing MP4 captures and JSON sidecars.
+    # ## Return the directory exposed by Browse Captures playback.
     def get_capture_directory(self) -> Path:
-        return self._capture_directory
+        return self._browse_directory
 
     # ## Read the JSON sidecar for one capture file.
     def _read_sidecar(
