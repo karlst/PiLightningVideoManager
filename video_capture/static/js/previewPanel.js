@@ -69,11 +69,6 @@ export class PreviewPanel
         );
 
         this._bindClick(
-            "playback-first-frame-button",
-            () => this._setPlaybackFrameIndex(0)
-        );
-
-        this._bindClick(
             "playback-step-back-10-button",
             () => this._stepPlaybackFrames(-10)
         );
@@ -91,13 +86,6 @@ export class PreviewPanel
         this._bindClick(
             "playback-step-forward-10-button",
             () => this._stepPlaybackFrames(10)
-        );
-
-        this._bindClick(
-            "playback-last-frame-button",
-            () => this._setPlaybackFrameIndex(
-                this._getPlaybackFrameRecords().length - 1
-            )
         );
 
         const frameSlider =
@@ -206,6 +194,7 @@ export class PreviewPanel
         this._detachPlaybackKeyboardEvents();
         this._hidePlaybackOverlay();
         this._hidePlaybackStepControls();
+        this._showImageAge();
         this._showStatusContext();
         this._showLiveGraphs();
         this._hideVideo();
@@ -277,6 +266,7 @@ export class PreviewPanel
         this._updatePlaybackOverlay();
         this._showClosePlaybackButton();
         this._showPlaybackStepControls();
+        this._hideImageAge();
     }
 
 
@@ -1072,22 +1062,7 @@ export class PreviewPanel
                     event.shiftKey ? 10 : 1
                 );
             }
-            else if (!isTextInput && event.key === "Home")
-            {
-                event.preventDefault();
 
-                this._setPlaybackFrameIndex(
-                    0
-                );
-            }
-            else if (!isTextInput && event.key === "End")
-            {
-                event.preventDefault();
-
-                this._setPlaybackFrameIndex(
-                    this._getPlaybackFrameRecords().length - 1
-                );
-            }
         }
     }
 
@@ -1231,7 +1206,7 @@ export class PreviewPanel
     }
 
 
-    // ## Preview slider position numerically without seeking on every mouse move.
+    // ## Preview slider position on graphs without seeking the video.
     _previewSliderFrame()
     {
         const slider =
@@ -1264,6 +1239,13 @@ export class PreviewPanel
 
             label.textContent =
                 `${previewIndex + 1} / ${records.length}`;
+
+            if (this._metricsGraphPanel !== null)
+            {
+                this._metricsGraphPanel.setCaptureCursorFrameIndex(
+                    previewIndex
+                );
+            }
         }
     }
 
@@ -1586,6 +1568,40 @@ export class PreviewPanel
         {
             element.textContent =
                 text;
+        }
+    }
+
+
+    // ## Show live-preview image age when the camera preview is active.
+    _showImageAge()
+    {
+        const imageAge =
+            document.getElementById(
+                "image-age"
+            );
+
+        if (imageAge !== null)
+        {
+            imageAge.classList.remove(
+                "cameraImageHidden"
+            );
+        }
+    }
+
+
+    // ## Hide live-preview image age while inspecting a saved capture.
+    _hideImageAge()
+    {
+        const imageAge =
+            document.getElementById(
+                "image-age"
+            );
+
+        if (imageAge !== null)
+        {
+            imageAge.classList.add(
+                "cameraImageHidden"
+            );
         }
     }
 
