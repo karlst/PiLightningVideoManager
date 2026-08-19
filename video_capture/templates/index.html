@@ -56,7 +56,6 @@
                     <video
                         class="cameraImage cameraImageHidden"
                         id="camera-video"
-                        controls
                         muted
                         playsinline>
                     </video>
@@ -78,6 +77,14 @@
 
                         <button
                             class="miniButton"
+                            id="playback-first-frame-button"
+                            type="button"
+                            title="First frame: Home">
+                            |&lt;
+                        </button>
+
+                        <button
+                            class="miniButton"
                             id="playback-step-back-10-button"
                             type="button"
                             title="Back 10 frames: Shift+Left">
@@ -92,13 +99,19 @@
                             -1
                         </button>
 
-                        <button
-                            class="miniButton"
-                            id="playback-play-pause-button"
-                            type="button"
-                            title="Play/Pause: Space">
-                            Pause
-                        </button>
+                        <input
+                            id="playback-frame-slider"
+                            type="range"
+                            min="0"
+                            max="0"
+                            step="1"
+                            value="0"
+                            aria-label="Playback frame">
+
+                        <span
+                            id="playback-frame-label">
+                            1 / 1
+                        </span>
 
                         <button
                             class="miniButton"
@@ -114,6 +127,14 @@
                             type="button"
                             title="Forward 10 frames: Shift+Right">
                             +10
+                        </button>
+
+                        <button
+                            class="miniButton"
+                            id="playback-last-frame-button"
+                            type="button"
+                            title="Last frame: End">
+                            &gt;|
                         </button>
 
                     </div>
@@ -315,7 +336,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=40">
+        src="/static/js/app.js?v=41">
     </script>
 
 </body>

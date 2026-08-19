@@ -43,6 +43,15 @@ export class PreviewPanel
 
         this._playbackKeyHandler =
             null;
+
+        // Logical frame selected by the viewer. This is authoritative while
+        // playback mode is active; video.currentTime is only a transport used
+        // to ask the browser to display that frame.
+        this._playbackFrameIndex =
+            0;
+
+        this._playbackSeekPending =
+            false;
     }
 
 
@@ -60,6 +69,11 @@ export class PreviewPanel
         );
 
         this._bindClick(
+            "playback-first-frame-button",
+            () => this._setPlaybackFrameIndex(0)
+        );
+
+        this._bindClick(
             "playback-step-back-10-button",
             () => this._stepPlaybackFrames(-10)
         );
@@ -67,11 +81,6 @@ export class PreviewPanel
         this._bindClick(
             "playback-step-back-1-button",
             () => this._stepPlaybackFrames(-1)
-        );
-
-        this._bindClick(
-            "playback-play-pause-button",
-            () => this._togglePlayback()
         );
 
         this._bindClick(
@@ -83,6 +92,31 @@ export class PreviewPanel
             "playback-step-forward-10-button",
             () => this._stepPlaybackFrames(10)
         );
+
+        this._bindClick(
+            "playback-last-frame-button",
+            () => this._setPlaybackFrameIndex(
+                this._getPlaybackFrameRecords().length - 1
+            )
+        );
+
+        const frameSlider =
+            document.getElementById(
+                "playback-frame-slider"
+            );
+
+        if (frameSlider !== null)
+        {
+            frameSlider.addEventListener(
+                "input",
+                () => this._previewSliderFrame()
+            );
+
+            frameSlider.addEventListener(
+                "change",
+                () => this._commitSliderFrame()
+            );
+        }
 
         this._ensurePlaybackOverlay();
         this._loadPreviewConfig();
@@ -158,6 +192,12 @@ export class PreviewPanel
         this._playbackCaptureFile =
             null;
 
+        this._playbackFrameIndex =
+            0;
+
+        this._playbackSeekPending =
+            false;
+
         this._setMediaTitle(
             "Live Camera"
         );
@@ -211,6 +251,15 @@ export class PreviewPanel
 
         this._stopPreviewPolling();
         this._hideImage();
+
+        this._playbackFrameIndex =
+            0;
+
+        this._playbackSeekPending =
+            false;
+
+        this._configurePlaybackSlider();
+
         this._showVideo(
             resolvedVideoUrl
         );
@@ -309,7 +358,6 @@ export class PreviewPanel
             );
         }
 
-        this._updatePlaybackPlayPauseButton();
     }
 
 
@@ -479,7 +527,7 @@ export class PreviewPanel
     }
 
 
-    // ## Load and play the selected MP4 capture.
+    // ## Load the selected MP4 capture for frame-oriented inspection.
     _showVideo(videoUrl)
     {
         const video =
@@ -494,20 +542,32 @@ export class PreviewPanel
             );
 
             video.controls =
-                true;
+                false;
+
+            video.pause();
 
             video.src =
                 videoUrl;
 
             video.load();
 
-            video.play().catch(
-                (error) =>
+            const onLoadedMetadata =
+                () =>
                 {
-                    console.error(
-                        error
+                    video.removeEventListener(
+                        "loadedmetadata",
+                        onLoadedMetadata
                     );
-                }
+
+                    this._setPlaybackFrameIndex(
+                        this._playbackFrameIndex,
+                        true
+                    );
+                };
+
+            video.addEventListener(
+                "loadedmetadata",
+                onLoadedMetadata
             );
         }
     }
@@ -817,7 +877,7 @@ export class PreviewPanel
     }
 
 
-    // ## Attach video time handlers used to refresh the frame timestamp overlay.
+    // ## Attach seek-completion handlers used to synchronize viewer state.
     _attachPlaybackOverlayEvents()
     {
         const video =
@@ -830,37 +890,23 @@ export class PreviewPanel
             this._detachPlaybackOverlayEvents();
 
             this._playbackTimeHandler =
-                () => this._updatePlaybackOverlay();
+                () =>
+                {
+                    this._playbackSeekPending =
+                        false;
 
-            video.addEventListener(
-                "timeupdate",
-                this._playbackTimeHandler
-            );
+                    this._updatePlaybackOverlay();
+                };
 
             video.addEventListener(
                 "seeked",
-                this._playbackTimeHandler
-            );
-
-            video.addEventListener(
-                "loadedmetadata",
-                this._playbackTimeHandler
-            );
-
-            video.addEventListener(
-                "play",
-                this._playbackTimeHandler
-            );
-
-            video.addEventListener(
-                "pause",
                 this._playbackTimeHandler
             );
         }
     }
 
 
-    // ## Detach playback overlay video handlers.
+    // ## Detach playback seek handlers.
     _detachPlaybackOverlayEvents()
     {
         const video =
@@ -871,35 +917,12 @@ export class PreviewPanel
         if (video !== null && this._playbackTimeHandler !== null)
         {
             video.removeEventListener(
-                "timeupdate",
-                this._playbackTimeHandler
-            );
-
-            video.removeEventListener(
                 "seeked",
-                this._playbackTimeHandler
-            );
-
-            video.removeEventListener(
-                "loadedmetadata",
-                this._playbackTimeHandler
-            );
-
-            video.removeEventListener(
-                "play",
-                this._playbackTimeHandler
-            );
-
-            video.removeEventListener(
-                "pause",
                 this._playbackTimeHandler
             );
         }
 
         this._playbackTimeHandler =
-            null;
-
-        this._playbackKeyHandler =
             null;
     }
 
@@ -924,7 +947,7 @@ export class PreviewPanel
     }
 
 
-    // ## Update timestamp overlay using current video time and sidecar frames.
+    // ## Update overlay, graphs, slider, and frame label from logical frame state.
     _updatePlaybackOverlay()
     {
         const overlay =
@@ -932,15 +955,8 @@ export class PreviewPanel
                 "playback-frame-overlay"
             );
 
-        const video =
-            document.getElementById(
-                "camera-video"
-            );
-
         const frameRecord =
-            this._getCurrentFrameRecord(
-                video
-            );
+            this._getCurrentFrameRecord();
 
         if (overlay !== null && frameRecord !== null)
         {
@@ -964,11 +980,12 @@ export class PreviewPanel
             frameRecord
         );
 
-        this._updatePlaybackPlayPauseButton();
+        this._syncPlaybackSlider();
+        this._updatePlaybackFrameLabel();
     }
 
 
-    // ## Move capture graph cursor to the current playback frame.
+    // ## Move capture graph cursor to the current logical playback frame.
     _updateCaptureGraphCursor(frameRecord)
     {
         if (
@@ -977,7 +994,7 @@ export class PreviewPanel
         )
         {
             this._metricsGraphPanel.setCaptureCursorFrameIndex(
-                Number(frameRecord.frame_index ?? 0)
+                this._playbackFrameIndex
             );
         }
     }
@@ -1013,6 +1030,15 @@ export class PreviewPanel
 
         this._playbackKeyHandler =
             null;
+
+        // Logical frame selected by the viewer. This is authoritative while
+        // playback mode is active; video.currentTime is only a transport used
+        // to ask the browser to display that frame.
+        this._playbackFrameIndex =
+            0;
+
+        this._playbackSeekPending =
+            false;
     }
 
 
@@ -1046,49 +1072,40 @@ export class PreviewPanel
                     event.shiftKey ? 10 : 1
                 );
             }
-            else if (!isTextInput && event.key === " ")
+            else if (!isTextInput && event.key === "Home")
             {
                 event.preventDefault();
 
-                this._togglePlayback();
-            }
-        }
-    }
-
-
-    // ## Toggle video play/pause from the custom playback control bar.
-    _togglePlayback()
-    {
-        const video =
-            document.getElementById(
-                "camera-video"
-            );
-
-        if (video !== null)
-        {
-            if (video.paused)
-            {
-                video.play().catch(
-                    (error) =>
-                    {
-                        console.error(
-                            error
-                        );
-                    }
+                this._setPlaybackFrameIndex(
+                    0
                 );
             }
-            else
+            else if (!isTextInput && event.key === "End")
             {
-                video.pause();
+                event.preventDefault();
+
+                this._setPlaybackFrameIndex(
+                    this._getPlaybackFrameRecords().length - 1
+                );
             }
         }
-
-        this._updatePlaybackPlayPauseButton();
     }
 
 
-    // ## Step playback by an integer number of sidecar frame records.
+    // ## Step by an integer number of logical sidecar frames.
     _stepPlaybackFrames(frameDelta)
+    {
+        this._setPlaybackFrameIndex(
+            this._playbackFrameIndex + frameDelta
+        );
+    }
+
+
+    // ## Select one logical frame and ask the video element to display it.
+    _setPlaybackFrameIndex(
+        frameIndex,
+        force = false
+    )
     {
         const video =
             document.getElementById(
@@ -1098,185 +1115,218 @@ export class PreviewPanel
         const records =
             this._getPlaybackFrameRecords();
 
-        if (video !== null && records.length > 0)
+        if (video === null || records.length === 0)
         {
-            video.pause();
+            return;
+        }
 
-            const currentFrameIndex =
-                this._getCurrentFrameIndex(
-                    video
+        const clampedFrameIndex =
+            Math.min(
+                records.length - 1,
+                Math.max(
+                    0,
+                    Number(frameIndex) || 0
+                )
+            );
+
+        if (
+            !force &&
+            clampedFrameIndex === this._playbackFrameIndex
+        )
+        {
+            this._updatePlaybackOverlay();
+            return;
+        }
+
+        this._playbackFrameIndex =
+            clampedFrameIndex;
+
+        video.pause();
+
+        const record =
+            records[this._playbackFrameIndex];
+
+        let targetSeconds =
+            null;
+
+        if (
+            record.offset_ms !== null &&
+            record.offset_ms !== undefined
+        )
+        {
+            targetSeconds =
+                Number(record.offset_ms) / 1000.0;
+        }
+
+        if (
+            targetSeconds === null ||
+            Number.isNaN(targetSeconds)
+        )
+        {
+            targetSeconds =
+                video.duration *
+                this._playbackFrameIndex /
+                Math.max(
+                    1,
+                    records.length - 1
+                );
+        }
+
+        this._playbackSeekPending =
+            true;
+
+        video.currentTime =
+            Math.min(
+                Math.max(
+                    targetSeconds,
+                    0.0
+                ),
+                Math.max(
+                    video.duration || targetSeconds,
+                    targetSeconds
+                )
+            );
+
+        // The selected frame is authoritative immediately for the slider/label.
+        // Graphs and sidecar display will be refreshed again on the seeked event.
+        this._syncPlaybackSlider();
+        this._updatePlaybackFrameLabel();
+    }
+
+
+    // ## Configure the custom integer frame slider for the active capture.
+    _configurePlaybackSlider()
+    {
+        const slider =
+            document.getElementById(
+                "playback-frame-slider"
+            );
+
+        const records =
+            this._getPlaybackFrameRecords();
+
+        if (slider !== null)
+        {
+            slider.min =
+                "0";
+
+            slider.max =
+                String(
+                    Math.max(
+                        0,
+                        records.length - 1
+                    )
                 );
 
-            const nextFrameIndex =
+            slider.step =
+                "1";
+
+            slider.value =
+                String(
+                    this._playbackFrameIndex
+                );
+        }
+
+        this._updatePlaybackFrameLabel();
+    }
+
+
+    // ## Preview slider position numerically without seeking on every mouse move.
+    _previewSliderFrame()
+    {
+        const slider =
+            document.getElementById(
+                "playback-frame-slider"
+            );
+
+        const label =
+            document.getElementById(
+                "playback-frame-label"
+            );
+
+        const records =
+            this._getPlaybackFrameRecords();
+
+        if (
+            slider !== null &&
+            label !== null &&
+            records.length > 0
+        )
+        {
+            const previewIndex =
                 Math.min(
                     records.length - 1,
                     Math.max(
                         0,
-                        currentFrameIndex + frameDelta
+                        Number(slider.value) || 0
                     )
                 );
 
-            this._seekPlaybackToFrameIndex(
-                video,
-                nextFrameIndex
+            label.textContent =
+                `${previewIndex + 1} / ${records.length}`;
+        }
+    }
+
+
+    // ## Commit one slider-selected frame after the user releases the slider.
+    _commitSliderFrame()
+    {
+        const slider =
+            document.getElementById(
+                "playback-frame-slider"
+            );
+
+        if (slider !== null)
+        {
+            this._setPlaybackFrameIndex(
+                Number(slider.value)
             );
         }
     }
 
 
-    // ## Seek video to the requested sidecar frame index.
-    _seekPlaybackToFrameIndex(video, frameIndex)
+    // ## Keep the custom slider synchronized with the logical frame index.
+    _syncPlaybackSlider()
     {
-        const records =
-            this._getPlaybackFrameRecords();
+        const slider =
+            document.getElementById(
+                "playback-frame-slider"
+            );
 
-        if (records.length > 0)
+        if (slider !== null)
         {
-            const record =
-                records[frameIndex];
-
-            let targetSeconds =
-                null;
-
-            if (record.offset_ms !== null && record.offset_ms !== undefined)
-            {
-                targetSeconds =
-                    Number(record.offset_ms) / 1000.0;
-            }
-
-            if (targetSeconds === null || Number.isNaN(targetSeconds))
-            {
-                targetSeconds =
-                    video.duration *
-                    frameIndex /
-                    Math.max(
-                        1,
-                        records.length - 1
-                    );
-            }
-
-            video.currentTime =
-                Math.min(
-                    Math.max(
-                        targetSeconds,
-                        0.0
-                    ),
-                    Math.max(
-                        video.duration || targetSeconds,
-                        targetSeconds
-                    )
+            slider.value =
+                String(
+                    this._playbackFrameIndex
                 );
-
-            this._updatePlaybackOverlay();
         }
     }
 
 
-    // ## Return current frame index based on video time and sidecar records.
-    _getCurrentFrameIndex(video)
+    // ## Display the current logical frame number and total frame count.
+    _updatePlaybackFrameLabel()
     {
-        let frameIndex =
-            0;
+        const label =
+            document.getElementById(
+                "playback-frame-label"
+            );
 
         const records =
             this._getPlaybackFrameRecords();
 
-        if (video !== null && records.length > 0)
+        if (label !== null)
         {
-            if (records[0]?.offset_ms !== null && records[0]?.offset_ms !== undefined)
+            if (records.length > 0)
             {
-                const currentMs =
-                    video.currentTime * 1000.0;
-
-                frameIndex =
-                    this._findNearestFrameRecordIndex(
-                        records,
-                        currentMs
-                    );
+                label.textContent =
+                    `${this._playbackFrameIndex + 1} / ${records.length}`;
             }
             else
             {
-                frameIndex =
-                    Math.min(
-                        records.length - 1,
-                        Math.max(
-                            0,
-                            Math.round(
-                                video.currentTime *
-                                Math.max(
-                                    records.length - 1,
-                                    1
-                                ) /
-                                Math.max(
-                                    video.duration || 0.001,
-                                    0.001
-                                )
-                            )
-                        )
-                    );
+                label.textContent =
+                    "0 / 0";
             }
         }
-
-        return frameIndex;
-    }
-
-
-    // ## Find the sidecar frame nearest the requested elapsed milliseconds.
-    _findNearestFrameRecordIndex(records, currentMs)
-    {
-        let low =
-            0;
-
-        let high =
-            records.length - 1;
-
-        while (low < high)
-        {
-            const middle =
-                Math.floor(
-                    (low + high) / 2
-                );
-
-            const middleMs =
-                Number(records[middle].offset_ms ?? 0.0);
-
-            if (middleMs < currentMs)
-            {
-                low =
-                    middle + 1;
-            }
-            else
-            {
-                high =
-                    middle;
-            }
-        }
-
-        let index =
-            low;
-
-        if (index > 0)
-        {
-            const previousDistance =
-                Math.abs(
-                    Number(records[index - 1].offset_ms ?? 0.0) -
-                    currentMs
-                );
-
-            const currentDistance =
-                Math.abs(
-                    Number(records[index].offset_ms ?? 0.0) -
-                    currentMs
-                );
-
-            if (previousDistance <= currentDistance)
-            {
-                index =
-                    index - 1;
-            }
-        }
-
-        return index;
     }
 
 
@@ -1290,51 +1340,29 @@ export class PreviewPanel
     }
 
 
-    // ## Update play/pause button label.
-    _updatePlaybackPlayPauseButton()
+    // ## Return the sidecar record for the current logical playback frame.
+    _getCurrentFrameRecord()
     {
-        const button =
-            document.getElementById(
-                "playback-play-pause-button"
-            );
-
-        const video =
-            document.getElementById(
-                "camera-video"
-            );
-
-        if (button !== null && video !== null)
-        {
-            button.textContent =
-                video.paused ? "Play" : "Pause";
-        }
-    }
-
-
-    // ## Resolve current video time to the nearest sidecar frame record.
-    _getCurrentFrameRecord(video)
-    {
-        let frameRecord =
-            null;
-
-        const analysis =
-            this._playbackCaptureFile?.analysis || {};
-
         const records =
-            analysis.frame_records || [];
+            this._getPlaybackFrameRecords();
 
-        if (video !== null && records.length > 0)
+        if (records.length === 0)
         {
-            const frameIndex =
-                this._getCurrentFrameIndex(
-                    video
-                );
-
-            frameRecord =
-                records[frameIndex];
+            return null;
         }
 
-        return frameRecord;
+        const frameIndex =
+            Math.min(
+                records.length - 1,
+                Math.max(
+                    0,
+                    this._playbackFrameIndex
+                )
+            );
+
+        return records[
+            frameIndex
+        ];
     }
 
 
