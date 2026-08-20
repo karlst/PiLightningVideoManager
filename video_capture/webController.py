@@ -49,7 +49,8 @@ import psutil
 from pathlib import Path
 
 from common.candidate_config import CANDIDATE_CONFIG
-from common.candidate_config import get_sensitivity_config
+from common.candidate_config import candidate_config_from_settings
+from common.candidate_config import load_candidate_settings
 from common.system_config import load_system_settings
 from common.system_config import set_save_filtered_false_positives
 
@@ -279,7 +280,42 @@ def register_routes(
 
                 "active":
                     services.trigger_manager.
-                    get_candidate_config_dict()
+                    get_candidate_config_dict(),
+
+                "profiles":
+                {
+                    sensitivity:
+                        (
+                            lambda config:
+                            {
+                                "candidate_brightness_delta_threshold":
+                                    config.
+                                    candidate_brightness_delta_threshold,
+
+                                "candidate_bright_pixel_delta_threshold":
+                                    config.
+                                    candidate_bright_pixel_delta_threshold,
+
+                                "candidate_bright_pixel_fraction_threshold":
+                                    config.
+                                    candidate_bright_pixel_fraction_threshold
+                            }
+                        )(
+                            candidate_config_from_settings(
+                                {
+                                    **load_candidate_settings(),
+                                    "sensitivity":
+                                        sensitivity
+                                }
+                            )
+                        )
+
+                    for sensitivity in (
+                        "high",
+                        "medium",
+                        "low"
+                    )
+                }
             }
         )
 
@@ -1037,9 +1073,19 @@ def register_routes(
             ), 404
 
         try:
+            replay_settings = (
+                load_candidate_settings()
+            )
+
+            replay_settings[
+                "sensitivity"
+            ] = sensitivity
+
+            # Build a temporary effective CandidateConfig for replay only.
+            # Do NOT persist this selection or change the live camera.
             replay_config = (
-                get_sensitivity_config(
-                    sensitivity
+                candidate_config_from_settings(
+                    replay_settings
                 )
             )
 

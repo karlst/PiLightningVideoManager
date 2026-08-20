@@ -62,6 +62,9 @@ export class PreviewPanel
 
         this._replayRequestSerial =
             0;
+
+        this._viewerSensitivityProfiles =
+            {};
     }
 
 
@@ -1661,6 +1664,9 @@ export class PreviewPanel
                     "/candidate_settings"
                 );
 
+            this._viewerSensitivityProfiles =
+                settings?.profiles || {};
+
             const sensitivity =
                 String(
                     settings?.active?.sensitivity ||
@@ -1668,6 +1674,10 @@ export class PreviewPanel
                 ).toLowerCase();
 
             this._selectViewerSensitivity(
+                sensitivity
+            );
+
+            this._showViewerSensitivityThresholds(
                 sensitivity
             );
 
@@ -1693,8 +1703,54 @@ export class PreviewPanel
         sensitivity
     )
     {
+        // Threshold fields respond immediately to the selected profile.
+        // MP4 replay may take longer because CandidateFinder reconstructs
+        // bright-pixel metrics from the saved video.
+        this._showViewerSensitivityThresholds(
+            sensitivity
+        );
+
         await this._requestCaptureReplay(
             sensitivity
+        );
+    }
+
+
+    // ## Display the effective read-only thresholds for one sensitivity profile.
+    _showViewerSensitivityThresholds(
+        sensitivity
+    )
+    {
+        const config =
+            this._viewerSensitivityProfiles?.[
+                sensitivity
+            ] || {};
+
+        this._setElementText(
+            "viewer-threshold-brightness-delta",
+            this._formatViewerNumber(
+                config.
+                    candidate_brightness_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-delta",
+            this._formatViewerNumber(
+                config.
+                    candidate_bright_pixel_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-fraction",
+            this._formatViewerNumber(
+                config.
+                    candidate_bright_pixel_fraction_threshold,
+                6
+            )
         );
     }
 
@@ -1814,6 +1870,11 @@ export class PreviewPanel
 
         const config =
             result.candidate_config || {};
+
+        this._viewerSensitivityProfiles[
+            sensitivity
+        ] =
+            config;
 
         this._setElementText(
             "viewer-threshold-brightness-delta",

@@ -22,7 +22,7 @@ import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=37";
+from "./previewPanel.js?v=38";
 
 import
 {
