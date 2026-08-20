@@ -22,7 +22,7 @@ import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=34";
+from "./previewPanel.js?v=36";
 
 import
 {
@@ -74,6 +74,19 @@ function initializePage()
             previewPanel
         );
     dialogPanel.initialize();
+
+    const loadCaptureButton =
+        document.getElementById(
+            "load-capture-button"
+        );
+
+    if (loadCaptureButton !== null)
+    {
+        loadCaptureButton.addEventListener(
+            "click",
+            () => dialogPanel.showBrowseCaptures()
+        );
+    }
 
     const bufferPanel =
         new BufferPanel(

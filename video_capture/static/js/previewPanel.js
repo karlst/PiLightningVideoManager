@@ -35,6 +35,10 @@ export class PreviewPanel
         this._mode =
             "preview";
 
+        document.body.classList.remove(
+            "capturePlaybackMode"
+        );
+
         this._playbackCaptureFile =
             null;
 
@@ -177,6 +181,10 @@ export class PreviewPanel
         this._mode =
             "preview";
 
+        document.body.classList.remove(
+            "capturePlaybackMode"
+        );
+
         this._playbackCaptureFile =
             null;
 
@@ -194,6 +202,7 @@ export class PreviewPanel
         this._detachPlaybackKeyboardEvents();
         this._hidePlaybackOverlay();
         this._hidePlaybackStepControls();
+        this._hidePlaybackViewer();
         this._showImageAge();
         this._showStatusContext();
         this._showLiveGraphs();
@@ -231,6 +240,10 @@ export class PreviewPanel
         this._mode =
             "playback";
 
+        document.body.classList.add(
+            "capturePlaybackMode"
+        );
+
         this._playbackCaptureFile =
             resolvedCaptureFile;
 
@@ -266,6 +279,12 @@ export class PreviewPanel
         this._updatePlaybackOverlay();
         this._showClosePlaybackButton();
         this._showPlaybackStepControls();
+        this._showPlaybackViewer();
+
+        this._updatePlaybackViewerCaptureValues(
+            resolvedCaptureFile
+        );
+
         this._hideImageAge();
     }
 
@@ -970,6 +989,10 @@ export class PreviewPanel
             frameRecord
         );
 
+        this._updatePlaybackViewerFrameValues(
+            frameRecord
+        );
+
         this._syncPlaybackSlider();
         this._updatePlaybackFrameLabel();
     }
@@ -1537,6 +1560,416 @@ export class PreviewPanel
         }
 
         return text;
+    }
+
+
+    // ## Show the Analyzer-style capture viewer layout.
+    _showPlaybackViewer()
+    {
+        const sidebar =
+            document.getElementById(
+                "playback-sidebar"
+            );
+
+        const navigation =
+            document.getElementById(
+                "playback-navigation"
+            );
+
+        if (sidebar !== null)
+        {
+            sidebar.classList.remove(
+                "cameraImageHidden"
+            );
+        }
+
+        if (navigation !== null)
+        {
+            navigation.classList.remove(
+                "cameraImageHidden"
+            );
+        }
+    }
+
+
+    // ## Hide playback-only layout elements when returning to camera mode.
+    _hidePlaybackViewer()
+    {
+        const sidebar =
+            document.getElementById(
+                "playback-sidebar"
+            );
+
+        const navigation =
+            document.getElementById(
+                "playback-navigation"
+            );
+
+        if (sidebar !== null)
+        {
+            sidebar.classList.add(
+                "cameraImageHidden"
+            );
+        }
+
+        if (navigation !== null)
+        {
+            navigation.classList.add(
+                "cameraImageHidden"
+            );
+        }
+    }
+
+
+    // ## Read a nested sidecar value with a flat legacy fallback.
+    _sidecarValue(
+        sidecar,
+        sectionName,
+        key,
+        legacyKey = null
+    )
+    {
+        const section =
+            sidecar?.[sectionName];
+
+        if (
+            section !== null &&
+            typeof section === "object" &&
+            section[key] !== undefined
+        )
+        {
+            return section[key];
+        }
+
+        const fallbackKey =
+            legacyKey ?? key;
+
+        return sidecar?.[fallbackKey];
+    }
+
+
+    // ## Populate capture-level fields from current or legacy sidecars.
+    _updatePlaybackViewerCaptureValues(captureFile)
+    {
+        const sidecar =
+            captureFile?.analysis || {};
+
+        const camera =
+            sidecar.camera || {};
+
+        const candidate =
+            sidecar.candidate || {};
+
+        this._setElementText(
+            "viewer-capture-video",
+            captureFile?.name ||
+                captureFile?.display_name ||
+                "--"
+        );
+
+        this._setElementText(
+            "viewer-capture-start",
+            this._formatUtcText(
+                this._sidecarValue(
+                    sidecar,
+                    "capture",
+                    "start_utc",
+                    "capture_start_utc"
+                )
+            )
+        );
+
+        this._setElementText(
+            "viewer-capture-trigger",
+            candidate.trigger_display ||
+                sidecar.trigger_display ||
+                candidate.trigger_type ||
+                sidecar.trigger_type ||
+                "--"
+        );
+
+        this._setElementText(
+            "viewer-capture-trigger-reason",
+            candidate.trigger_reason ||
+                sidecar.trigger_reason ||
+                "--"
+        );
+
+        const piTriggerIndex =
+            candidate.trigger_frame_index ??
+            sidecar.trigger_frame_index;
+
+        const piTriggerNumber =
+            candidate.trigger_frame_number ??
+            sidecar.trigger_frame_number ??
+            (
+                piTriggerIndex !== null &&
+                piTriggerIndex !== undefined
+                    ? Number(piTriggerIndex) + 1
+                    : null
+            );
+
+        this._setElementText(
+            "viewer-pi-trigger-frame",
+            piTriggerNumber !== null &&
+            piTriggerNumber !== undefined
+                ? String(piTriggerNumber)
+                : "--"
+        );
+
+        this._setElementText(
+            "viewer-replay-trigger-frame",
+            "--"
+        );
+
+        const triggerOffset =
+            candidate.trigger_offset_ms ??
+            sidecar.trigger_offset_ms;
+
+        this._setElementText(
+            "viewer-trigger-offset",
+            triggerOffset !== null &&
+            triggerOffset !== undefined
+                ? `${Number(triggerOffset).toFixed(3)} ms`
+                : "--"
+        );
+
+        this._setElementText(
+            "viewer-site-name",
+            camera.site_name ??
+            sidecar.site_name ??
+            "Flagstaff"
+        );
+
+        this._setElementText(
+            "viewer-site-latitude",
+            this._formatViewerNumber(
+                camera.latitude_degrees ??
+                sidecar.camera_latitude_degrees,
+                7,
+                "°"
+            )
+        );
+
+        this._setElementText(
+            "viewer-site-longitude",
+            this._formatViewerNumber(
+                camera.longitude_degrees ??
+                sidecar.camera_longitude_degrees,
+                7,
+                "°"
+            )
+        );
+
+        this._setElementText(
+            "viewer-site-bearing",
+            this._formatViewerNumber(
+                camera.bearing_degrees ??
+                sidecar.camera_bearing_degrees,
+                1,
+                "°"
+            )
+        );
+
+        this._setElementText(
+            "viewer-site-hfov",
+            this._formatViewerNumber(
+                camera.hfov_degrees ??
+                sidecar.camera_hfov_degrees,
+                1,
+                "°"
+            )
+        );
+
+        this._setElementText(
+            "viewer-site-vfov",
+            this._formatViewerNumber(
+                camera.vfov_degrees ??
+                sidecar.camera_vfov_degrees,
+                1,
+                "°"
+            )
+        );
+
+        const bounds =
+            sidecar.search_bounding_box ||
+            camera.search_bounding_box;
+
+        let boundsText =
+            "--";
+
+        if (bounds && typeof bounds === "object")
+        {
+            const minLat =
+                bounds.min_latitude ??
+                bounds.min_latitude_degrees;
+
+            const maxLat =
+                bounds.max_latitude ??
+                bounds.max_latitude_degrees;
+
+            const minLon =
+                bounds.min_longitude ??
+                bounds.min_longitude_degrees;
+
+            const maxLon =
+                bounds.max_longitude ??
+                bounds.max_longitude_degrees;
+
+            if (
+                [minLat, maxLat, minLon, maxLon].every(
+                    (value) =>
+                        value !== null &&
+                        value !== undefined &&
+                        Number.isFinite(
+                            Number(value)
+                        )
+                )
+            )
+            {
+                boundsText =
+                    `${Number(minLat).toFixed(5)}, ` +
+                    `${Number(minLon).toFixed(5)} to ` +
+                    `${Number(maxLat).toFixed(5)}, ` +
+                    `${Number(maxLon).toFixed(5)}`;
+            }
+        }
+
+        this._setElementText(
+            "viewer-search-bounds",
+            boundsText
+        );
+
+        // Layout pass only. Backend replay wiring will enable these.
+        document.querySelectorAll(
+            'input[name="viewer-sensitivity"]'
+        ).forEach(
+            (radio) =>
+            {
+                radio.disabled =
+                    true;
+            }
+        );
+
+        const config =
+            candidate.config ||
+            sidecar.candidate_config ||
+            {};
+
+        this._setElementText(
+            "viewer-threshold-brightness-delta",
+            this._formatViewerNumber(
+                config.candidate_brightness_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-delta",
+            this._formatViewerNumber(
+                config.candidate_bright_pixel_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-fraction",
+            this._formatViewerNumber(
+                config.candidate_bright_pixel_fraction_threshold,
+                6
+            )
+        );
+    }
+
+
+    // ## Populate fields that change as the user steps through the capture.
+    _updatePlaybackViewerFrameValues(frameRecord)
+    {
+        const records =
+            this._getPlaybackFrameRecords();
+
+        if (
+            frameRecord === null ||
+            frameRecord === undefined
+        )
+        {
+            return;
+        }
+
+        const frameIndex =
+            Number(
+                frameRecord.frame_index ??
+                this._playbackFrameIndex
+            );
+
+        this._setElementText(
+            "viewer-current-frame",
+            `${frameIndex + 1} / ${records.length}`
+        );
+
+        this._setElementText(
+            "viewer-current-timestamp",
+            this._formatUtcText(
+                frameRecord.timestamp_utc
+            )
+        );
+
+        this._setElementText(
+            "viewer-current-offset",
+            frameRecord.offset_ms !== null &&
+            frameRecord.offset_ms !== undefined
+                ? `${Number(frameRecord.offset_ms).toFixed(3)} ms`
+                : "--"
+        );
+
+        this._setElementText(
+            "viewer-current-brightness",
+            this._formatViewerNumber(
+                frameRecord.mean_brightness,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-current-brightness-change",
+            this._formatViewerNumber(
+                frameRecord.brightness_delta_adjacent,
+                3
+            )
+        );
+    }
+
+
+    // ## Format a viewer numeric field with optional suffix.
+    _formatViewerNumber(
+        value,
+        digits = 3,
+        suffix = ""
+    )
+    {
+        if (
+            value === null ||
+            value === undefined ||
+            value === ""
+        )
+        {
+            return "--";
+        }
+
+        const numericValue =
+            Number(value);
+
+        if (!Number.isFinite(numericValue))
+        {
+            return String(value);
+        }
+
+        return (
+            numericValue.toFixed(
+                digits
+            ) +
+            suffix
+        );
     }
 
 

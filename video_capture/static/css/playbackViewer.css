@@ -1,0 +1,263 @@
+/*
+ * Analyzer-style capture playback layout.
+ *
+ * Live-camera mode retains the existing P-Site layout. These rules become
+ * active only while PreviewPanel adds body.capturePlaybackMode.
+ */
+
+.playbackNavigation,
+.playbackSidebar
+{
+    min-width: 0;
+}
+
+.playbackNavigation
+{
+    grid-area: playbackNav;
+}
+
+.playbackSidebar
+{
+    grid-area: playbackSidebar;
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+.playbackActions
+{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+}
+
+.playbackInfoPanel h2
+{
+    margin-bottom: 7px;
+}
+
+.viewerInfoGrid
+{
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: 12px;
+    row-gap: 4px;
+    min-width: 0;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.viewerInfoGrid > div:nth-child(odd)
+{
+    color: #555;
+    white-space: nowrap;
+}
+
+.viewerInfoGrid > div:nth-child(even)
+{
+    min-width: 0;
+    overflow-wrap: anywhere;
+    text-align: right;
+    font-weight: 700;
+}
+
+.solutionViewerResult
+{
+    padding: 9px;
+    border: 1px solid #999;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.solutionViewerPending
+{
+    background-color: #eeeeee;
+}
+
+.solutionViewerTrue
+{
+    background-color: #b7e4c7;
+}
+
+.solutionViewerFalse
+{
+    background-color: #f4b8b8;
+}
+
+.solutionViewerReason
+{
+    margin-top: 7px;
+    font-size: 12px;
+}
+
+.viewerSensitivityChoices
+{
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#playback-frame-slider
+{
+    flex: 1 1 auto;
+    min-width: 80px;
+}
+
+#playback-frame-label
+{
+    min-width: 70px;
+    text-align: center;
+    font-family: Consolas, monospace;
+    font-size: 12px;
+}
+
+.capturePlaybackMode .pageGrid
+{
+    grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100vh - 16px);
+}
+
+.capturePlaybackMode .eventPanel,
+.capturePlaybackMode .controlPanel,
+.capturePlaybackMode .contextPanel
+{
+    display: none;
+}
+
+.capturePlaybackMode .mainGrid
+{
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(300px, 3fr);
+    grid-template-rows:
+        minmax(240px, 0.95fr)
+        minmax(270px, 1.05fr)
+        auto;
+    grid-template-areas:
+        "media playbackSidebar"
+        "graphs playbackSidebar"
+        "playbackNav playbackSidebar";
+    gap: 8px;
+    min-height: 0;
+}
+
+.capturePlaybackMode .mediaPanel
+{
+    grid-area: media;
+}
+
+.capturePlaybackMode .metricsPanel
+{
+    grid-area: graphs;
+    grid-template-rows:
+        26px
+        minmax(0, 1fr)
+        minmax(0, 1fr);
+}
+
+.capturePlaybackMode .mediaFooter
+{
+    display: none;
+}
+
+.capturePlaybackMode .metricsToolbar
+{
+    min-height: 0;
+}
+
+.capturePlaybackMode .playbackNavigation
+{
+    display: block;
+}
+
+.capturePlaybackMode .playbackStepControls
+{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.capturePlaybackMode .playbackSidebar
+{
+    display: grid;
+}
+
+@media (max-width: 900px) and (orientation: portrait)
+{
+    .capturePlaybackMode .pageGrid
+    {
+        height: auto;
+    }
+
+    .capturePlaybackMode .mainGrid
+    {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows:
+            360px
+            430px
+            auto
+            auto;
+        grid-template-areas:
+            "media"
+            "graphs"
+            "playbackNav"
+            "playbackSidebar";
+    }
+
+    .capturePlaybackMode .playbackSidebar
+    {
+        overflow-y: visible;
+    }
+}
+
+@media (max-width: 700px)
+{
+    .capturePlaybackMode .mainGrid
+    {
+        grid-template-rows:
+            280px
+            400px
+            auto
+            auto;
+    }
+
+    .playbackActions
+    {
+        grid-template-columns: 1fr;
+    }
+
+    .playbackStepControls
+    {
+        flex-wrap: wrap;
+    }
+
+    #playback-frame-slider
+    {
+        order: 3;
+        flex-basis: 100%;
+        width: 100%;
+    }
+
+    #playback-frame-label
+    {
+        order: 4;
+        flex-basis: 100%;
+    }
+
+    .viewerInfoGrid
+    {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .viewerInfoGrid > div:nth-child(even)
+    {
+        text-align: left;
+        margin-bottom: 3px;
+    }
+}
