@@ -35,6 +35,12 @@ from video_capture.previewServer import PreviewServer
 from video_capture.trigger_manager import TriggerManager
 from video_capture.capture_manager import CaptureManager
 
+from video_analyzer.candidate_replay import replay_candidate_finder
+from video_analyzer.capture_data import load_capture
+from video_analyzer.solution_config import SOLUTION_CONFIG
+from video_analyzer.solution_filter import SolutionFilter
+from video_analyzer.solution_filter import failed_candidate_result
+
 from datetime import datetime
 from datetime import timezone
 import os
@@ -43,6 +49,7 @@ import psutil
 from pathlib import Path
 
 from common.candidate_config import CANDIDATE_CONFIG
+from common.candidate_config import get_sensitivity_config
 from common.system_config import load_system_settings
 from common.system_config import set_save_filtered_false_positives
 
@@ -941,6 +948,203 @@ def register_routes(
             }
         )
     
+
+    @app.route(
+        "/capture_replay",
+        methods=["POST"]
+    )
+    def capture_replay():
+        """
+        Replay CandidateFinder and SolutionFilter for one saved capture.
+
+        This endpoint is intentionally analysis-only. Selecting a replay
+        sensitivity does NOT change the live camera's CandidateFinder
+        configuration or candidate_config.json.
+        """
+        body = request.get_json(
+            silent=True
+        ) or {}
+
+        capture_path_text = str(
+            body.get(
+                "capture_path",
+                ""
+            )
+        ).strip()
+
+        sensitivity = str(
+            body.get(
+                "sensitivity",
+                services.trigger_manager.
+                get_candidate_config().
+                sensitivity
+            )
+        ).lower()
+
+        if sensitivity not in (
+            "high",
+            "medium",
+            "low"
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        "Sensitivity must be high, medium, or low"
+                }
+            ), 400
+
+        if capture_path_text == "":
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Capture path is required"
+                }
+            ), 400
+
+        capture_root = Path(
+            services.capture_manager.
+            get_capture_directory()
+        ).resolve()
+
+        requested_path = (
+            capture_root /
+            capture_path_text
+        ).resolve()
+
+        # Do not allow a browser-supplied path to escape the capture tree.
+        try:
+            requested_path.relative_to(
+                capture_root
+            )
+        except ValueError:
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Invalid capture path"
+                }
+            ), 400
+
+        if (
+            requested_path.suffix.lower() != ".mp4" or
+            not requested_path.is_file()
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "Capture MP4 not found"
+                }
+            ), 404
+
+        try:
+            replay_config = (
+                get_sensitivity_config(
+                    sensitivity
+                )
+            )
+
+            capture_data = load_capture(
+                requested_path
+            )
+
+            candidate_result = (
+                replay_candidate_finder(
+                    capture_data,
+                    replay_config
+                )
+            )
+
+            if candidate_result.frame_index is None:
+                solution_result = (
+                    failed_candidate_result()
+                )
+            else:
+                solution_filter = SolutionFilter(
+                    SOLUTION_CONFIG
+                )
+
+                solution_result = (
+                    solution_filter.evaluate(
+                        capture_data.pi_brightness,
+                        capture_data.pi_brightness_delta,
+                        candidate_result.frame_index,
+                        candidate_result.reason
+                    )
+                )
+
+            replay_frame_number = None
+
+            if candidate_result.frame_index is not None:
+                replay_frame_number = (
+                    int(
+                        candidate_result.frame_index
+                    ) +
+                    1
+                )
+
+            return jsonify(
+                {
+                    "success": True,
+                    "sensitivity":
+                        replay_config.sensitivity,
+
+                    "candidate_config":
+                    {
+                        "candidate_brightness_delta_threshold":
+                            replay_config.
+                            candidate_brightness_delta_threshold,
+
+                        "candidate_bright_pixel_delta_threshold":
+                            replay_config.
+                            candidate_bright_pixel_delta_threshold,
+
+                        "candidate_bright_pixel_fraction_threshold":
+                            replay_config.
+                            candidate_bright_pixel_fraction_threshold
+                    },
+
+                    "candidate":
+                    {
+                        "found":
+                            candidate_result.frame_index
+                            is not None,
+
+                        "frame_index":
+                            candidate_result.frame_index,
+
+                        "frame_number":
+                            replay_frame_number,
+
+                        "reason":
+                            candidate_result.reason
+                    },
+
+                    "solution":
+                    {
+                        "category":
+                            solution_result.category,
+
+                        "reason":
+                            solution_result.reason
+                    }
+                }
+            )
+
+        except (
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError
+        ) as error:
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        f"Capture replay failed: {error}"
+                }
+            ), 500
+
+
     @app.route("/captures")
     def captures():
         files = (

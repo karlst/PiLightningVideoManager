@@ -17,6 +17,8 @@ export class MetricsGraphPanel
         this._aCaptureMetrics = [];
         this._captureName = "";
         this._captureCursorFrameIndex = null;
+        this._piTriggerFrameIndex = null;
+        this._replayTriggerFrameIndex = null;
     }
 
     initialize()
@@ -88,10 +90,16 @@ export class MetricsGraphPanel
             captureFile?.name ||
             "Capture";
 
-        this._captureCursorFrameIndex =
+        this._piTriggerFrameIndex =
             this._getInitialCaptureCursorFrameIndex(
                 analysis
             );
+
+        this._captureCursorFrameIndex =
+            this._piTriggerFrameIndex;
+
+        this._replayTriggerFrameIndex =
+            null;
 
         this._setGraphButtonsVisible(
             false
@@ -115,6 +123,12 @@ export class MetricsGraphPanel
         this._captureCursorFrameIndex =
             null;
 
+        this._piTriggerFrameIndex =
+            null;
+
+        this._replayTriggerFrameIndex =
+            null;
+
         this._setGraphButtonsVisible(
             true
         );
@@ -135,6 +149,21 @@ export class MetricsGraphPanel
             this.drawAllGraphs();
         }
     }
+
+    // ## Set the CandidateFinder replay trigger marker on capture graphs.
+    setCaptureReplayTriggerFrameIndex(frameIndex)
+    {
+        if (this._mode === "capture")
+        {
+            this._replayTriggerFrameIndex =
+                this._clampCaptureFrameIndex(
+                    frameIndex
+                );
+
+            this.drawAllGraphs();
+        }
+    }
+
 
     setGraphWindow(iHours)
     {
@@ -705,6 +734,24 @@ export class MetricsGraphPanel
                 "#2f80ed"
             );
 
+            this._drawCaptureTriggerMarker(
+                context,
+                plot,
+                records,
+                this._piTriggerFrameIndex,
+                "#7a3db8",
+                "Pi"
+            );
+
+            this._drawCaptureTriggerMarker(
+                context,
+                plot,
+                records,
+                this._replayTriggerFrameIndex,
+                "#d47a00",
+                "Replay"
+            );
+
             this._drawCaptureCursor(
                 context,
                 plot,
@@ -933,6 +980,75 @@ export class MetricsGraphPanel
             )
         );
     }
+
+    // ## Draw a fixed Pi or replay trigger marker on a capture graph.
+    _drawCaptureTriggerMarker(
+        context,
+        plot,
+        records,
+        requestedFrameIndex,
+        strokeStyle,
+        label
+    )
+    {
+        const frameIndex =
+            this._clampCaptureFrameIndex(
+                requestedFrameIndex
+            );
+
+        if (
+            frameIndex === null ||
+            records.length === 0
+        )
+        {
+            return;
+        }
+
+        const record =
+            records[frameIndex];
+
+        const x =
+            this._xCaptureOffsetToPixel(
+                plot,
+                records,
+                Number(
+                    record.offset_ms ?? 0.0
+                )
+            );
+
+        context.save();
+        context.strokeStyle =
+            strokeStyle;
+        context.lineWidth =
+            1.5;
+
+        context.beginPath();
+        context.moveTo(
+            x,
+            plot.top
+        );
+        context.lineTo(
+            x,
+            plot.bottom
+        );
+        context.stroke();
+
+        context.fillStyle =
+            strokeStyle;
+        context.textAlign =
+            "center";
+        context.font =
+            "10px Arial";
+
+        context.fillText(
+            label,
+            x,
+            plot.top + 11
+        );
+
+        context.restore();
+    }
+
 
     // ## Draw a vertical cursor at the current playback frame.
     _drawCaptureCursor(

@@ -56,6 +56,12 @@ export class PreviewPanel
 
         this._playbackSeekPending =
             false;
+
+        this._playbackCapturePath =
+            null;
+
+        this._replayRequestSerial =
+            0;
     }
 
 
@@ -109,6 +115,26 @@ export class PreviewPanel
                 () => this._commitSliderFrame()
             );
         }
+
+        document.querySelectorAll(
+            'input[name="viewer-sensitivity"]'
+        ).forEach(
+            (radio) =>
+            {
+                radio.addEventListener(
+                    "change",
+                    () =>
+                    {
+                        if (radio.checked)
+                        {
+                            this._handleViewerSensitivityChange(
+                                radio.value
+                            );
+                        }
+                    }
+                );
+            }
+        );
 
         this._ensurePlaybackOverlay();
         this._loadPreviewConfig();
@@ -188,6 +214,9 @@ export class PreviewPanel
         this._playbackCaptureFile =
             null;
 
+        this._playbackCapturePath =
+            null;
+
         this._playbackFrameIndex =
             0;
 
@@ -247,6 +276,12 @@ export class PreviewPanel
         this._playbackCaptureFile =
             resolvedCaptureFile;
 
+        this._playbackCapturePath =
+            this._resolvePlaybackCapturePath(
+                resolvedVideoUrl,
+                resolvedCaptureFile
+            );
+
         this._setMediaTitle(
             "Capture Playback"
         );
@@ -284,6 +319,8 @@ export class PreviewPanel
         this._updatePlaybackViewerCaptureValues(
             resolvedCaptureFile
         );
+
+        this._loadInitialReplay();
 
         this._hideImageAge();
     }
@@ -1563,6 +1600,392 @@ export class PreviewPanel
     }
 
 
+    // ## Resolve the capture path expected by the Pi replay endpoint.
+    _resolvePlaybackCapturePath(
+        videoUrl,
+        captureFile
+    )
+    {
+        const explicitPath =
+            captureFile?.relative_path ||
+            captureFile?.capture_path;
+
+        if (
+            explicitPath !== null &&
+            explicitPath !== undefined &&
+            explicitPath !== ""
+        )
+        {
+            return String(
+                explicitPath
+            );
+        }
+
+        const urlText =
+            String(
+                videoUrl || ""
+            );
+
+        const marker =
+            "/capture_files/";
+
+        const markerIndex =
+            urlText.indexOf(
+                marker
+            );
+
+        if (markerIndex >= 0)
+        {
+            return decodeURIComponent(
+                urlText.substring(
+                    markerIndex +
+                    marker.length
+                )
+            );
+        }
+
+        return (
+            captureFile?.name ||
+            ""
+        );
+    }
+
+
+    // ## Replay the newly opened capture at the Pi's currently active sensitivity.
+    async _loadInitialReplay()
+    {
+        try
+        {
+            const settings =
+                await getJson(
+                    "/candidate_settings"
+                );
+
+            const sensitivity =
+                String(
+                    settings?.active?.sensitivity ||
+                    "medium"
+                ).toLowerCase();
+
+            this._selectViewerSensitivity(
+                sensitivity
+            );
+
+            await this._requestCaptureReplay(
+                sensitivity
+            );
+        }
+        catch (error)
+        {
+            this._setReplayFailure(
+                "Unable to load replay settings"
+            );
+
+            console.error(
+                error
+            );
+        }
+    }
+
+
+    // ## Rerun CandidateFinder/SolutionFilter when a sensitivity radio is clicked.
+    async _handleViewerSensitivityChange(
+        sensitivity
+    )
+    {
+        await this._requestCaptureReplay(
+            sensitivity
+        );
+    }
+
+
+    // ## Ask the Pi backend to replay CandidateFinder and SolutionFilter.
+    async _requestCaptureReplay(
+        sensitivity
+    )
+    {
+        if (
+            this._mode !== "playback" ||
+            !this._playbackCapturePath
+        )
+        {
+            return;
+        }
+
+        const requestSerial =
+            ++this._replayRequestSerial;
+
+        this._setElementText(
+            "viewer-replay-trigger-frame",
+            "Evaluating..."
+        );
+
+        this._setSolutionViewer(
+            "EVALUATING",
+            "Running CandidateFinder and SolutionFilter..."
+        );
+
+        try
+        {
+            const response =
+                await fetch(
+                    "/capture_replay",
+                    {
+                        method: "POST",
+
+                        headers:
+                        {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body:
+                            JSON.stringify(
+                                {
+                                    capture_path:
+                                        this._playbackCapturePath,
+
+                                    sensitivity:
+                                        sensitivity
+                                }
+                            )
+                    }
+                );
+
+            const result =
+                await response.json();
+
+            // Ignore an older replay result if the user clicked another radio.
+            if (
+                requestSerial !==
+                this._replayRequestSerial
+            )
+            {
+                return;
+            }
+
+            if (
+                !response.ok ||
+                !result.success
+            )
+            {
+                throw new Error(
+                    result.message ||
+                    "Capture replay failed"
+                );
+            }
+
+            this._applyReplayResult(
+                result
+            );
+        }
+        catch (error)
+        {
+            if (
+                requestSerial ===
+                this._replayRequestSerial
+            )
+            {
+                this._setReplayFailure(
+                    error.message ||
+                    "Capture replay failed"
+                );
+            }
+
+            console.error(
+                error
+            );
+        }
+    }
+
+
+    // ## Update replay trigger, thresholds, graph marker, and Solution panel.
+    _applyReplayResult(result)
+    {
+        const sensitivity =
+            String(
+                result.sensitivity ||
+                "medium"
+            ).toLowerCase();
+
+        this._selectViewerSensitivity(
+            sensitivity
+        );
+
+        const config =
+            result.candidate_config || {};
+
+        this._setElementText(
+            "viewer-threshold-brightness-delta",
+            this._formatViewerNumber(
+                config.
+                    candidate_brightness_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-delta",
+            this._formatViewerNumber(
+                config.
+                    candidate_bright_pixel_delta_threshold,
+                3
+            )
+        );
+
+        this._setElementText(
+            "viewer-threshold-bright-pixel-fraction",
+            this._formatViewerNumber(
+                config.
+                    candidate_bright_pixel_fraction_threshold,
+                6
+            )
+        );
+
+        const candidate =
+            result.candidate || {};
+
+        if (
+            candidate.frame_number !== null &&
+            candidate.frame_number !== undefined
+        )
+        {
+            this._setElementText(
+                "viewer-replay-trigger-frame",
+                String(
+                    candidate.frame_number
+                )
+            );
+        }
+        else
+        {
+            this._setElementText(
+                "viewer-replay-trigger-frame",
+                "No candidate"
+            );
+        }
+
+        if (this._metricsGraphPanel !== null)
+        {
+            this._metricsGraphPanel.
+                setCaptureReplayTriggerFrameIndex(
+                    candidate.frame_index
+                );
+        }
+
+        const solution =
+            result.solution || {};
+
+        this._setSolutionViewer(
+            solution.category || "UNCLASSIFIED",
+            solution.reason || "--"
+        );
+    }
+
+
+    // ## Select one sensitivity radio without firing another replay request.
+    _selectViewerSensitivity(
+        sensitivity
+    )
+    {
+        document.querySelectorAll(
+            'input[name="viewer-sensitivity"]'
+        ).forEach(
+            (radio) =>
+            {
+                radio.checked =
+                    radio.value === sensitivity;
+            }
+        );
+    }
+
+
+    // ## Display Solution category/reason using Analyzer-like result color.
+    _setSolutionViewer(
+        category,
+        reason
+    )
+    {
+        const resultElement =
+            document.getElementById(
+                "viewer-solution-result"
+            );
+
+        if (resultElement !== null)
+        {
+            const normalizedCategory =
+                String(
+                    category || ""
+                ).toUpperCase();
+
+            resultElement.textContent =
+                normalizedCategory ||
+                "UNCLASSIFIED";
+
+            resultElement.classList.remove(
+                "solutionViewerPending",
+                "solutionViewerTrue",
+                "solutionViewerFalse"
+            );
+
+            if (
+                normalizedCategory ===
+                "TRUE_FLASH"
+            )
+            {
+                resultElement.classList.add(
+                    "solutionViewerTrue"
+                );
+            }
+            else if (
+                normalizedCategory ===
+                "EVALUATING"
+            )
+            {
+                resultElement.classList.add(
+                    "solutionViewerPending"
+                );
+            }
+            else
+            {
+                resultElement.classList.add(
+                    "solutionViewerFalse"
+                );
+            }
+        }
+
+        this._setElementText(
+            "viewer-solution-reason",
+            reason || "--"
+        );
+    }
+
+
+    // ## Show a replay failure without breaking video/frame inspection.
+    _setReplayFailure(
+        message
+    )
+    {
+        this._setElementText(
+            "viewer-replay-trigger-frame",
+            "--"
+        );
+
+        if (this._metricsGraphPanel !== null)
+        {
+            this._metricsGraphPanel.
+                setCaptureReplayTriggerFrameIndex(
+                    null
+                );
+        }
+
+        this._setSolutionViewer(
+            "UNCLASSIFIED",
+            message
+        );
+    }
+
+
     // ## Show the Analyzer-style capture viewer layout.
     _showPlaybackViewer()
     {
@@ -1840,14 +2263,13 @@ export class PreviewPanel
             boundsText
         );
 
-        // Layout pass only. Backend replay wiring will enable these.
         document.querySelectorAll(
             'input[name="viewer-sensitivity"]'
         ).forEach(
             (radio) =>
             {
                 radio.disabled =
-                    true;
+                    false;
             }
         );
 
