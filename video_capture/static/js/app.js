@@ -22,7 +22,7 @@ import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=38";
+from "./previewPanel.js?v=39";
 
 import
 {
@@ -34,7 +34,7 @@ import
 {
     MetricsGraphPanel
 }
-from "./metricsGraphPanel.js?v=35";
+from "./metricsGraphPanel.js?v=36";
 
 import
 {

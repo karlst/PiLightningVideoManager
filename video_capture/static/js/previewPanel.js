@@ -57,14 +57,8 @@ export class PreviewPanel
         this._playbackSeekPending =
             false;
 
-        this._playbackCapturePath =
+        this._selectedViewerSensitivity =
             null;
-
-        this._replayRequestSerial =
-            0;
-
-        this._viewerSensitivityProfiles =
-            {};
     }
 
 
@@ -130,7 +124,7 @@ export class PreviewPanel
                     {
                         if (radio.checked)
                         {
-                            this._handleViewerSensitivityChange(
+                            this._applyStoredSensitivityResult(
                                 radio.value
                             );
                         }
@@ -217,9 +211,6 @@ export class PreviewPanel
         this._playbackCaptureFile =
             null;
 
-        this._playbackCapturePath =
-            null;
-
         this._playbackFrameIndex =
             0;
 
@@ -279,12 +270,6 @@ export class PreviewPanel
         this._playbackCaptureFile =
             resolvedCaptureFile;
 
-        this._playbackCapturePath =
-            this._resolvePlaybackCapturePath(
-                resolvedVideoUrl,
-                resolvedCaptureFile
-            );
-
         this._setMediaTitle(
             "Capture Playback"
         );
@@ -323,7 +308,7 @@ export class PreviewPanel
             resolvedCaptureFile
         );
 
-        this._loadInitialReplay();
+        this._initializeStoredSensitivityResult();
 
         this._hideImageAge();
     }
@@ -1603,279 +1588,161 @@ export class PreviewPanel
     }
 
 
-    // ## Resolve the capture path expected by the Pi replay endpoint.
-    _resolvePlaybackCapturePath(
-        videoUrl,
-        captureFile
-    )
+    // ## Select an initial stored sensitivity result when a v2 capture opens.
+    _initializeStoredSensitivityResult()
     {
-        const explicitPath =
-            captureFile?.relative_path ||
-            captureFile?.capture_path;
+        const sidecar =
+            this._playbackCaptureFile?.analysis || {};
+
+        const results =
+            sidecar.sensitivity_results;
 
         if (
-            explicitPath !== null &&
-            explicitPath !== undefined &&
-            explicitPath !== ""
+            results === null ||
+            typeof results !== "object"
         )
         {
-            return String(
-                explicitPath
+            this._selectedViewerSensitivity =
+                null;
+
+            this._setViewerSensitivityEnabled(
+                false
             );
-        }
-
-        const urlText =
-            String(
-                videoUrl || ""
-            );
-
-        const marker =
-            "/capture_files/";
-
-        const markerIndex =
-            urlText.indexOf(
-                marker
-            );
-
-        if (markerIndex >= 0)
-        {
-            return decodeURIComponent(
-                urlText.substring(
-                    markerIndex +
-                    marker.length
-                )
-            );
-        }
-
-        return (
-            captureFile?.name ||
-            ""
-        );
-    }
-
-
-    // ## Replay the newly opened capture at the Pi's currently active sensitivity.
-    async _loadInitialReplay()
-    {
-        try
-        {
-            const settings =
-                await getJson(
-                    "/candidate_settings"
-                );
-
-            this._viewerSensitivityProfiles =
-                settings?.profiles || {};
-
-            const sensitivity =
-                String(
-                    settings?.active?.sensitivity ||
-                    "medium"
-                ).toLowerCase();
 
             this._selectViewerSensitivity(
-                sensitivity
+                null
             );
 
-            this._showViewerSensitivityThresholds(
-                sensitivity
+            this._setElementText(
+                "viewer-replay-trigger-frame",
+                "--"
             );
 
-            await this._requestCaptureReplay(
-                sensitivity
-            );
-        }
-        catch (error)
-        {
-            this._setReplayFailure(
-                "Unable to load replay settings"
+            this._setElementText(
+                "viewer-threshold-brightness-delta",
+                "--"
             );
 
-            console.error(
-                error
+            this._setElementText(
+                "viewer-threshold-bright-pixel-delta",
+                "--"
             );
-        }
-    }
 
+            this._setElementText(
+                "viewer-threshold-bright-pixel-fraction",
+                "--"
+            );
 
-    // ## Rerun CandidateFinder/SolutionFilter when a sensitivity radio is clicked.
-    async _handleViewerSensitivityChange(
-        sensitivity
-    )
-    {
-        // Threshold fields respond immediately to the selected profile.
-        // MP4 replay may take longer because CandidateFinder reconstructs
-        // bright-pixel metrics from the saved video.
-        this._showViewerSensitivityThresholds(
-            sensitivity
-        );
+            if (this._metricsGraphPanel !== null)
+            {
+                this._metricsGraphPanel.
+                    setCaptureReplayTriggerFrameIndex(
+                        null
+                    );
+            }
 
-        await this._requestCaptureReplay(
-            sensitivity
-        );
-    }
+            this._setSolutionViewer(
+                "UNAVAILABLE",
+                (
+                    "Stored High / Medium / Low analysis is not present " +
+                    "in this older sidecar. Migrate the sidecar to the " +
+                    "current version to enable sensitivity selection."
+                )
+            );
 
-
-    // ## Display the effective read-only thresholds for one sensitivity profile.
-    _showViewerSensitivityThresholds(
-        sensitivity
-    )
-    {
-        const config =
-            this._viewerSensitivityProfiles?.[
-                sensitivity
-            ] || {};
-
-        this._setElementText(
-            "viewer-threshold-brightness-delta",
-            this._formatViewerNumber(
-                config.
-                    candidate_brightness_delta_threshold,
-                3
-            )
-        );
-
-        this._setElementText(
-            "viewer-threshold-bright-pixel-delta",
-            this._formatViewerNumber(
-                config.
-                    candidate_bright_pixel_delta_threshold,
-                3
-            )
-        );
-
-        this._setElementText(
-            "viewer-threshold-bright-pixel-fraction",
-            this._formatViewerNumber(
-                config.
-                    candidate_bright_pixel_fraction_threshold,
-                6
-            )
-        );
-    }
-
-
-    // ## Ask the Pi backend to replay CandidateFinder and SolutionFilter.
-    async _requestCaptureReplay(
-        sensitivity
-    )
-    {
-        if (
-            this._mode !== "playback" ||
-            !this._playbackCapturePath
-        )
-        {
             return;
         }
 
-        const requestSerial =
-            ++this._replayRequestSerial;
-
-        this._setElementText(
-            "viewer-replay-trigger-frame",
-            "Evaluating..."
+        this._setViewerSensitivityEnabled(
+            true
         );
 
-        this._setSolutionViewer(
-            "EVALUATING",
-            "Running CandidateFinder and SolutionFilter..."
+        const originalSensitivity =
+            String(
+                sidecar?.candidate?.config?.sensitivity ||
+                ""
+            ).toLowerCase();
+
+        let initialSensitivity =
+            "medium";
+
+        if (
+            ["high", "medium", "low"].
+                includes(
+                    originalSensitivity
+                ) &&
+            results[
+                originalSensitivity
+            ] !== undefined
+        )
+        {
+            initialSensitivity =
+                originalSensitivity;
+        }
+        else if (
+            results.medium === undefined
+        )
+        {
+            initialSensitivity =
+                ["high", "low"].
+                    find(
+                        (name) =>
+                            results[name] !== undefined
+                    ) ||
+                "medium";
+        }
+
+        this._applyStoredSensitivityResult(
+            initialSensitivity
         );
-
-        try
-        {
-            const response =
-                await fetch(
-                    "/capture_replay",
-                    {
-                        method: "POST",
-
-                        headers:
-                        {
-                            "Content-Type":
-                                "application/json"
-                        },
-
-                        body:
-                            JSON.stringify(
-                                {
-                                    capture_path:
-                                        this._playbackCapturePath,
-
-                                    sensitivity:
-                                        sensitivity
-                                }
-                            )
-                    }
-                );
-
-            const result =
-                await response.json();
-
-            // Ignore an older replay result if the user clicked another radio.
-            if (
-                requestSerial !==
-                this._replayRequestSerial
-            )
-            {
-                return;
-            }
-
-            if (
-                !response.ok ||
-                !result.success
-            )
-            {
-                throw new Error(
-                    result.message ||
-                    "Capture replay failed"
-                );
-            }
-
-            this._applyReplayResult(
-                result
-            );
-        }
-        catch (error)
-        {
-            if (
-                requestSerial ===
-                this._replayRequestSerial
-            )
-            {
-                this._setReplayFailure(
-                    error.message ||
-                    "Capture replay failed"
-                );
-            }
-
-            console.error(
-                error
-            );
-        }
     }
 
 
-    // ## Update replay trigger, thresholds, graph marker, and Solution panel.
-    _applyReplayResult(result)
+    // ## Apply one precomputed CandidateFinder/SolutionFilter result from v2 JSON.
+    _applyStoredSensitivityResult(
+        sensitivity
+    )
     {
-        const sensitivity =
+        const normalizedSensitivity =
             String(
-                result.sensitivity ||
-                "medium"
+                sensitivity || ""
             ).toLowerCase();
 
+        const sidecar =
+            this._playbackCaptureFile?.analysis || {};
+
+        const result =
+            sidecar?.
+                sensitivity_results?.
+                [normalizedSensitivity];
+
+        if (
+            result === null ||
+            result === undefined ||
+            typeof result !== "object"
+        )
+        {
+            this._setSolutionViewer(
+                "UNAVAILABLE",
+                (
+                    "No stored result is available for " +
+                    `${normalizedSensitivity || "this"} sensitivity.`
+                )
+            );
+
+            return;
+        }
+
+        this._selectedViewerSensitivity =
+            normalizedSensitivity;
+
         this._selectViewerSensitivity(
-            sensitivity
+            normalizedSensitivity
         );
 
         const config =
             result.candidate_config || {};
 
-        this._viewerSensitivityProfiles[
-            sensitivity
-        ] =
-            config;
-
         this._setElementText(
             "viewer-threshold-brightness-delta",
             this._formatViewerNumber(
@@ -1903,18 +1770,18 @@ export class PreviewPanel
             )
         );
 
-        const candidate =
-            result.candidate || {};
+        const replayFrameNumber =
+            result.trigger_frame_number;
 
         if (
-            candidate.frame_number !== null &&
-            candidate.frame_number !== undefined
+            replayFrameNumber !== null &&
+            replayFrameNumber !== undefined
         )
         {
             this._setElementText(
                 "viewer-replay-trigger-frame",
                 String(
-                    candidate.frame_number
+                    replayFrameNumber
                 )
             );
         }
@@ -1930,21 +1797,39 @@ export class PreviewPanel
         {
             this._metricsGraphPanel.
                 setCaptureReplayTriggerFrameIndex(
-                    candidate.frame_index
+                    result.trigger_frame_index
                 );
         }
 
-        const solution =
-            result.solution || {};
-
         this._setSolutionViewer(
-            solution.category || "UNCLASSIFIED",
-            solution.reason || "--"
+            result.solution_category ||
+                "UNCLASSIFIED",
+
+            result.solution_reason ||
+                result.trigger_reason ||
+                "--"
         );
     }
 
 
-    // ## Select one sensitivity radio without firing another replay request.
+    // ## Enable or disable the viewer sensitivity radios as one group.
+    _setViewerSensitivityEnabled(
+        enabled
+    )
+    {
+        document.querySelectorAll(
+            'input[name="viewer-sensitivity"]'
+        ).forEach(
+            (radio) =>
+            {
+                radio.disabled =
+                    !enabled;
+            }
+        );
+    }
+
+
+    // ## Select one viewer sensitivity radio without triggering its change event.
     _selectViewerSensitivity(
         sensitivity
     )
@@ -1961,7 +1846,7 @@ export class PreviewPanel
     }
 
 
-    // ## Display Solution category/reason using Analyzer-like result color.
+    // ## Display stored Solution category/reason using Analyzer-like color.
     _setSolutionViewer(
         category,
         reason
@@ -2000,7 +1885,7 @@ export class PreviewPanel
             }
             else if (
                 normalizedCategory ===
-                "EVALUATING"
+                "UNAVAILABLE"
             )
             {
                 resultElement.classList.add(
@@ -2018,31 +1903,6 @@ export class PreviewPanel
         this._setElementText(
             "viewer-solution-reason",
             reason || "--"
-        );
-    }
-
-
-    // ## Show a replay failure without breaking video/frame inspection.
-    _setReplayFailure(
-        message
-    )
-    {
-        this._setElementText(
-            "viewer-replay-trigger-frame",
-            "--"
-        );
-
-        if (this._metricsGraphPanel !== null)
-        {
-            this._metricsGraphPanel.
-                setCaptureReplayTriggerFrameIndex(
-                    null
-                );
-        }
-
-        this._setSolutionViewer(
-            "UNCLASSIFIED",
-            message
         );
     }
 
@@ -2324,43 +2184,27 @@ export class PreviewPanel
             boundsText
         );
 
-        document.querySelectorAll(
-            'input[name="viewer-sensitivity"]'
-        ).forEach(
-            (radio) =>
-            {
-                radio.disabled =
-                    false;
-            }
+        // Stored sensitivity results, when present, are applied immediately
+        // after the rest of the capture-level fields have been populated.
+        // Older sidecars remain viewable but their sensitivity controls are
+        // disabled until migration enriches them.
+        this._setViewerSensitivityEnabled(
+            false
         );
-
-        const config =
-            candidate.config ||
-            sidecar.candidate_config ||
-            {};
 
         this._setElementText(
             "viewer-threshold-brightness-delta",
-            this._formatViewerNumber(
-                config.candidate_brightness_delta_threshold,
-                3
-            )
+            "--"
         );
 
         this._setElementText(
             "viewer-threshold-bright-pixel-delta",
-            this._formatViewerNumber(
-                config.candidate_bright_pixel_delta_threshold,
-                3
-            )
+            "--"
         );
 
         this._setElementText(
             "viewer-threshold-bright-pixel-fraction",
-            this._formatViewerNumber(
-                config.candidate_bright_pixel_fraction_threshold,
-                6
-            )
+            "--"
         );
     }
 

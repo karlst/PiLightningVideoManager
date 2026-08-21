@@ -1100,21 +1100,56 @@ export class MetricsGraphPanel
         }
     }
 
-    // ## Pick the trigger frame as the first playback cursor when available.
+    // ## Pick the original Pi trigger frame as the first playback cursor.
     _getInitialCaptureCursorFrameIndex(analysis)
     {
         let frameIndex =
             null;
 
-        if (analysis?.trigger_frame_index !== null && analysis?.trigger_frame_index !== undefined)
+        const candidate =
+            analysis?.candidate || {};
+
+        if (
+            candidate.trigger_frame_index !== null &&
+            candidate.trigger_frame_index !== undefined
+        )
         {
             frameIndex =
-                Number(analysis.trigger_frame_index);
+                Number(
+                    candidate.trigger_frame_index
+                );
         }
-        else if (analysis?.trigger_frame_number !== null && analysis?.trigger_frame_number !== undefined)
+        else if (
+            analysis?.trigger_frame_index !== null &&
+            analysis?.trigger_frame_index !== undefined
+        )
         {
             frameIndex =
-                Number(analysis.trigger_frame_number) - 1;
+                Number(
+                    analysis.trigger_frame_index
+                );
+        }
+        else if (
+            candidate.trigger_frame_number !== null &&
+            candidate.trigger_frame_number !== undefined
+        )
+        {
+            frameIndex =
+                Number(
+                    candidate.trigger_frame_number
+                ) -
+                1;
+        }
+        else if (
+            analysis?.trigger_frame_number !== null &&
+            analysis?.trigger_frame_number !== undefined
+        )
+        {
+            frameIndex =
+                Number(
+                    analysis.trigger_frame_number
+                ) -
+                1;
         }
 
         return this._clampCaptureFrameIndex(
