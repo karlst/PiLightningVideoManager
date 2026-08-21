@@ -8,7 +8,7 @@
     "camera_type": "ELP USB High Speed",
     "camera_latitude_degrees": 32.22256,
     "camera_longitude_degrees": -111.59191,
-    "camera_bearing_degrees": 0.0,
-    "camera_hfov_degrees": 0.0,
-    "camera_vfov_degrees": 0.0
+    "camera_bearing_degrees": 95.0,
+    "camera_hfov_degrees": 28.0,
+    "camera_vfov_degrees": 20.0
 }
