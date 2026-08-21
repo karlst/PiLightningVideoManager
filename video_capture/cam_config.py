@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -156,6 +157,284 @@ def update_camera_geometry_settings(
     return settings
 
 
+# ## Return whether a compass bearing lies inside a clockwise angular sector.
+def _bearing_in_sector(
+    bearing_degrees: float,
+    left_degrees: float,
+    right_degrees: float,
+) -> bool:
+    bearing = (
+        float(
+            bearing_degrees
+        ) %
+        360.0
+    )
+
+    left = (
+        float(
+            left_degrees
+        ) %
+        360.0
+    )
+
+    right = (
+        float(
+            right_degrees
+        ) %
+        360.0
+    )
+
+    if left <= right:
+        return (
+            left <=
+            bearing <=
+            right
+        )
+
+    return (
+        bearing >= left or
+        bearing <= right
+    )
+
+
+# ## Project one bearing/range point from the camera on a spherical Earth.
+def _destination_point(
+    latitude_degrees: float,
+    longitude_degrees: float,
+    bearing_degrees: float,
+    distance_miles: float,
+) -> tuple[float, float]:
+    earth_radius_miles = 3958.7613
+
+    latitude_radians = math.radians(
+        latitude_degrees
+    )
+
+    longitude_radians = math.radians(
+        longitude_degrees
+    )
+
+    bearing_radians = math.radians(
+        bearing_degrees
+    )
+
+    angular_distance = (
+        float(
+            distance_miles
+        ) /
+        earth_radius_miles
+    )
+
+    destination_latitude = math.asin(
+        (
+            math.sin(
+                latitude_radians
+            ) *
+            math.cos(
+                angular_distance
+            )
+        ) +
+        (
+            math.cos(
+                latitude_radians
+            ) *
+            math.sin(
+                angular_distance
+            ) *
+            math.cos(
+                bearing_radians
+            )
+        )
+    )
+
+    destination_longitude = (
+        longitude_radians +
+        math.atan2(
+            (
+                math.sin(
+                    bearing_radians
+                ) *
+                math.sin(
+                    angular_distance
+                ) *
+                math.cos(
+                    latitude_radians
+                )
+            ),
+            (
+                math.cos(
+                    angular_distance
+                ) -
+                (
+                    math.sin(
+                        latitude_radians
+                    ) *
+                    math.sin(
+                        destination_latitude
+                    )
+                )
+            ),
+        )
+    )
+
+    longitude_degrees_result = (
+        (
+            math.degrees(
+                destination_longitude
+            ) +
+            540.0
+        ) %
+        360.0
+    ) - 180.0
+
+    return (
+        math.degrees(
+            destination_latitude
+        ),
+        longitude_degrees_result,
+    )
+
+
+# ## Build a conservative rectangular search box around the camera FOV sector.
+def build_search_bounding_box(
+    latitude_degrees: float,
+    longitude_degrees: float,
+    bearing_degrees: float,
+    hfov_degrees: float,
+    minimum_range_miles: float,
+    maximum_range_miles: float,
+) -> dict[str, float]:
+    minimum_range = max(
+        0.0,
+        float(
+            minimum_range_miles
+        )
+    )
+
+    maximum_range = max(
+        minimum_range,
+        float(
+            maximum_range_miles
+        )
+    )
+
+    half_fov = max(
+        0.0,
+        min(
+            180.0,
+            float(
+                hfov_degrees
+            ) /
+            2.0,
+        )
+    )
+
+    left_bearing = (
+        float(
+            bearing_degrees
+        ) -
+        half_fov
+    ) % 360.0
+
+    right_bearing = (
+        float(
+            bearing_degrees
+        ) +
+        half_fov
+    ) % 360.0
+
+    bearings = [
+        left_bearing,
+        float(
+            bearing_degrees
+        ) % 360.0,
+        right_bearing,
+    ]
+
+    # Cardinal directions can be extrema of the enclosing latitude/longitude
+    # rectangle even when they are not the two FOV edge bearings.
+    for cardinal_bearing in (
+        0.0,
+        90.0,
+        180.0,
+        270.0,
+    ):
+        if _bearing_in_sector(
+            cardinal_bearing,
+            left_bearing,
+            right_bearing,
+        ):
+            bearings.append(
+                cardinal_bearing
+            )
+
+    points: list[tuple[float, float]] = []
+
+    for range_miles in (
+        minimum_range,
+        maximum_range,
+    ):
+        for search_bearing in bearings:
+            points.append(
+                _destination_point(
+                    latitude_degrees,
+                    longitude_degrees,
+                    search_bearing,
+                    range_miles,
+                )
+            )
+
+    latitudes = [
+        point[0]
+        for point in points
+    ]
+
+    longitudes = [
+        point[1]
+        for point in points
+    ]
+
+    return {
+        "minimum_range_miles":
+            minimum_range,
+
+        "maximum_range_miles":
+            maximum_range,
+
+        "min_latitude_degrees":
+            round(
+                min(
+                    latitudes
+                ),
+                7
+            ),
+
+        "max_latitude_degrees":
+            round(
+                max(
+                    latitudes
+                ),
+                7
+            ),
+
+        "min_longitude_degrees":
+            round(
+                min(
+                    longitudes
+                ),
+                7
+            ),
+
+        "max_longitude_degrees":
+            round(
+                max(
+                    longitudes
+                ),
+                7
+            ),
+    }
+
+
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
@@ -222,17 +501,27 @@ class CamConfig:
 
     camera_name: str = "ELP USB Camera"
     camera_type: str = "ELP USB High Speed"
+    camera_site_name: str = "Flagstaff"
     camera_latitude_degrees: float = 32.2225600
     camera_longitude_degrees: float = -111.5919100
     camera_bearing_degrees: float = 0.0
     camera_hfov_degrees: float = 0.0
     camera_vfov_degrees: float = 0.0
+
+    # Conservative rectangular geographic search area used to look up a
+    # captured flash in an external lightning-detection database.
+    search_minimum_range_miles: float = 1.0
+    search_maximum_range_miles: float = 25.0
+
     camera_preview_refresh_seconds: float = 0.2
 
     trigger_enabled: bool = True
 
     # Minimum time between automatic trigger events.
     trigger_cooldown_seconds: float = 1.0
+
+    capture_max_files: int = 100
+    capture_protect_recent_seconds: float = 60.0
 
     # ## Overlay camera/device fields from config/camera_config.json.
     def __post_init__(
@@ -245,6 +534,7 @@ class CamConfig:
             "input_format",
             "camera_name",
             "camera_type",
+            "camera_site_name",
         )
 
         integer_fields = (
@@ -259,6 +549,8 @@ class CamConfig:
             "camera_bearing_degrees",
             "camera_hfov_degrees",
             "camera_vfov_degrees",
+            "search_minimum_range_miles",
+            "search_maximum_range_miles",
         )
 
         for field_name in string_fields:

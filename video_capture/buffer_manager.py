@@ -16,6 +16,7 @@ import cv2
 
 from video_capture.brightness_plugin import BrightnessPlugin
 from video_capture.cam_config import CamConfig
+from video_capture.cam_config import build_search_bounding_box
 from video_capture.camera_reader import CameraFrame
 from video_capture.camera_reader import CameraReader
 from video_capture.clip_writer import ClipWriter
@@ -247,6 +248,7 @@ class BufferManager:
                         summary="Sidecar analysis failed"
                     )
 
+            self._capture_manager.cleanup()
 
         capture_status = {
             "buffer_count": len(
@@ -751,6 +753,34 @@ class BufferManager:
                     3
                 )
 
+        search_bounding_box = (
+            build_search_bounding_box(
+                latitude_degrees=
+                    self._config.
+                    camera_latitude_degrees,
+
+                longitude_degrees=
+                    self._config.
+                    camera_longitude_degrees,
+
+                bearing_degrees=
+                    self._config.
+                    camera_bearing_degrees,
+
+                hfov_degrees=
+                    self._config.
+                    camera_hfov_degrees,
+
+                minimum_range_miles=
+                    self._config.
+                    search_minimum_range_miles,
+
+                maximum_range_miles=
+                    self._config.
+                    search_maximum_range_miles,
+            )
+        )
+
         return {
             "application": {
                 "name": "Pi Camera Capture",
@@ -758,8 +788,14 @@ class BufferManager:
                 "start_utc": self._config.application_start_utc
             },
             "camera": {
-                "name": self._config.camera_name,
-                "type": self._config.camera_type,
+                "site_name":
+                    self._config.camera_site_name,
+
+                "name":
+                    self._config.camera_name,
+
+                "type":
+                    self._config.camera_type,
                 "input_format": self._config.input_format,
                 "frame_width_pixels": self._config.frame_width_pixels,
                 "frame_height_pixels": self._config.frame_height_pixels,
@@ -768,8 +804,16 @@ class BufferManager:
                 "longitude_degrees": self._config.camera_longitude_degrees,
                 "bearing_degrees": self._config.camera_bearing_degrees,
                 "hfov_degrees": self._config.camera_hfov_degrees,
-                "vfov_degrees": self._config.camera_vfov_degrees
+                "vfov_degrees":
+                    self._config.camera_vfov_degrees,
+
+                "search_bounding_box":
+                    search_bounding_box
             },
+
+            "search_bounding_box":
+                search_bounding_box,
+
             "capture": {
                 "saved_utc": writer_status.get(
                     "saved_utc",
