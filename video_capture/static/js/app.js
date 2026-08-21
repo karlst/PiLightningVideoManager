@@ -1,5 +1,7 @@
 "use strict";
 
+import "./captureViewer.js?v=1";
+
 import
 {
     StatusPanel
@@ -22,7 +24,7 @@ import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=39";
+from "./previewPanel.js?v=40";
 
 import
 {

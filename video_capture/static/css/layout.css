@@ -217,3 +217,41 @@ body
     white-space: normal;
     font-weight: 700;
 }
+
+
+/*
+ * Shared capture viewer host.
+ * The P Site owns only this mode switch; all viewer layout/styling is inside
+ * captureViewer.js Shadow DOM so the same component can be reused by G Site.
+ */
+.captureViewerHost
+{
+    display: none;
+    min-width: 0;
+    min-height: 0;
+}
+
+body.capturePlaybackMode .pageGrid
+{
+    grid-template-rows: auto minmax(0, 1fr);
+    height: calc(100vh - 16px);
+}
+
+body.capturePlaybackMode .mainGrid,
+body.capturePlaybackMode .eventPanel
+{
+    display: none;
+}
+
+body.capturePlaybackMode .captureViewerHost
+{
+    display: block;
+}
+
+@media (max-width: 900px) and (orientation: portrait)
+{
+    body.capturePlaybackMode .pageGrid
+    {
+        height: auto;
+    }
+}

@@ -53,13 +53,6 @@
                         id="camera-image"
                         alt="Camera preview">
 
-                    <video
-                        class="cameraImage cameraImageHidden"
-                        id="camera-video"
-                        muted
-                        playsinline>
-                    </video>
-
                 </div>
 
                 <div class="mediaFooter">
@@ -213,191 +206,29 @@
 
             </section>
 
-
-            <section
-                class="subPanel playbackNavigation cameraImageHidden"
-                id="playback-navigation">
-
-                <div
-                    class="playbackStepControls"
-                    id="playback-step-controls">
-
-                    <button
-                        class="miniButton"
-                        id="playback-step-back-10-button"
-                        type="button"
-                        title="Back 10 frames: Shift+Left">
-                        -10
-                    </button>
-
-                    <button
-                        class="miniButton"
-                        id="playback-step-back-1-button"
-                        type="button"
-                        title="Back 1 frame: Left">
-                        -1
-                    </button>
-
-                    <input
-                        id="playback-frame-slider"
-                        type="range"
-                        min="0"
-                        max="0"
-                        step="1"
-                        value="0"
-                        aria-label="Playback frame">
-
-                    <span id="playback-frame-label">1 / 1</span>
-
-                    <button
-                        class="miniButton"
-                        id="playback-step-forward-1-button"
-                        type="button"
-                        title="Forward 1 frame: Right">
-                        +1
-                    </button>
-
-                    <button
-                        class="miniButton"
-                        id="playback-step-forward-10-button"
-                        type="button"
-                        title="Forward 10 frames: Shift+Right">
-                        +10
-                    </button>
-
-                </div>
-
-            </section>
-
-            <aside
-                class="playbackSidebar cameraImageHidden"
-                id="playback-sidebar">
-
-                <div class="playbackActions">
-
-                    <button
-                        class="ccButton"
-                        id="load-capture-button"
-                        type="button">
-                        Browse Captures...
-                    </button>
-
-                    <button
-                        class="ccButton ccButtonSecondary"
-                        id="close-playback-button"
-                        type="button">
-                        Return to Camera
-                    </button>
-
-                </div>
-
-                <section class="subPanel playbackInfoPanel">
-                    <h2>Site Info</h2>
-
-                    <div class="viewerInfoGrid">
-                        <div>Site name</div><div id="viewer-site-name">--</div>
-                        <div>Latitude</div><div id="viewer-site-latitude">--</div>
-                        <div>Longitude</div><div id="viewer-site-longitude">--</div>
-                        <div>Bearing</div><div id="viewer-site-bearing">--</div>
-                        <div>Horizontal FOV</div><div id="viewer-site-hfov">--</div>
-                        <div>Vertical FOV</div><div id="viewer-site-vfov">--</div>
-                        <div>Search bounding box</div><div id="viewer-search-bounds">--</div>
-                    </div>
-                </section>
-
-                <section class="subPanel playbackInfoPanel">
-                    <h2>Current Capture</h2>
-
-                    <div class="viewerInfoGrid">
-                        <div>Video</div><div id="viewer-capture-video">--</div>
-                        <div>Capture start UTC</div><div id="viewer-capture-start">--</div>
-                        <div>Trigger</div><div id="viewer-capture-trigger">--</div>
-                        <div>Trigger reason</div><div id="viewer-capture-trigger-reason">--</div>
-                        <div>Pi Trigger Frame</div><div id="viewer-pi-trigger-frame">--</div>
-                        <div>Replay Trigger Frame</div><div id="viewer-replay-trigger-frame">--</div>
-                        <div>Trigger Offset</div><div id="viewer-trigger-offset">--</div>
-                    </div>
-                </section>
-
-                <section class="subPanel playbackInfoPanel">
-                    <h2>Current Frame</h2>
-
-                    <div class="viewerInfoGrid">
-                        <div>Frame</div><div id="viewer-current-frame">--</div>
-                        <div>Timestamp UTC</div><div id="viewer-current-timestamp">--</div>
-                        <div>Offset</div><div id="viewer-current-offset">--</div>
-                        <div>Pi brightness</div><div id="viewer-current-brightness">--</div>
-                        <div>Pi brightness change</div><div id="viewer-current-brightness-change">--</div>
-                    </div>
-                </section>
-
-                <section class="subPanel playbackInfoPanel solutionViewerPanel">
-                    <h2>Solution</h2>
-
-                    <div
-                        class="solutionViewerResult solutionViewerPending"
-                        id="viewer-solution-result">
-                        Not evaluated
-                    </div>
-
-                    <div class="solutionViewerReasonBlock">
-                        <div class="solutionViewerReasonLabel">Reason</div>
-
-                        <div
-                            class="solutionViewerReason"
-                            id="viewer-solution-reason">
-                            --
-                        </div>
-                    </div>
-                </section>
-
-                <section class="subPanel playbackInfoPanel">
-                    <h2>Sensitivity</h2>
-
-                    <div class="viewerSensitivityChoices">
-                        <label>
-                            <input
-                                type="radio"
-                                name="viewer-sensitivity"
-                                value="high"
-                                disabled>
-                            High
-                        </label>
-
-                        <label>
-                            <input
-                                type="radio"
-                                name="viewer-sensitivity"
-                                value="medium"
-                                disabled>
-                            Medium
-                        </label>
-
-                        <label>
-                            <input
-                                type="radio"
-                                name="viewer-sensitivity"
-                                value="low"
-                                disabled>
-                            Low
-                        </label>
-                    </div>
-
-                    <div class="viewerInfoGrid">
-                        <div>Brightness delta threshold</div>
-                        <div id="viewer-threshold-brightness-delta">--</div>
-
-                        <div>Bright pixel delta</div>
-                        <div id="viewer-threshold-bright-pixel-delta">--</div>
-
-                        <div>Bright pixel fraction</div>
-                        <div id="viewer-threshold-bright-pixel-fraction">--</div>
-                    </div>
-                </section>
-
-            </aside>
-
         </main>
+
+        <capture-viewer
+            class="captureViewerHost"
+            id="capture-viewer">
+
+            <button
+                class="ccButton"
+                id="load-capture-button"
+                slot="actions"
+                type="button">
+                Browse Captures...
+            </button>
+
+            <button
+                class="ccButton ccButtonSecondary"
+                id="close-playback-button"
+                slot="actions"
+                type="button">
+                Return to Camera
+            </button>
+
+        </capture-viewer>
 
         <section class="subPanel eventPanel">
 
@@ -445,7 +276,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=47">
+        src="/static/js/app.js?v=48">
     </script>
 
 </body>
