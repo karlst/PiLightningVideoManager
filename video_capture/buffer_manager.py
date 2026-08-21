@@ -247,7 +247,6 @@ class BufferManager:
                         summary="Sidecar analysis failed"
                     )
 
-            self._capture_manager.cleanup()
 
         capture_status = {
             "buffer_count": len(

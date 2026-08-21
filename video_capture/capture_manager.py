@@ -28,7 +28,6 @@ old ones when necessary.
 from pathlib import Path
 import json
 import re
-import time
 
 from video_capture.cam_config import CamConfig
 from video_capture.event_log import EventLog
@@ -113,63 +112,6 @@ class CaptureManager:
                 )
 
         return files
-
-    # ## Delete old capture files when the capture limit is exceeded.
-    def cleanup(self) -> None:
-        max_files = int(
-            self._config.capture_max_files
-        )
-
-        protect_recent_seconds = float(
-            self._config.capture_protect_recent_seconds
-        )
-
-        if max_files <= 0:
-            return
-
-        if not self._capture_directory.exists():
-            return
-
-        files = sorted(
-            self._capture_directory.glob(
-                "*.mp4"
-            ),
-            key=lambda item: item.stat().st_mtime
-        )
-
-        delete_count = max(
-            0,
-            len(files) - max_files
-        )
-
-        if delete_count <= 0:
-            return
-
-        now_seconds = time.time()
-        deleted_count = 0
-
-        for path in files:
-            if deleted_count >= delete_count:
-                break
-
-            age_seconds = (
-                now_seconds -
-                path.stat().st_mtime
-            )
-
-            if age_seconds < protect_recent_seconds:
-                continue
-
-            self._delete_capture_file(
-                path
-            )
-
-            deleted_count += 1
-
-        if deleted_count > 0:
-            self._event_log.add(
-                f"Capture cleanup deleted {deleted_count} old file(s)"
-            )
 
     # ## Return the directory exposed by Browse Captures playback.
     def get_capture_directory(self) -> Path:

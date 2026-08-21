@@ -234,9 +234,6 @@ class CamConfig:
     # Minimum time between automatic trigger events.
     trigger_cooldown_seconds: float = 1.0
 
-    capture_max_files: int = 100
-    capture_protect_recent_seconds: float = 60.0
-
     # ## Overlay camera/device fields from config/camera_config.json.
     def __post_init__(
         self,
