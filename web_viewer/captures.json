@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "captures": [
+        {
+            "capture_time_utc": "2026-08-21T20:37:59.619706Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "medium",
+            "solution": "TRUE_FLASH",
+            "video_name": "trigger_20260821T203800Z.mp4",
+            "video_url": "captures/trigger_20260821T203800Z.mp4",
+            "sidecar_url": "captures/trigger_20260821T203800Z.json"
+        }
+    ]
+}

@@ -1,0 +1,198 @@
+html,
+body
+{
+    margin: 0;
+    min-height: 100%;
+    font-family: Arial, sans-serif;
+    background: #f3f4f6;
+    color: #111;
+}
+
+body
+{
+    padding: 16px;
+}
+
+.pageShell
+{
+    width: min(1400px, 100%);
+    margin: 0 auto;
+}
+
+.pageHeader
+{
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    border: 1px solid #777;
+    border-top: 8px solid #2f80ed;
+    background: white;
+}
+
+.pageHeader h1
+{
+    margin: 0;
+    font-size: 24px;
+}
+
+.pageSubtitle
+{
+    margin: 4px 0 0 0;
+    color: #555;
+    font-size: 14px;
+}
+
+.galleryView
+{
+    border: 1px solid #aaa;
+    background: white;
+}
+
+.galleryToolbar
+{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid #ccc;
+}
+
+.galleryToolbar label
+{
+    font-weight: 700;
+}
+
+.galleryToolbar select
+{
+    min-width: 180px;
+    padding: 5px 7px;
+}
+
+.captureCount
+{
+    margin-left: auto;
+    color: #555;
+    font-size: 13px;
+}
+
+.captureTableWrap
+{
+    overflow-x: auto;
+}
+
+.captureTable
+{
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.captureTable th,
+.captureTable td
+{
+    padding: 9px 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+.captureTable th
+{
+    background: #f5f5f5;
+    font-size: 13px;
+}
+
+.captureTable td
+{
+    font-family: Consolas, monospace;
+    font-size: 13px;
+}
+
+.captureRow
+{
+    cursor: pointer;
+}
+
+.captureRow:hover,
+.captureRow:focus
+{
+    background: #edf4ff;
+    outline: none;
+}
+
+.solutionTrue
+{
+    font-weight: 700;
+    color: #176b38;
+}
+
+.solutionOther
+{
+    font-weight: 700;
+    color: #8a2a2a;
+}
+
+.galleryMessage
+{
+    padding: 20px 12px;
+    color: #555;
+}
+
+.viewerView
+{
+    min-height: calc(100vh - 120px);
+}
+
+.viewerToolbar
+{
+    margin-bottom: 8px;
+}
+
+.viewerToolbar button
+{
+    padding: 7px 12px;
+    border: 1px solid #777;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.viewerToolbar button:hover
+{
+    background: #eee;
+}
+
+capture-viewer
+{
+    display: block;
+    height: calc(100vh - 145px);
+    min-height: 620px;
+}
+
+.hidden
+{
+    display: none !important;
+}
+
+@media (max-width: 700px)
+{
+    body
+    {
+        padding: 6px;
+    }
+
+    .galleryToolbar
+    {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .captureCount
+    {
+        margin-left: 0;
+    }
+
+    capture-viewer
+    {
+        height: auto;
+        min-height: 0;
+    }
+}

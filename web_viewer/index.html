@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>Soloran Lightning Captures</title>
+
+    <link
+        rel="stylesheet"
+        href="static/css/captureGallery.css">
+</head>
+
+<body>
+
+    <main class="pageShell">
+
+        <header class="pageHeader">
+            <div>
+                <h1>Lightning Captures</h1>
+                <p class="pageSubtitle">
+                    Published high-speed lightning captures
+                </p>
+            </div>
+        </header>
+
+        <section
+            class="galleryView"
+            id="gallery-view">
+
+            <div class="galleryToolbar">
+
+                <label for="site-filter">
+                    Site
+                </label>
+
+                <select id="site-filter">
+                    <option value="">All sites</option>
+                </select>
+
+                <span
+                    class="captureCount"
+                    id="capture-count">
+                    0 captures
+                </span>
+
+            </div>
+
+            <div class="captureTableWrap">
+
+                <table class="captureTable">
+                    <thead>
+                        <tr>
+                            <th>Date / Time UTC</th>
+                            <th>Site</th>
+                            <th>Sensitivity</th>
+                            <th>Solution</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="capture-table-body">
+                    </tbody>
+                </table>
+
+                <div
+                    class="galleryMessage"
+                    id="gallery-message">
+                    Loading captures...
+                </div>
+
+            </div>
+
+        </section>
+
+        <section
+            class="viewerView hidden"
+            id="viewer-view">
+
+            <div class="viewerToolbar">
+                <button
+                    id="back-to-captures-button"
+                    type="button">
+                    ← Back to Captures
+                </button>
+            </div>
+
+            <capture-viewer id="capture-viewer">
+            </capture-viewer>
+
+        </section>
+
+    </main>
+
+    <script
+        type="module"
+        src="static/js/captureGallery.js">
+    </script>
+
+</body>
+</html>
