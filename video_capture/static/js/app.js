@@ -1,6 +1,6 @@
 "use strict";
 
-import "./captureViewer.js?v=1";
+import "/web_viewer/static/js/captureViewer.js?v=1";
 
 import
 {

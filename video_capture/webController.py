@@ -96,6 +96,29 @@ def register_routes(
             "index.html"
         )
 
+
+    @app.route(
+        "/web_viewer/static/js/<path:filename>"
+    )
+    def web_viewer_static_js(filename: str):
+        """
+        Serve shared JavaScript from the repository-level web_viewer tree.
+
+        captureViewer.js lives under web_viewer/static/js so the Pi-hosted
+        P Site and the public G Site can use the exact same source file.
+        """
+        web_viewer_js_directory = (
+            Path(__file__).resolve().parent.parent /
+            "web_viewer" /
+            "static" /
+            "js"
+        )
+
+        return send_from_directory(
+            web_viewer_js_directory,
+            filename
+        )
+
     @app.route(
         "/capture_once",
         methods=["POST"]
