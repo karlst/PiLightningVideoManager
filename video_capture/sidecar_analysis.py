@@ -27,7 +27,7 @@ import numpy as np
 from common.candidate_config import candidate_config_from_settings
 from common.candidate_config import load_candidate_settings
 from common.candidate_finder import CandidateFinder
-from video_analyzer.solution_config import SOLUTION_CONFIG
+from video_analyzer.solution_config import solution_config_for_sensitivity
 from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 from video_capture.camera_reader import CameraFrame
@@ -302,7 +302,9 @@ def analyze_sidecar_frames(
             )
         else:
             solution_filter = SolutionFilter(
-                SOLUTION_CONFIG
+                solution_config_for_sensitivity(
+                    sensitivity
+                )
             )
 
             solution_result = (

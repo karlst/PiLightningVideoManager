@@ -45,6 +45,7 @@ from video_analyzer.capture_data import load_capture
 from video_analyzer.graph_panel import GraphPanel
 from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_config import SolutionConfig
+from video_analyzer.solution_config import solution_config_for_sensitivity
 from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 from video_analyzer.solution_filter import SolutionResult
@@ -132,7 +133,10 @@ class AnalyzerWindow(QMainWindow):
         self.candidate_result = candidate_result
         self.solution_result = solution_result
         self.candidate_config = CANDIDATE_CONFIG
-        self.solution_config = SOLUTION_CONFIG
+        self.solution_config = solution_config_for_sensitivity(
+            self.candidate_config.sensitivity,
+            SOLUTION_CONFIG,
+        )
         self.frame_number = 0
         self.updating_slider = False
         self.open_directory = (
@@ -575,6 +579,28 @@ class AnalyzerWindow(QMainWindow):
         )
 
         self.update_trigger_replay_information()
+
+        # CandidateFinder sensitivity also selects the default relative
+        # brightness-noise threshold used by SolutionFilter:
+        #
+        #     High   -> 0.01
+        #     Medium -> 0.02
+        #     Low    -> 0.04
+        #
+        # Preserve every other temporary Solution setting currently being
+        # tuned in Analyzer and replace only the sensitivity-dependent
+        # max-delta fraction.
+        self.solution_config = solution_config_for_sensitivity(
+            config.sensitivity,
+            self.solution_config,
+        )
+
+        # Keep the visible Solution settings panel synchronized with the
+        # effective value that will actually be used for classification.
+        self.solution_settings_panel.set_noise_max_delta_fraction(
+            self.solution_config.
+            brightness_noise_max_delta_fraction
+        )
 
         # CandidateFinder is Stage 1. Changing Candidate settings must rerun
         # Stage 2 so the Solution result stays consistent with the replay.

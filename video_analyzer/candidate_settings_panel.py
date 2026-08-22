@@ -59,6 +59,16 @@ class CandidateSettingsPanel(QGroupBox):
             apply_callback
         )
 
+        self._last_standard_sensitivity = (
+            config.sensitivity
+            if config.sensitivity in (
+                "high",
+                "medium",
+                "low",
+            )
+            else "medium"
+        )
+
         self._create_ui()
         self._load_initial_config(
             config
@@ -408,6 +418,10 @@ class CandidateSettingsPanel(QGroupBox):
         if not checked:
             return
 
+        self._last_standard_sensitivity = (
+            profile_name
+        )
+
         profile = (
             get_sensitivity_config(
                 profile_name
@@ -481,7 +495,24 @@ class CandidateSettingsPanel(QGroupBox):
 
     # ## Build CandidateConfig from displayed values and rerun Candidate replay.
     def _apply(self) -> None:
+        if self.high_radio.isChecked():
+            sensitivity = "high"
+        elif self.medium_radio.isChecked():
+            sensitivity = "medium"
+        elif self.low_radio.isChecked():
+            sensitivity = "low"
+        else:
+            # Custom is an Analyzer-only editing mode, not a fourth shared
+            # sensitivity profile. Keep the most recently selected standard
+            # sensitivity so downstream SolutionFilter settings still have
+            # a valid High/Medium/Low profile association.
+            sensitivity = (
+                self._last_standard_sensitivity
+            )
+
         config = CandidateConfig(
+            sensitivity=sensitivity,
+
             # Absolute-brightness replay remains effectively disabled.
             candidate_brightness_threshold=999.0,
 

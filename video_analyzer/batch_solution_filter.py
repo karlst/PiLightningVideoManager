@@ -50,6 +50,7 @@ from common.candidate_config import candidate_config_from_settings
 from common.candidate_config import load_candidate_settings
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
+from video_analyzer.solution_config import solution_config_for_sensitivity
 from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 from video_analyzer.stair_step_decay_filter import CATEGORY_STAIR_STEP_DECAY
@@ -660,7 +661,11 @@ def run_batch_solution_filter(
             )
         )
 
-    solution_filter = SolutionFilter()
+    solution_filter = SolutionFilter(
+        solution_config_for_sensitivity(
+            candidate_config.sensitivity
+        )
+    )
     counts: Counter[str] = Counter()
 
     video_files = sorted(
@@ -958,7 +963,7 @@ def main() -> int:
             arguments.findCandidates,
         )
 
-        return run_batch(
+        return run_batch_solution_filter(
             arguments.folder,
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
