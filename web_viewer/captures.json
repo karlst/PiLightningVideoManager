@@ -9,6 +9,321 @@
             "video_name": "trigger_20260821T203800Z.mp4",
             "video_url": "captures/trigger_20260821T203800Z.mp4",
             "sidecar_url": "captures/trigger_20260821T203800Z.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T12:20:35.383174Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightNoise02.mp4",
+            "video_url": "captures/nightNoise02.mp4",
+            "sidecar_url": "captures/nightNoise02.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T12:16:50.225856Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightNoise01.mp4",
+            "video_url": "captures/nightNoise01.mp4",
+            "sidecar_url": "captures/nightNoise01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T02:55:29.811132Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightNoise03.mp4",
+            "video_url": "captures/nightNoise03.mp4",
+            "sidecar_url": "captures/nightNoise03.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T02:38:39.152000Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightRainNoise03.mp4",
+            "video_url": "captures/nightRainNoise03.mp4",
+            "sidecar_url": "captures/nightRainNoise03.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T02:38:23.287005Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightRainNoise02.mp4",
+            "video_url": "captures/nightRainNoise02.mp4",
+            "sidecar_url": "captures/nightRainNoise02.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T02:38:02.842438Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightRainNoise01.mp4",
+            "video_url": "captures/nightRainNoise01.mp4",
+            "sidecar_url": "captures/nightRainNoise01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-10T01:58:53.457962Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "SsaTwilight01.mp4",
+            "video_url": "captures/SsaTwilight01.mp4",
+            "sidecar_url": "captures/SsaTwilight01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-09T21:15:37.159339Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "dayNoise03.mp4",
+            "video_url": "captures/dayNoise03.mp4",
+            "sidecar_url": "captures/dayNoise03.json"
+        },
+        {
+            "capture_time_utc": "2026-08-09T21:15:28.674883Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "dayNoise05.mp4",
+            "video_url": "captures/dayNoise05.mp4",
+            "sidecar_url": "captures/dayNoise05.json"
+        },
+        {
+            "capture_time_utc": "2026-08-09T21:15:22.338529Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "dayNoise04.mp4",
+            "video_url": "captures/dayNoise04.mp4",
+            "sidecar_url": "captures/dayNoise04.json"
+        },
+        {
+            "capture_time_utc": "2026-08-09T21:15:15.970120Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "dayNoise02.mp4",
+            "video_url": "captures/dayNoise02.mp4",
+            "sidecar_url": "captures/dayNoise02.json"
+        },
+        {
+            "capture_time_utc": "2026-08-09T21:15:07.517669Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "dayNoise01.mp4",
+            "video_url": "captures/dayNoise01.mp4",
+            "sidecar_url": "captures/dayNoise01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T01:58:22.815713Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "daylightCgSmall01.mp4",
+            "video_url": "captures/daylightCgSmall01.mp4",
+            "sidecar_url": "captures/daylightCgSmall01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T01:48:23.072851Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "stairStep01.mp4",
+            "video_url": "captures/stairStep01.mp4",
+            "sidecar_url": "captures/stairStep01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T01:13:42.919733Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "daylightIc02.mp4",
+            "video_url": "captures/daylightIc02.mp4",
+            "sidecar_url": "captures/daylightIc02.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T00:53:27.424654Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "frameDropout03.mp4",
+            "video_url": "captures/frameDropout03.mp4",
+            "sidecar_url": "captures/frameDropout03.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T00:53:18.592075Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "frameDropout02.mp4",
+            "video_url": "captures/frameDropout02.mp4",
+            "sidecar_url": "captures/frameDropout02.json"
+        },
+        {
+            "capture_time_utc": "2026-08-06T00:52:57.890873Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "frameDropout01.mp4",
+            "video_url": "captures/frameDropout01.mp4",
+            "sidecar_url": "captures/frameDropout01.json"
+        },
+        {
+            "capture_time_utc": "2026-08-05T22:49:16.582920Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "daylightIc01.mp4",
+            "video_url": "captures/daylightIc01.mp4",
+            "sidecar_url": "captures/daylightIc01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-30T21:00:29.750046Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "trueFlashDaylight03.mp4",
+            "video_url": "captures/trueFlashDaylight03.mp4",
+            "sidecar_url": "captures/trueFlashDaylight03.json"
+        },
+        {
+            "capture_time_utc": "2026-07-30T20:51:22.666440Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "trueFlashDaylight02.mp4",
+            "video_url": "captures/trueFlashDaylight02.mp4",
+            "sidecar_url": "captures/trueFlashDaylight02.json"
+        },
+        {
+            "capture_time_utc": "2026-07-29T12:12:06.100393Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "Ssa02.mp4",
+            "video_url": "captures/Ssa02.mp4",
+            "sidecar_url": "captures/Ssa02.json"
+        },
+        {
+            "capture_time_utc": "2026-07-28T18:45:41.584818Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "daylightCg02.mp4",
+            "video_url": "captures/daylightCg02.mp4",
+            "sidecar_url": "captures/daylightCg02.json"
+        },
+        {
+            "capture_time_utc": "2026-07-28T18:45:41.584818Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "trueFlashDaylight01.mp4",
+            "video_url": "captures/trueFlashDaylight01.mp4",
+            "sidecar_url": "captures/trueFlashDaylight01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:18:15.878406Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightIc03.mp4",
+            "video_url": "captures/nightIc03.mp4",
+            "sidecar_url": "captures/nightIc03.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:11:13.313241Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightIc02.mp4",
+            "video_url": "captures/nightIc02.mp4",
+            "sidecar_url": "captures/nightIc02.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:10:57.120226Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightCgCool01.mp4",
+            "video_url": "captures/nightCgCool01.mp4",
+            "sidecar_url": "captures/nightCgCool01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:08:33.415144Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightFlash02.mp4",
+            "video_url": "captures/nightFlash02.mp4",
+            "sidecar_url": "captures/nightFlash02.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:07:15.070999Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightIcExtended01.mp4",
+            "video_url": "captures/nightIcExtended01.mp4",
+            "sidecar_url": "captures/nightIcExtended01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:06:34.128497Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightIcBright01.mp4",
+            "video_url": "captures/nightIcBright01.mp4",
+            "sidecar_url": "captures/nightIcBright01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T03:05:33.692960Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightIcSubtle01.mp4",
+            "video_url": "captures/nightIcSubtle01.mp4",
+            "sidecar_url": "captures/nightIcSubtle01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T02:58:39.863423Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightCgLong01.mp4",
+            "video_url": "captures/nightCgLong01.mp4",
+            "sidecar_url": "captures/nightCgLong01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T02:55:40.771478Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "noCandidate01.mp4",
+            "video_url": "captures/noCandidate01.mp4",
+            "sidecar_url": "captures/noCandidate01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T02:53:21.155002Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightFlashSubtle01.mp4",
+            "video_url": "captures/nightFlashSubtle01.mp4",
+            "sidecar_url": "captures/nightFlashSubtle01.json"
+        },
+        {
+            "capture_time_utc": "2026-07-19T02:51:21.587784Z",
+            "site_name": "Flagstaff",
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "nightFlash01.mp4",
+            "video_url": "captures/nightFlash01.mp4",
+            "sidecar_url": "captures/nightFlash01.json"
         }
     ]
 }

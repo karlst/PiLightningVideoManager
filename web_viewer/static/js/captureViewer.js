@@ -26,10 +26,8 @@ export class CaptureViewer extends HTMLElement
         this._sidecar = null;
         this._frameIndex = 0;
         this._selectedSensitivity = null;
-        this._seekHandler = null;
         this._keyHandler = null;
         this._resizeObserver = null;
-
         this.shadowRoot.innerHTML = this._template();
     }
 
@@ -51,20 +49,12 @@ export class CaptureViewer extends HTMLElement
     {
         this._detachKeyboard();
 
-        const video = this._byId("video");
-
-        if (video !== null && this._seekHandler !== null)
-        {
-            video.removeEventListener("seeked", this._seekHandler);
-        }
-
         if (this._resizeObserver !== null)
         {
             this._resizeObserver.disconnect();
             this._resizeObserver = null;
         }
     }
-
 
     /*
      * Load one capture.  P Site can pass the already-loaded captureFile object:
@@ -130,8 +120,6 @@ export class CaptureViewer extends HTMLElement
         this._configureSlider();
         this._initializeSensitivity();
         this._loadVideo(videoUrl);
-        this._updateCurrentFrame();
-        this._drawGraphs();
         this._attachKeyboard();
     }
 
@@ -155,7 +143,6 @@ export class CaptureViewer extends HTMLElement
         this._detachKeyboard();
     }
 
-
     _bindControls()
     {
         this._byId("step-back-10")?.addEventListener(
@@ -176,18 +163,6 @@ export class CaptureViewer extends HTMLElement
         this._byId("step-forward-10")?.addEventListener(
             "click",
             () => this._stepFrames(10)
-        );
-
-        const slider = this._byId("frame-slider");
-
-        slider?.addEventListener(
-            "input",
-            () => this._previewSliderFrame()
-        );
-
-        slider?.addEventListener(
-            "change",
-            () => this._commitSliderFrame()
         );
 
         this.shadowRoot.querySelectorAll(
@@ -224,26 +199,95 @@ export class CaptureViewer extends HTMLElement
         video.src = videoUrl;
         video.load();
 
-        if (this._seekHandler !== null)
-        {
-            video.removeEventListener("seeked", this._seekHandler);
-        }
-
-        this._seekHandler =
-            () => this._updateCurrentFrame();
-
-        video.addEventListener("seeked", this._seekHandler);
-
         const onLoadedMetadata =
             () =>
             {
-                video.removeEventListener("loadedmetadata", onLoadedMetadata);
-                this._setFrameIndex(this._initialFrameIndex(), true);
+                video.removeEventListener(
+                    "loadedmetadata",
+                    onLoadedMetadata
+                );
+
+                const initialIndex =
+                    this._initialFrameIndex();
+
+                const targetSeconds =
+                    initialIndex /
+                    this._videoFrameRate();
+
+                const onInitialSeeked =
+                    () =>
+                    {
+                        video.removeEventListener(
+                            "seeked",
+                            onInitialSeeked
+                        );
+
+                        /*
+                         * Startup synchronization point:
+                         * do not claim a current frame until Edge has completed
+                         * the initial video seek.
+                         */
+                        /*
+                         * Edge's paused H.264 seek presents the picture
+                         * immediately preceding the requested trigger
+                         * timestamp. Treat that displayed picture as the
+                         * current frame so the image, graph cursor, and frame
+                         * metadata agree. This also opens the viewer one frame
+                         * before the trigger, which is useful for inspection.
+                         */
+                        const displayedInitialIndex =
+                            Math.max(
+                                0,
+                                initialIndex - 1
+                            );
+
+                        this._frameIndex =
+                            displayedInitialIndex;
+
+                        const records =
+                            this._frameRecords();
+
+                        this._syncSlider();
+                        this._updateFrameLabel();
+
+                        if (
+                            displayedInitialIndex >= 0 &&
+                            displayedInitialIndex < records.length
+                        )
+                        {
+                            this._updateCurrentFrameValues(
+                                records[
+                                    displayedInitialIndex
+                                ]
+                            );
+                        }
+
+                        this._drawGraphs();
+                    };
+
+                video.addEventListener(
+                    "seeked",
+                    onInitialSeeked,
+                    {
+                        once: true
+                    }
+                );
+
+                video.currentTime =
+                    Math.max(
+                        0,
+                        Math.min(
+                            targetSeconds,
+                            video.duration || targetSeconds
+                        )
+                    );
             };
 
-        video.addEventListener("loadedmetadata", onLoadedMetadata);
+        video.addEventListener(
+            "loadedmetadata",
+            onLoadedMetadata
+        );
     }
-
 
     _attachKeyboard()
     {
@@ -287,57 +331,73 @@ export class CaptureViewer extends HTMLElement
     }
 
 
+    /*
+     * Deliberately simple frame-step experiment.
+     *
+     * Do not use requestVideoFrameCallback(), mediaTime mapping, seek-backward
+     * priming, or slow sequential playback.  Just pause the browser video and
+     * move currentTime by one nominal 260-fps frame period per requested frame.
+     *
+     * This is intentionally close to the simple behavior of the earlier viewer
+     * so we can determine whether Edge's visible frame stepping itself is sound
+     * before rebuilding graph/metadata synchronization around it.
+     */
     _stepFrames(delta)
     {
-        this._setFrameIndex(this._frameIndex + delta);
-    }
-
-
-    _setFrameIndex(frameIndex, force = false)
-    {
-        const records = this._frameRecords();
         const video = this._byId("video");
+        const records = this._frameRecords();
 
-        if (records.length === 0 || video === null)
+        if (
+            video === null ||
+            records.length === 0
+        )
         {
             return;
         }
 
-        const clamped = Math.min(
-            records.length - 1,
-            Math.max(0, Math.round(Number(frameIndex) || 0))
-        );
+        const frameSeconds =
+            1.0 /
+            this._videoFrameRate();
 
-        if (!force && clamped === this._frameIndex)
-        {
-            this._updateCurrentFrame();
-            return;
-        }
-
-        this._frameIndex = clamped;
         video.pause();
 
-        const record = records[this._frameIndex];
-        let targetSeconds = Number(record.offset_ms) / 1000.0;
+        const requestedTime =
+            video.currentTime +
+            (
+                Number(delta) *
+                frameSeconds
+            );
 
-        if (!Number.isFinite(targetSeconds))
-        {
-            targetSeconds =
-                (video.duration || 0) *
-                this._frameIndex /
-                Math.max(1, records.length - 1);
-        }
+        video.currentTime =
+            Math.max(
+                0,
+                Math.min(
+                    requestedTime,
+                    video.duration || requestedTime
+                )
+            );
 
-        video.currentTime = Math.max(
-            0,
-            Math.min(targetSeconds, video.duration || targetSeconds)
-        );
+        /*
+         * For this experiment, keep our logical frame count moving by the same
+         * requested delta.  We are testing the visible video behavior first.
+         */
+        this._frameIndex =
+            Math.min(
+                records.length - 1,
+                Math.max(
+                    0,
+                    this._frameIndex +
+                    Number(delta)
+                )
+            );
 
-        // Logical frame state is authoritative immediately.  The browser may
-        // finish seeking the compressed MP4 a little later.
         this._syncSlider();
         this._updateFrameLabel();
-        this._updateCurrentFrameValues(record);
+        this._updateCurrentFrameValues(
+            records[
+                this._frameIndex
+            ]
+        );
         this._drawGraphs();
     }
 
@@ -367,11 +427,57 @@ export class CaptureViewer extends HTMLElement
     _commitSliderFrame()
     {
         const slider = this._byId("frame-slider");
+        const video = this._byId("video");
+        const records = this._frameRecords();
 
-        if (slider !== null)
+        if (
+            slider === null ||
+            video === null ||
+            records.length === 0
+        )
         {
-            this._setFrameIndex(Number(slider.value));
+            return;
         }
+
+        const targetIndex =
+            Math.min(
+                records.length - 1,
+                Math.max(
+                    0,
+                    Math.round(
+                        Number(
+                            slider.value
+                        ) || 0
+                    )
+                )
+            );
+
+        video.pause();
+
+        const targetSeconds =
+            targetIndex /
+            this._videoFrameRate();
+
+        video.currentTime =
+            Math.max(
+                0,
+                Math.min(
+                    targetSeconds,
+                    video.duration || targetSeconds
+                )
+            );
+
+        this._frameIndex =
+            targetIndex;
+
+        this._syncSlider();
+        this._updateFrameLabel();
+        this._updateCurrentFrameValues(
+            records[
+                targetIndex
+            ]
+        );
+        this._drawGraphs();
     }
 
 
@@ -757,7 +863,12 @@ export class CaptureViewer extends HTMLElement
             records.forEach(
                 (record, index) =>
                 {
-                    const x = this._frameX(plot, records, Number(record.offset_ms ?? 0));
+                    const x =
+                        this._frameX(
+                            plot,
+                            records,
+                            index
+                        );
                     const value = Number(record[valueKey] ?? 0);
                     const y = plot.bottom -
                         ((value - limits.min) * (plot.bottom - plot.top) / range);
@@ -844,16 +955,34 @@ export class CaptureViewer extends HTMLElement
         context.lineTo(plot.right, plot.bottom);
         context.stroke();
 
-        const durationMs = this._captureDurationMs(records);
         context.fillStyle = "#333333";
         context.font = "10px Arial";
         context.textAlign = "center";
 
+        const lastFrameIndex =
+            Math.max(
+                0,
+                records.length - 1
+            );
+
         for (let tick = 0; tick <= 4; tick += 1)
         {
-            const fraction = tick / 4;
-            const x = plot.left + (plot.right - plot.left) * fraction;
-            const offsetMs = durationMs * fraction;
+            const fraction =
+                tick / 4;
+
+            const x =
+                plot.left +
+                (
+                    plot.right -
+                    plot.left
+                ) *
+                fraction;
+
+            const frameIndex =
+                Math.round(
+                    lastFrameIndex *
+                    fraction
+                );
 
             context.beginPath();
             context.moveTo(x, plot.bottom);
@@ -861,9 +990,9 @@ export class CaptureViewer extends HTMLElement
             context.stroke();
 
             context.fillText(
-                offsetMs >= 1000
-                    ? `${(offsetMs / 1000).toFixed(2)}s`
-                    : `${offsetMs.toFixed(0)}ms`,
+                String(
+                    frameIndex
+                ),
                 x,
                 plot.bottom + 22
             );
@@ -886,11 +1015,12 @@ export class CaptureViewer extends HTMLElement
             return;
         }
 
-        const x = this._frameX(
-            plot,
-            records,
-            Number(records[index].offset_ms ?? 0)
-        );
+        const x =
+            this._frameX(
+                plot,
+                records,
+                index
+            );
 
         context.save();
         context.strokeStyle = color;
@@ -911,19 +1041,60 @@ export class CaptureViewer extends HTMLElement
     }
 
 
-    _frameX(plot, records, offsetMs)
+    /*
+     * Graph X position is based on logical frame index, not historical Pi
+     * offset_ms.  Rebuilt sidecars can preserve acquisition-time gaps that do
+     * not exist in the encoded MP4 timeline; using those offsets distorts the
+     * graph badly.  Frame index matches Analyzer behavior and remains stable.
+     */
+    _frameX(plot, records, frameIndex)
     {
-        const durationMs = Math.max(0.001, this._captureDurationMs(records));
-        const fraction = Math.max(0, Math.min(1, offsetMs / durationMs));
-        return plot.left + (plot.right - plot.left) * fraction;
+        const lastFrameIndex =
+            Math.max(
+                1,
+                records.length - 1
+            );
+
+        const fraction =
+            Math.max(
+                0,
+                Math.min(
+                    1,
+                    Number(frameIndex) /
+                    lastFrameIndex
+                )
+            );
+
+        return (
+            plot.left +
+            (
+                plot.right -
+                plot.left
+            ) *
+            fraction
+        );
     }
 
 
-    _captureDurationMs(records)
+    /*
+     * Return the MP4 presentation frame rate.  Historical frame_records
+     * offset_ms remains useful for display, but must not be used to seek the
+     * encoded MP4 because rebuilt sidecars may preserve Pi acquisition gaps.
+     */
+    _videoFrameRate()
     {
-        return records.length > 0
-            ? Number(records[records.length - 1].offset_ms ?? 0)
-            : 0;
+        const fps =
+            Number(
+                this._sidecar?.camera?.
+                    frame_rate_fps
+            );
+
+        return (
+            Number.isFinite(fps) &&
+            fps > 0
+        )
+            ? fps
+            : 260.0;
     }
 
 
@@ -1422,7 +1593,7 @@ export class CaptureViewer extends HTMLElement
                 <div class="stepControls">
                     <button class="miniButton" id="step-back-10" type="button" title="Back 10 frames: Shift+Left">-10</button>
                     <button class="miniButton" id="step-back-1" type="button" title="Back 1 frame: Left">-1</button>
-                    <input id="frame-slider" type="range" min="0" max="0" step="1" value="0" aria-label="Playback frame">
+                    <input id="frame-slider" type="range" min="0" max="0" step="1" value="0" disabled aria-label="Playback frame">
                     <span id="frame-label">1 / 1</span>
                     <button class="miniButton" id="step-forward-1" type="button" title="Forward 1 frame: Right">+1</button>
                     <button class="miniButton" id="step-forward-10" type="button" title="Forward 10 frames: Shift+Right">+10</button>

@@ -1,6 +1,6 @@
 "use strict";
 
-import "./captureViewer.js";
+import "./captureViewer.js?v=24";
 
 
 class CaptureGallery
@@ -212,16 +212,6 @@ class CaptureGallery
                             capture.site_name === this._siteFilter
                         );
                     }
-                )
-                .sort(
-                    (a, b) =>
-                        String(
-                            b.capture_time_utc || ""
-                        ).localeCompare(
-                            String(
-                                a.capture_time_utc || ""
-                            )
-                        )
                 );
 
         this._tableBody.replaceChildren();
@@ -242,9 +232,7 @@ class CaptureGallery
 
                 row.appendChild(
                     this._cell(
-                        this._formatUtc(
-                            capture.capture_time_utc
-                        )
+                        capture.video_name || "--"
                     )
                 );
 
@@ -252,31 +240,6 @@ class CaptureGallery
                     this._cell(
                         capture.site_name || "--"
                     )
-                );
-
-                row.appendChild(
-                    this._cell(
-                        this._formatSensitivity(
-                            capture.sensitivity
-                        )
-                    )
-                );
-
-                const solutionCell =
-                    this._cell(
-                        this._formatSolution(
-                            capture.solution
-                        )
-                    );
-
-                solutionCell.classList.add(
-                    this._solutionClass(
-                        capture.solution
-                    )
-                );
-
-                row.appendChild(
-                    solutionCell
                 );
 
                 row.addEventListener(
@@ -435,78 +398,6 @@ class CaptureGallery
         this._message.classList.toggle(
             "hidden",
             text === ""
-        );
-    }
-
-
-    _formatUtc(value)
-    {
-        if (
-            value === null ||
-            value === undefined ||
-            value === ""
-        )
-        {
-            return "--";
-        }
-
-        const date =
-            new Date(
-                value
-            );
-
-        if (Number.isNaN(date.getTime()))
-        {
-            return String(
-                value
-            );
-        }
-
-        return date.toISOString()
-            .replace("T", " ")
-            .replace("Z", " UTC");
-    }
-
-
-    _formatSensitivity(value)
-    {
-        const text =
-            String(
-                value || ""
-            ).toLowerCase();
-
-        if (
-            text === "high" ||
-            text === "medium" ||
-            text === "low"
-        )
-        {
-            return (
-                text.charAt(0).toUpperCase() +
-                text.slice(1)
-            );
-        }
-
-        return value || "--";
-    }
-
-
-    _formatSolution(value)
-    {
-        return String(
-            value || "--"
-        ).toUpperCase();
-    }
-
-
-    _solutionClass(value)
-    {
-        return (
-            String(
-                value || ""
-            ).toUpperCase() === "TRUE_FLASH"
-                ? "solutionTrue"
-                : "solutionOther"
         );
     }
 
