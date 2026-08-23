@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>About Pi Camera Capture</title>
+
+    <style>
+        html,
+        body
+        {
+            margin: 0;
+            min-height: 100%;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            color: #111;
+        }
+
+        body
+        {
+            padding: 16px;
+        }
+
+        .pageShell
+        {
+            width: min(1100px, 100%);
+            margin: 0 auto;
+        }
+
+        .pageHeader
+        {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 14px;
+            padding: 14px 16px;
+            border: 1px solid #777;
+            border-top: 8px solid #2f80ed;
+            background: white;
+        }
+
+        .pageHeader h1
+        {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .pageSubtitle
+        {
+            margin: 4px 0 0 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .pageNavButton
+        {
+            display: inline-block;
+            padding: 7px 12px;
+            border: 1px solid #777;
+            border-radius: 4px;
+            background: white;
+            color: #111;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .pageNavButton:hover
+        {
+            background: #eee;
+        }
+
+        .aboutPanel
+        {
+            padding: 24px 28px;
+            border: 1px solid #aaa;
+            background: white;
+        }
+
+        .aboutPanel h2
+        {
+            margin: 0 0 10px 0;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #ddd;
+            font-size: 21px;
+        }
+
+        .aboutPanel h2:not(:first-child)
+        {
+            margin-top: 28px;
+        }
+
+        .aboutPanel ul
+        {
+            margin: 10px 0 0 22px;
+            padding: 0;
+        }
+
+        .aboutPanel li
+        {
+            margin: 7px 0;
+            line-height: 1.45;
+        }
+
+        .stageFlow
+        {
+            margin: 16px 0;
+            padding: 12px 16px;
+            border-left: 5px solid #2f80ed;
+            background: #f6f9fe;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .stageLabel
+        {
+            color: #1f5fae;
+        }
+
+        .testSummary
+        {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 14px 0 16px 0;
+        }
+
+        .testStat
+        {
+            min-width: 120px;
+            padding: 10px 14px;
+            border: 1px solid #bbb;
+            border-radius: 4px;
+            background: #fafafa;
+            text-align: center;
+        }
+
+        .testStatValue
+        {
+            display: block;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .testStatLabel
+        {
+            display: block;
+            margin-top: 3px;
+            color: #555;
+            font-size: 12px;
+        }
+
+        .matrixWrap
+        {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+
+        .matrixTable
+        {
+            border-collapse: collapse;
+            min-width: 520px;
+        }
+
+        .matrixTable th,
+        .matrixTable td
+        {
+            padding: 10px 14px;
+            border: 1px solid #bbb;
+            text-align: center;
+        }
+
+        .matrixTable thead th
+        {
+            background: #eaf2fd;
+        }
+
+        .matrixTable tbody th
+        {
+            background: #f5f5f5;
+            text-align: left;
+        }
+
+        .matrixGood
+        {
+            background: #e8f5e9;
+            font-weight: 700;
+        }
+
+        .matrixZero
+        {
+            background: #fff4f4;
+            color: #666;
+        }
+
+        .note
+        {
+            margin-top: 12px;
+            color: #555;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .invite
+        {
+            margin-top: 28px;
+            padding: 16px 18px;
+            border: 1px solid #9cb9df;
+            border-radius: 4px;
+            background: #f6f9fe;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 700px)
+        {
+            body
+            {
+                padding: 6px;
+            }
+
+            .pageHeader
+            {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .aboutPanel
+            {
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <main class="pageShell">
+
+        <header class="pageHeader">
+            <div>
+                <h1>Pi Lightning Video Capture</h1>
+                <p class="pageSubtitle">
+                    High-speed lightning capture and analysis<br/> Developed by Karl Stock in Flagstaff, Arizona
+                </p>
+            </div>
+
+            <nav aria-label="Site navigation">
+                <a
+                    class="pageNavButton"
+                    href="index.html">
+                    Captures
+                </a>
+            </nav>
+        </header>
+
+        <section class="aboutPanel">
+
+            <h2>What It Does</h2>
+
+            <ul>
+                <li>
+                    Pi Lightning Video Capture is a high-speed video capture and analysis
+                    system designed to detect, record, and analyze lightning
+                    events.
+                </li>
+                <li>
+                    A Raspberry Pi with a high-speed camera continuously monitors
+                    the scene at 260 FPS, and preserves 2 second video clips
+                    when a possible lightning event triggers capture.
+                </li>
+                <li>
+                    Each capture is stored as an MP4 video together with a JSON
+                    sidecar containing trigger information, camera metadata,
+                    configuration, and per-frame measurements.
+                </li>
+                <li>
+                    The system is designed for <strong>unattended operation</strong> where
+                    continuously storing the entire high-speed camera stream
+                    would produce far too much data.
+                </li>
+                <li>
+                    The system can be deployed in the field without the need for an
+                    internet connection.
+                </li>
+                <li>
+                    The web-based controller allows sensitivity to be adjusted. 
+                    Fixed-site cameras might use Medium or Low sensitivity, 
+                    while field systems actively monitoring storms can use 
+                    High sensitivity.
+                </li>
+            </ul>
+
+            <h2>Two-Stage Analysis</h2>
+
+            <div class="stageFlow">
+                <span class="stageLabel">Candidate detection</span>
+                &nbsp;&rarr;&nbsp;
+                <span class="stageLabel">Solution filtering</span>
+            </div>
+
+            <ul>
+                <li>
+                    The central design separates
+                    <strong>fast real-time detection</strong> from
+                    <strong>careful post-capture classification</strong>.
+                </li>
+                <li>
+                    <strong>Stage 1 — Candidate detection:</strong>
+                    while frames are arriving, CandidateFinder performs
+                    lightweight measurements such as mean brightness,
+                    adjacent-frame brightness change, and the fraction of pixels
+                    that changed significantly.
+                </li>
+                <li>
+                    A <strong>Candidate</strong> is a saved clip that
+                    <em>might</em> contain lightning. It is not a claim that a
+                    flash occurred. The first stage is intentionally biased 
+                    toward preserving questionable events rather than risking
+                     the loss of a real lightning flash.
+                </li>
+                <li>
+                    <strong>Stage 2 — Solution filtering:</strong>
+                    after the Candidate has been safely recorded,
+                    SolutionFilter examines the broader frame sequence,
+                    including behavior before and after the trigger.
+                </li>
+                <li>
+                    A <strong>Solution</strong> is a Candidate that survives the
+                    second-stage rejection filters and is therefore classified
+                    as a likely true lightning flash.
+                </li>
+                <li>
+                    The design principle is simple:
+                    <strong>capture first, analyze later.</strong>
+                </li>
+            </ul>
+
+            <h2>Heuristic Filtering — No Machine Learning</h2>
+
+            <ul>
+                <li>
+                    The current SolutionFilter uses
+                    <strong>explicit, inspectable heuristics</strong>.
+                    It does not use a trained machine-learning model.
+                </li>
+                <li>
+                    The filtering logic looks for temporal and brightness
+                    patterns characteristic of known false positives, including
+                    sustained brightness noise, frame-dropout anomalies,
+                    steady-state brightness changes, stair-step behavior, and
+                    other repeatable artifacts.
+                </li>
+                <li>
+                    Because the rules are explicit, a classification can be
+                    tied directly to measured frame behavior and a specific
+                    rejection reason.
+                </li>
+                <li>
+                    The smoke-test collection is used as a regression suite.
+                    When a new false-positive pattern is found, the filtering
+                    heuristics can be refined.
+                </li>
+            </ul>
+
+            
+
+            <h2>Current Test Results</h2>
+
+            <ul>
+                <li>
+                    The current SolutionFilter smoke-test suite contains
+                    <strong>35 captures</strong>:
+                    18 true lightning flashes and 17 anomalies.
+                </li>
+                <li>
+                    With the current filter configuration,
+                    <strong>all 35 captures are classified correctly</strong>.
+                </li>
+                <li>
+                    For this suite, recall, precision, and accuracy are each
+                    <strong>100.0%</strong>.
+                </li>
+            </ul>
+
+            <div class="testSummary">
+                <div class="testStat">
+                    <span class="testStatValue">35</span>
+                    <span class="testStatLabel">Tests</span>
+                </div>
+
+                <div class="testStat">
+                    <span class="testStatValue">35</span>
+                    <span class="testStatLabel">Correct</span>
+                </div>
+
+                <div class="testStat">
+                    <span class="testStatValue">0</span>
+                    <span class="testStatLabel">Incorrect</span>
+                </div>
+
+                <div class="testStat">
+                    <span class="testStatValue">100%</span>
+                    <span class="testStatLabel">Accuracy</span>
+                </div>
+            </div>
+
+            <div class="matrixWrap">
+                <table
+                    class="matrixTable"
+                    aria-label="SolutionFilter confusion matrix">
+
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Actual</th>
+                            <th colspan="2">Calculated</th>
+                        </tr>
+
+                        <tr>
+                            <th>True Flash</th>
+                            <th>Anomaly</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr>
+                            <th>True Flash</th>
+                            <td class="matrixGood">18</td>
+                            <td class="matrixZero">0</td>
+                        </tr>
+
+                        <tr>
+                            <th>Anomaly</th>
+                            <td class="matrixZero">0</td>
+                            <td class="matrixGood">17</td>
+                        </tr>
+                    </tbody>
+
+                </table>
+            </div>
+
+            <p class="note">
+                These numbers describe the current smoke-test suite.
+                They are not intended as a claim of perfect performance on all
+                possible lightning scenes, cameras, or environmental
+                conditions. The test cases will be extended as new edge cases are found.
+            </p>
+
+            <h2>Using the Viewer</h2>
+
+            <ul>
+                <li>
+                    Select a capture from the published list to open the
+                    browser-based frame viewer.
+                </li>
+                <li>
+                    Step through the video one frame at a time or in ten-frame
+                    increments while comparing the image with the brightness
+                    graphs.
+                </li>
+                <li>
+                    Graph markers show the original Raspberry Pi trigger, the
+                    replay trigger, and the currently displayed frame.
+                </li>
+                <li>
+                    High, Medium, and Low sensitivity selections expose the
+                    stored Candidate and Solution results for each sensitivity
+                    level.
+                </li>
+                <li>
+                    The Solution panel shows both the classification and the
+                    reason produced by the filtering logic.
+                </li>
+            </ul>
+
+            <div class="invite">
+                <strong>Questions, criticism, and ideas are welcome.</strong>
+                The project is actively evolving. The source code is available on GitHub.
+                If the capture architecture,
+                two-stage analysis, heuristic filtering, viewer, test results,
+                or potential scientific applications raise questions, please
+                ask.
+            </div>
+
+        </section>
+
+    </main>
+
+</body>
+</html>

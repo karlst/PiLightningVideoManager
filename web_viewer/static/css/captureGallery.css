@@ -21,6 +21,10 @@ body
 
 .pageHeader
 {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
     margin-bottom: 14px;
     padding: 14px 16px;
     border: 1px solid #777;
@@ -39,6 +43,31 @@ body
     margin: 4px 0 0 0;
     color: #555;
     font-size: 14px;
+}
+
+.pageNav
+{
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+}
+
+.pageNavButton
+{
+    display: inline-block;
+    padding: 7px 12px;
+    border: 1px solid #777;
+    border-radius: 4px;
+    background: white;
+    color: #111;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pageNavButton:hover
+{
+    background: #eee;
 }
 
 .galleryView
@@ -167,6 +196,33 @@ capture-viewer
     min-height: 620px;
 }
 
+.aboutPanel
+{
+    max-width: 980px;
+    padding: 22px 26px;
+    border: 1px solid #aaa;
+    background: white;
+}
+
+.aboutPanel h2
+{
+    margin: 0 0 18px 0;
+    font-size: 22px;
+}
+
+.aboutPanel h3
+{
+    margin: 24px 0 8px 0;
+    font-size: 17px;
+}
+
+.aboutPanel p
+{
+    margin: 0 0 12px 0;
+    max-width: 850px;
+    line-height: 1.55;
+}
+
 .hidden
 {
     display: none !important;
@@ -177,6 +233,17 @@ capture-viewer
     body
     {
         padding: 6px;
+    }
+
+    .pageHeader
+    {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .pageNav
+    {
+        padding-top: 0;
     }
 
     .galleryToolbar
@@ -194,5 +261,10 @@ capture-viewer
     {
         height: auto;
         min-height: 0;
+    }
+
+    .aboutPanel
+    {
+        padding: 16px;
     }
 }
