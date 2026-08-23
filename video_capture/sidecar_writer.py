@@ -76,7 +76,7 @@ class SidecarWriter:
         )
 
         result = {
-            "sidecar_version": 2
+            "sidecar_version": 4
         }
 
         if metadata is not None:

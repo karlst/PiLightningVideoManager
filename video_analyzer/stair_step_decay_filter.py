@@ -4,16 +4,20 @@ Reject Candidates with a stair-step brightness decay after the trigger.
 This false-positive family has a distinctive shape:
 
 1. A large positive brightness jump occurs at or very near the Candidate trigger.
-2. Brightness then falls through several meaningful negative steps rather
+2. Brightness then falls through several distinct downward events rather
    than returning in one transient drop.
-3. The negative steps may occur on consecutive frames, and together must
-   recover a substantial fraction of the initial positive jump.
-4. By the end of the short search window, brightness has returned close to the
+3. Consecutive qualifying negative frames belong to the same downward event.
+   Separate events together must recover a substantial fraction of the
+   initial positive jump.
+4. A substantial positive re-brightening during the decay window disqualifies
+   the pattern because a true staircase should remain predominantly one-way.
+5. By the end of the short search window, brightness has returned close to the
    pre-trigger baseline.
 
-A real lightning flash may have a strong positive delta followed by one large
-negative recovery delta. Requiring several separated negative steps makes this
-filter target the staircase artifact rather than an ordinary flash.
+A real lightning flash may recover over a few frames rather than one frame.
+When cumulative negative recovery within the configured short transient window
+reaches the configured fraction of the rise, the filter stops and accepts the
+event as a transient rather than continuing to accumulate later negative steps.
 
 The filter uses only the brightness arrays already stored in the sidecar; it
 does not inspect video frames.
@@ -43,6 +47,10 @@ class StairStepDecayFilter:
         minimum_negative_steps: int = 3,
         minimum_recovery_fraction: float = 0.70,
         baseline_return_tolerance: float = 2.0,
+        transient_recovery_frames: int = 4,
+        transient_recovery_fraction: float = 0.70,
+        step_separation_frames: int = 1,
+        rebrightening_fraction: float = 0.30,
     ) -> None:
         self._baseline_frames = int(
             baseline_frames
@@ -67,6 +75,19 @@ class StairStepDecayFilter:
         )
         self._baseline_return_tolerance = float(
             baseline_return_tolerance
+        )
+        self._transient_recovery_frames = int(
+            transient_recovery_frames
+        )
+        self._transient_recovery_fraction = float(
+            transient_recovery_fraction
+        )
+        self._step_separation_frames = max(
+            1,
+            int(step_separation_frames),
+        )
+        self._rebrightening_fraction = float(
+            rebrightening_fraction
         )
 
     # ## Reject the Candidate when a qualifying staircase decay is found.
@@ -186,6 +207,40 @@ class StairStepDecayFilter:
             ]
         )
 
+        # A real flash can recover over several frames. Measure cumulative
+        # negative recovery during a very short transient window immediately
+        # after the rise. Small negative deltas count here too; this test asks
+        # only whether the signal returned quickly, not whether each change is
+        # large enough to qualify as a stair-step.
+        transient_end = min(
+            frame_count,
+            rise_frame +
+            self._transient_recovery_frames +
+            1,
+        )
+
+        transient_recovery = 0.0
+
+        for frame_index in range(
+            rise_frame + 1,
+            transient_end,
+        ):
+            delta = float(
+                brightness_delta[
+                    frame_index
+                ]
+            )
+
+            if delta < 0.0:
+                transient_recovery += -delta
+
+        if (
+            transient_recovery >=
+            rise_delta *
+            self._transient_recovery_fraction
+        ):
+            return None
+
         decay_end = min(
             frame_count,
             rise_frame +
@@ -193,8 +248,13 @@ class StairStepDecayFilter:
             1,
         )
 
-        negative_steps = 0
-        total_negative_recovery = 0.0
+        # Stair-step decay should be predominantly one-way after the initial
+        # rise. A substantial later positive pulse is evidence of a multi-pulse
+        # transient, so stop stair-step detection immediately.
+        rebrightening_threshold = (
+            rise_delta *
+            self._rebrightening_fraction
+        )
 
         for frame_index in range(
             rise_frame + 1,
@@ -206,15 +266,54 @@ class StairStepDecayFilter:
                 ]
             )
 
-            # Consecutive negative steps are valid. Count each meaningful
-            # downward step and accumulate how much of the initial positive
-            # jump is recovered by the staircase as a whole.
+            if (
+                delta >=
+                rebrightening_threshold
+            ):
+                return None
+
+        negative_steps = 0
+        total_negative_recovery = 0.0
+
+        # Count distinct downward events, not individual negative frames.
+        # Consecutive qualifying negative deltas are one event. A new event
+        # begins only after the configured number of intervening non-step
+        # frames, which represents the plateau between staircase drops.
+        in_negative_event = False
+        non_step_frames = 0
+
+        for frame_index in range(
+            rise_frame + 1,
+            decay_end,
+        ):
+            delta = float(
+                brightness_delta[
+                    frame_index
+                ]
+            )
+
             if (
                 delta <=
                 -self._negative_step_threshold
             ):
-                negative_steps += 1
                 total_negative_recovery += -delta
+
+                if not in_negative_event:
+                    negative_steps += 1
+                    in_negative_event = True
+
+                non_step_frames = 0
+                continue
+
+            if in_negative_event:
+                non_step_frames += 1
+
+                if (
+                    non_step_frames >=
+                    self._step_separation_frames
+                ):
+                    in_negative_event = False
+                    non_step_frames = 0
 
         if (
             negative_steps <

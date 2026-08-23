@@ -17,7 +17,12 @@ def failed_candidate_result() -> SolutionResult:
 class SolutionFilter:
     def __init__(self, config: SolutionConfig = SOLUTION_CONFIG) -> None:
         self._frame_dropout_filter = FrameDropoutFilter()
-        self._stair_step_decay_filter = StairStepDecayFilter()
+        self._stair_step_decay_filter = StairStepDecayFilter(
+            transient_recovery_frames=config.stair_step_transient_recovery_frames,
+            transient_recovery_fraction=config.stair_step_transient_recovery_fraction,
+            step_separation_frames=config.stair_step_separation_frames,
+            rebrightening_fraction=config.stair_step_rebrightening_fraction,
+        )
         self._strong_transient_filter = StrongTransientFilter()
         self._bright_pixel_no_return_filter = BrightPixelNoReturnFilter()
         self._rejection_filters: list[SolutionRule] = [

@@ -49,6 +49,24 @@ class SolutionConfig:
     brightness_noise_min_sign_changes: int = 40
 
     # --------------------------------------------------------------
+    # Stair-step decay filtering
+    # --------------------------------------------------------------
+
+    # If cumulative negative recovery within this many frames after
+    # the rise reaches the configured fraction of the rise, treat the
+    # event as an ordinary fast transient rather than stair-step decay.
+    stair_step_transient_recovery_frames: int = 4
+    stair_step_transient_recovery_fraction: float = 0.70
+
+    # Consecutive qualifying negative deltas are one downward event.
+    # A new stair requires this many intervening non-step frames.
+    stair_step_separation_frames: int = 1
+
+    # A substantial positive pulse after the initial rise is evidence of
+    # a multi-pulse transient rather than a monotonic stair-step decay.
+    stair_step_rebrightening_fraction: float = 0.30
+
+    # --------------------------------------------------------------
     # Steady-state anomaly filtering
     # --------------------------------------------------------------
 

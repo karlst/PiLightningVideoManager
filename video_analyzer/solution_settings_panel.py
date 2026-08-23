@@ -1,16 +1,35 @@
 """Solution-filter tuning controls for the desktop Analyzer."""
 
 from __future__ import annotations
+
 from collections.abc import Callable
-from PySide6.QtWidgets import QDoubleSpinBox, QFormLayout, QGroupBox, QPushButton, QSpinBox, QVBoxLayout
+
+from PySide6.QtWidgets import (
+    QDoubleSpinBox,
+    QFormLayout,
+    QGroupBox,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+)
+
 from video_analyzer.solution_config import SolutionConfig
+
 
 class SolutionSettingsPanel(QGroupBox):
     """Allow experimental Solution-filter settings to be changed."""
 
-    def __init__(self, config: SolutionConfig, apply_callback: Callable[[SolutionConfig], None]) -> None:
+    def __init__(
+        self,
+        config: SolutionConfig,
+        apply_callback: Callable[[SolutionConfig], None],
+    ) -> None:
         super().__init__("Solution filter settings")
         self._apply_callback = apply_callback
+
+        # ----------------------------------------------------------
+        # Noise
+        # ----------------------------------------------------------
 
         self._noise_window_frames = QSpinBox()
         self._noise_window_frames.setRange(10, 500)
@@ -41,6 +60,76 @@ class SolutionSettingsPanel(QGroupBox):
         self._noise_min_sign_changes = QSpinBox()
         self._noise_min_sign_changes.setRange(1, 500)
         self._noise_min_sign_changes.setValue(config.brightness_noise_min_sign_changes)
+
+        noise_group = QGroupBox("Noise")
+        noise_form = QFormLayout(noise_group)
+        noise_form.setHorizontalSpacing(10)
+        noise_form.setVerticalSpacing(4)
+        noise_form.addRow("Window frames:", self._noise_window_frames)
+        noise_form.addRow("Trigger exclusion:", self._noise_trigger_exclusion_frames)
+        noise_form.addRow("Minimum |delta|:", self._noise_min_delta_magnitude)
+        noise_form.addRow("Max-delta fraction:", self._noise_max_delta_fraction)
+        noise_form.addRow("Minimum samples:", self._noise_min_meaningful_samples)
+        noise_form.addRow("Minimum sign changes:", self._noise_min_sign_changes)
+
+        # ----------------------------------------------------------
+        # Stair-step
+        # ----------------------------------------------------------
+
+        self._stair_step_transient_recovery_frames = QSpinBox()
+        self._stair_step_transient_recovery_frames.setRange(1, 20)
+        self._stair_step_transient_recovery_frames.setValue(
+            config.stair_step_transient_recovery_frames
+        )
+
+        self._stair_step_transient_recovery_fraction = QDoubleSpinBox()
+        self._stair_step_transient_recovery_fraction.setRange(0.0, 1.0)
+        self._stair_step_transient_recovery_fraction.setDecimals(3)
+        self._stair_step_transient_recovery_fraction.setSingleStep(0.05)
+        self._stair_step_transient_recovery_fraction.setValue(
+            config.stair_step_transient_recovery_fraction
+        )
+        self._stair_step_transient_recovery_fraction.setKeyboardTracking(False)
+
+        self._stair_step_separation_frames = QSpinBox()
+        self._stair_step_separation_frames.setRange(1, 20)
+        self._stair_step_separation_frames.setValue(
+            config.stair_step_separation_frames
+        )
+
+        self._stair_step_rebrightening_fraction = QDoubleSpinBox()
+        self._stair_step_rebrightening_fraction.setRange(0.0, 1.0)
+        self._stair_step_rebrightening_fraction.setDecimals(3)
+        self._stair_step_rebrightening_fraction.setSingleStep(0.05)
+        self._stair_step_rebrightening_fraction.setValue(
+            config.stair_step_rebrightening_fraction
+        )
+        self._stair_step_rebrightening_fraction.setKeyboardTracking(False)
+
+        stair_step_group = QGroupBox("Stair-step")
+        stair_step_form = QFormLayout(stair_step_group)
+        stair_step_form.setHorizontalSpacing(10)
+        stair_step_form.setVerticalSpacing(4)
+        stair_step_form.addRow(
+            "Transient recovery frames:",
+            self._stair_step_transient_recovery_frames,
+        )
+        stair_step_form.addRow(
+            "Transient recovery fraction:",
+            self._stair_step_transient_recovery_fraction,
+        )
+        stair_step_form.addRow(
+            "Step separation frames:",
+            self._stair_step_separation_frames,
+        )
+        stair_step_form.addRow(
+            "Re-brightening fraction:",
+            self._stair_step_rebrightening_fraction,
+        )
+
+        # ----------------------------------------------------------
+        # SSA (Steady State)
+        # ----------------------------------------------------------
 
         self._steady_state_baseline_frames = QSpinBox()
         self._steady_state_baseline_frames.setRange(1, 200)
@@ -75,34 +164,26 @@ class SolutionSettingsPanel(QGroupBox):
         self._steady_state_search_frames.setRange(1, 1000)
         self._steady_state_search_frames.setValue(config.steady_state_search_frames)
 
-        form_layout = QFormLayout()
-        form_layout.setContentsMargins(0, 0, 0, 0)
-        form_layout.setHorizontalSpacing(10)
-        form_layout.setVerticalSpacing(8)
-
-        for label, widget in [
-            ("Noise window frames:", self._noise_window_frames),
-            ("Noise trigger exclusion:", self._noise_trigger_exclusion_frames),
-            ("Noise minimum |delta|:", self._noise_min_delta_magnitude),
-            ("Noise max-delta fraction:", self._noise_max_delta_fraction),
-            ("Noise minimum samples:", self._noise_min_meaningful_samples),
-            ("Noise minimum sign changes:", self._noise_min_sign_changes),
-            ("SSA baseline frames:", self._steady_state_baseline_frames),
-            ("SSA baseline return tolerance:", self._steady_state_baseline_tolerance),
-            ("SSA rise above baseline:", self._steady_state_rise_threshold),
-            ("SSA steady neighborhood:", self._steady_state_neighborhood),
-            ("SSA minimum steady frames:", self._steady_state_min_frames),
-            ("SSA post-trigger search frames:", self._steady_state_search_frames),
-        ]:
-            form_layout.addRow(label, widget)
+        steady_state_group = QGroupBox("SSA (Steady State)")
+        steady_state_form = QFormLayout(steady_state_group)
+        steady_state_form.setHorizontalSpacing(10)
+        steady_state_form.setVerticalSpacing(4)
+        steady_state_form.addRow("Baseline frames:", self._steady_state_baseline_frames)
+        steady_state_form.addRow("Return tolerance:", self._steady_state_baseline_tolerance)
+        steady_state_form.addRow("Rise threshold:", self._steady_state_rise_threshold)
+        steady_state_form.addRow("Steady tolerance:", self._steady_state_neighborhood)
+        steady_state_form.addRow("Minimum steady frames:", self._steady_state_min_frames)
+        steady_state_form.addRow("Search frames:", self._steady_state_search_frames)
 
         self._apply_button = QPushButton("Apply solution settings")
         self._apply_button.clicked.connect(self._apply)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(10)
-        layout.addLayout(form_layout)
+        layout.setSpacing(8)
+        layout.addWidget(noise_group)
+        layout.addWidget(stair_step_group)
+        layout.addWidget(steady_state_group)
         layout.addWidget(self._apply_button)
 
     def set_noise_max_delta_fraction(
@@ -123,6 +204,18 @@ class SolutionSettingsPanel(QGroupBox):
             brightness_noise_max_delta_fraction=self._noise_max_delta_fraction.value(),
             brightness_noise_min_meaningful_samples=self._noise_min_meaningful_samples.value(),
             brightness_noise_min_sign_changes=self._noise_min_sign_changes.value(),
+            stair_step_transient_recovery_frames=(
+                self._stair_step_transient_recovery_frames.value()
+            ),
+            stair_step_transient_recovery_fraction=(
+                self._stair_step_transient_recovery_fraction.value()
+            ),
+            stair_step_separation_frames=(
+                self._stair_step_separation_frames.value()
+            ),
+            stair_step_rebrightening_fraction=(
+                self._stair_step_rebrightening_fraction.value()
+            ),
             steady_state_baseline_frames=self._steady_state_baseline_frames.value(),
             steady_state_baseline_tolerance=self._steady_state_baseline_tolerance.value(),
             steady_state_rise_threshold=self._steady_state_rise_threshold.value(),

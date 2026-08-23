@@ -14,7 +14,7 @@ For each MP4:
         Reconstruct a current sidecar from the encoded MP4 as far as possible.
 
     * Older/incomplete sidecar:
-        Preserve the original JSON as OldTrigger_....json, retain historical
+        Preserve the original JSON under "Old Triggers/OldTrigger_....json", retain historical
         metadata that cannot be recovered from the MP4, reconstruct current
         analysis, and write a current sidecar under the normal filename.
 
@@ -70,16 +70,28 @@ from common.candidate_finder import CandidateFinder
 from video_analyzer.capture_data import analyze_clip
 from video_analyzer.capture_data import build_bright_pixel_fraction
 from video_analyzer.capture_data import read_frame_info
-from video_analyzer.solution_config import SOLUTION_CONFIG
+from video_analyzer.solution_config import solution_config_for_sensitivity
 from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 
 
-CURRENT_SIDECAR_VERSION = 2
+CURRENT_SIDECAR_VERSION = 4
 TOOL_NAME = "RebuildSidecars"
 DEFAULT_SITE_NAME = "Flagstaff"
 DEFAULT_MINIMUM_RANGE_MILES = 1.0
 DEFAULT_MAXIMUM_RANGE_MILES = 25.0
+
+# One-time archive migration defaults. The historical sidecars currently
+# being migrated are all from the Flagstaff ELP installation.
+MIGRATION_SITE_NAME = "Flagstaff"
+MIGRATION_LATITUDE_DEGREES = 32.2225600
+MIGRATION_LONGITUDE_DEGREES = -111.5919100
+MIGRATION_BEARING_DEGREES = 95.0
+MIGRATION_HFOV_DEGREES = 28.0
+MIGRATION_VFOV_DEGREES = 20.0
+MIGRATION_CAMERA_NAME = "ELP USB Camera"
+MIGRATION_CAMERA_TYPE = "ELP USB High Speed"
+MIGRATION_INPUT_FORMAT = "mjpeg"
 
 SENSITIVITY_NAMES = (
     "high",
@@ -556,7 +568,9 @@ def build_sensitivity_results(
         else:
             solution_result = (
                 SolutionFilter(
-                    SOLUTION_CONFIG
+                    solution_config_for_sensitivity(
+                        sensitivity
+                    )
                 ).evaluate(
                     solution_brightness,
                     solution_brightness_delta,
@@ -777,12 +791,24 @@ def is_current_complete_sidecar(
         )
     )
 
-    if (
-        version is None or
-        version <
-        CURRENT_SIDECAR_VERSION
-    ):
+    if version != CURRENT_SIDECAR_VERSION:
         return False
+
+    # A clean v4 sidecar must not carry the old analysis-era top-level schema.
+    # This also detects malformed files produced by earlier migration attempts
+    # attempt, which had canonical v3 fields appended to an analysis_version file.
+    if "analysis_version" in sidecar:
+        return False
+
+    for required_section in (
+        "application",
+        "camera",
+        "capture",
+        "candidate",
+        "frame_records",
+    ):
+        if required_section not in sidecar:
+            return False
 
     results = sidecar.get(
         "sensitivity_results"
@@ -818,7 +844,7 @@ def is_current_complete_sidecar(
     return True
 
 
-# ## Create the searchable OldTrigger backup name for a migrated sidecar.
+# ## Create the OldTrigger backup path in the sibling "Old Triggers" folder.
 def backup_sidecar_path(
     sidecar_path: Path,
 ) -> Path:
@@ -841,9 +867,13 @@ def backup_sidecar_path(
             stem
         )
 
-    return sidecar_path.with_name(
-        backup_stem +
-        sidecar_path.suffix
+    return (
+        sidecar_path.parent /
+        "Old Triggers" /
+        (
+            backup_stem +
+            sidecar_path.suffix
+        )
     )
 
 
@@ -1129,7 +1159,7 @@ def build_search_bounding_box(
     }
 
 
-# ## Build v2 sidecar data from the MP4 plus any preserved historical sidecar.
+# ## Build v4 sidecar data from the MP4 plus any preserved historical sidecar.
 def build_current_sidecar(
     video_path: Path,
     old_sidecar: dict[str, Any] | None,
@@ -1259,92 +1289,43 @@ def build_current_sidecar(
             ]
         )
 
-    site_name = choose_metadata_value(
-        arguments.site_name,
-        old_camera.get(
-            "site_name",
-            old_sidecar.get(
-                "site_name"
-            )
-            if old_sidecar is not None
-            else None
-        ),
-        DEFAULT_SITE_NAME,
+    # One-time archive migration: use the known Flagstaff site geometry even when
+    # the legacy sidecar contains missing or zero values. Explicit CLI values
+    # still override these temporary migration defaults.
+    site_name = (
+        arguments.site_name
+        if arguments.site_name is not None
+        else MIGRATION_SITE_NAME
     )
 
-    latitude = optional_float(
-        choose_metadata_value(
-            arguments.latitude,
-            old_camera.get(
-                "latitude_degrees",
-                old_sidecar.get(
-                    "camera_latitude_degrees"
-                )
-                if old_sidecar is not None
-                else None
-            ),
-            None,
-        )
+    latitude = (
+        arguments.latitude
+        if arguments.latitude is not None
+        else MIGRATION_LATITUDE_DEGREES
     )
 
-    longitude = optional_float(
-        choose_metadata_value(
-            arguments.longitude,
-            old_camera.get(
-                "longitude_degrees",
-                old_sidecar.get(
-                    "camera_longitude_degrees"
-                )
-                if old_sidecar is not None
-                else None
-            ),
-            None,
-        )
+    longitude = (
+        arguments.longitude
+        if arguments.longitude is not None
+        else MIGRATION_LONGITUDE_DEGREES
     )
 
-    bearing = optional_float(
-        choose_metadata_value(
-            arguments.bearing,
-            old_camera.get(
-                "bearing_degrees",
-                old_sidecar.get(
-                    "camera_bearing_degrees"
-                )
-                if old_sidecar is not None
-                else None
-            ),
-            None,
-        )
+    bearing = (
+        arguments.bearing
+        if arguments.bearing is not None
+        else MIGRATION_BEARING_DEGREES
     )
 
-    hfov = optional_float(
-        choose_metadata_value(
-            arguments.hfov,
-            old_camera.get(
-                "hfov_degrees",
-                old_sidecar.get(
-                    "camera_hfov_degrees"
-                )
-                if old_sidecar is not None
-                else None
-            ),
-            None,
-        )
+    hfov = (
+        arguments.hfov
+        if arguments.hfov is not None
+        else MIGRATION_HFOV_DEGREES
     )
 
-    vfov = optional_float(
-        choose_metadata_value(
-            arguments.vfov,
-            old_camera.get(
-                "vfov_degrees",
-                old_sidecar.get(
-                    "camera_vfov_degrees"
-                )
-                if old_sidecar is not None
-                else None
-            ),
-            None,
-        )
+    vfov = (
+        arguments.vfov
+        if arguments.vfov is not None
+        else MIGRATION_VFOV_DEGREES
     )
 
     camera = dict(
@@ -1355,21 +1336,17 @@ def build_current_sidecar(
         "site_name"
     ] = site_name
 
-    camera.setdefault(
-        "name",
-        ""
-    )
+    camera[
+        "name"
+    ] = MIGRATION_CAMERA_NAME
 
-    camera.setdefault(
-        "type",
-        ""
-    )
+    camera[
+        "type"
+    ] = MIGRATION_CAMERA_TYPE
 
-    camera.setdefault(
-        "input_format",
-        ""
-    )
-
+    camera[
+        "input_format"
+    ] = MIGRATION_INPUT_FORMAT
     camera[
         "frame_width_pixels"
     ] = (
@@ -1423,76 +1400,25 @@ def build_current_sidecar(
         "vfov_degrees"
     ] = vfov
 
-    search_bounding_box = None
-
-    old_bounds = None
-
-    if old_sidecar is not None:
-        if isinstance(
-            old_sidecar.get(
-                "search_bounding_box"
-            ),
-            dict
-        ):
-            old_bounds = old_sidecar.get(
-                "search_bounding_box"
-            )
-        elif isinstance(
-            old_camera.get(
-                "search_bounding_box"
-            ),
-            dict
-        ):
-            old_bounds = old_camera.get(
-                "search_bounding_box"
-            )
-
-    geometry_overridden = any(
-        value is not None
-        for value in (
-            arguments.latitude,
-            arguments.longitude,
-            arguments.bearing,
-            arguments.hfov,
-        )
-    )
-
-    if (
-        old_bounds is not None and
-        not geometry_overridden and
-        arguments.minimum_range is None and
-        arguments.maximum_range is None
-    ):
-        search_bounding_box = dict(
-            old_bounds
-        )
-    elif all(
-        value is not None
-        for value in (
+    # Always regenerate the current Search Bounding Box from corrected geometry.
+    search_bounding_box = (
+        build_search_bounding_box(
             latitude,
             longitude,
             bearing,
             hfov,
+            (
+                arguments.minimum_range
+                if arguments.minimum_range is not None
+                else DEFAULT_MINIMUM_RANGE_MILES
+            ),
+            (
+                arguments.maximum_range
+                if arguments.maximum_range is not None
+                else DEFAULT_MAXIMUM_RANGE_MILES
+            ),
         )
-    ):
-        search_bounding_box = (
-            build_search_bounding_box(
-                latitude,
-                longitude,
-                bearing,
-                hfov,
-                (
-                    arguments.minimum_range
-                    if arguments.minimum_range is not None
-                    else DEFAULT_MINIMUM_RANGE_MILES
-                ),
-                (
-                    arguments.maximum_range
-                    if arguments.maximum_range is not None
-                    else DEFAULT_MAXIMUM_RANGE_MILES
-                ),
-            )
-        )
+    )
 
     camera[
         "search_bounding_box"
@@ -1658,53 +1584,39 @@ def build_current_sidecar(
                 default,
             )
 
+    # Build a clean canonical v4 sidecar. Legacy analysis-era top-level fields
+    # are migration inputs only and are deliberately not copied into v3.
     result: dict[
         str,
         Any
-    ] = {}
+    ] = {
+        "sidecar_version":
+            CURRENT_SIDECAR_VERSION,
 
-    # Preserve unknown top-level fields from the historical sidecar.
-    if old_sidecar is not None:
-        result.update(
-            old_sidecar
-        )
+        "application":
+            application,
 
-    result[
-        "sidecar_version"
-    ] = CURRENT_SIDECAR_VERSION
+        "camera":
+            camera,
 
-    result[
-        "application"
-    ] = application
+        "search_bounding_box":
+            search_bounding_box,
 
-    result[
-        "camera"
-    ] = camera
+        "capture":
+            capture,
 
-    result[
-        "search_bounding_box"
-    ] = search_bounding_box
+        "candidate":
+            candidate,
 
-    result[
-        "capture"
-    ] = capture
+        "sensitivity_results":
+            sensitivity_results,
 
-    result[
-        "candidate"
-    ] = candidate
+        "frame_records":
+            frame_records,
 
-    result[
-        "sensitivity_results"
-    ] = sensitivity_results
-
-    result[
-        "frame_records"
-    ] = frame_records
-
-    # Legacy helper retained because some existing consumers use it.
-    result[
-        "frame_count"
-    ] = frame_count
+        "frame_count":
+            frame_count,
+    }
 
     if old_sidecar is None:
         result[
@@ -1834,7 +1746,7 @@ def write_new_sidecar(
     )
 
 
-# ## Safely migrate one old sidecar, preserving the original as OldTrigger....
+# ## Safely migrate one old sidecar, preserving it under "Old Triggers".
 def install_migrated_sidecar(
     sidecar_path: Path,
     backup_path: Path,
@@ -1864,6 +1776,11 @@ def install_migrated_sidecar(
         temporary_path
     )
 
+    backup_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     sidecar_path.replace(
         backup_path
     )
@@ -1883,6 +1800,37 @@ def install_migrated_sidecar(
             )
 
         raise
+
+
+# ## Replace a malformed current-name sidecar while preserving its existing backup.
+def install_repaired_sidecar(
+    sidecar_path: Path,
+    sidecar: dict[str, Any],
+) -> None:
+    temporary_path = (
+        sidecar_path.with_suffix(
+            ".json.tmp"
+        )
+    )
+
+    temporary_path.write_text(
+        json.dumps(
+            sidecar,
+            indent=4,
+        ) +
+        "\n",
+        encoding="utf-8",
+    )
+
+    read_sidecar(
+        temporary_path
+    )
+
+    # The original historical sidecar is already safely preserved as
+    # OldTrigger_....json. Replace only the malformed current-name sidecar.
+    temporary_path.replace(
+        sidecar_path
+    )
 
 
 # ## Determine and execute the action for one MP4.
@@ -1933,22 +1881,41 @@ def process_file(
             sidecar_path
         )
 
-        if backup_path.exists():
-            print(
-                f"FAIL    {video_path} "
-                f"(backup already exists: {backup_path.name})"
+        legacy_backup_path = (
+            sidecar_path.parent /
+            backup_path.name
+        )
+
+        if (
+            not backup_path.exists() and
+            legacy_backup_path.exists()
+        ):
+            backup_path.parent.mkdir(
+                parents=True,
+                exist_ok=True,
             )
 
-            return (
-                "failed",
-                False,
+            legacy_backup_path.replace(
+                backup_path
             )
+
+        repair_from_backup = (
+            backup_path.exists()
+        )
+
+        source_sidecar = (
+            read_sidecar(
+                backup_path
+            )
+            if repair_from_backup
+            else old_sidecar
+        )
 
         old_version = optional_int(
-            old_sidecar.get(
+            source_sidecar.get(
                 "sidecar_version"
             )
-            if old_sidecar is not None
+            if source_sidecar is not None
             else None
         )
 
@@ -1961,29 +1928,45 @@ def process_file(
         )
 
         if arguments.dry_run:
-            print(
-                f"WOULD MIGRATE v{version_text} -> "
-                f"v{CURRENT_SIDECAR_VERSION}  {video_path}"
-            )
-            print(
-                f"              backup -> {backup_path.name}"
-            )
+            if repair_from_backup:
+                print(
+                    f"WOULD REPAIR -> v{CURRENT_SIDECAR_VERSION}  {video_path}"
+                )
+                print(
+                    f"              source backup: {backup_path.name}"
+                )
+            else:
+                print(
+                    f"WOULD MIGRATE v{version_text} -> "
+                    f"v{CURRENT_SIDECAR_VERSION}  {video_path}"
+                )
+                print(
+                    f"              backup -> {backup_path.name}"
+                )
 
             return (
                 "migrated",
                 True,
             )
 
-        print(
-            f"MIGRATE v{version_text} -> "
-            f"v{CURRENT_SIDECAR_VERSION}  {video_path}"
-        )
+        if repair_from_backup:
+            print(
+                f"REPAIR -> v{CURRENT_SIDECAR_VERSION}  {video_path}"
+            )
+            print(
+                f"        source backup: {backup_path.name}"
+            )
+        else:
+            print(
+                f"MIGRATE v{version_text} -> "
+                f"v{CURRENT_SIDECAR_VERSION}  {video_path}"
+            )
 
         try:
             built_sidecar = (
                 build_current_sidecar(
                     video_path,
-                    old_sidecar,
+                    source_sidecar,
                     arguments,
                 )
             )
@@ -1998,15 +1981,25 @@ def process_file(
                 built_sidecar
             )
 
-            install_migrated_sidecar(
-                sidecar_path,
-                backup_path,
-                built_sidecar,
-            )
+            if repair_from_backup:
+                install_repaired_sidecar(
+                    sidecar_path,
+                    built_sidecar,
+                )
 
-            print(
-                f"        backup -> {backup_path.name}"
-            )
+                print(
+                    f"        repaired; backup preserved -> {backup_path.name}"
+                )
+            else:
+                install_migrated_sidecar(
+                    sidecar_path,
+                    backup_path,
+                    built_sidecar,
+                )
+
+                print(
+                    f"        backup -> {backup_path.name}"
+                )
 
             return (
                 "migrated",
