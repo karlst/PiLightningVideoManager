@@ -2,13 +2,13 @@
     "version": 1,
     "captures": [
         {
-            "capture_time_utc": "2026-08-21T20:37:59.619706Z",
+            "capture_time_utc": "2026-08-11T21:25:26.019904Z",
             "site_name": "Flagstaff",
-            "sensitivity": "medium",
-            "solution": "TRUE_FLASH",
-            "video_name": "trigger_20260821T203800Z.mp4",
-            "video_url": "captures/trigger_20260821T203800Z.mp4",
-            "sidecar_url": "captures/trigger_20260821T203800Z.json"
+            "sensitivity": "",
+            "solution": "",
+            "video_name": "trueFlashDaylight04.mp4",
+            "video_url": "captures/trueFlashDaylight04.mp4",
+            "sidecar_url": "captures/trueFlashDaylight04.json"
         },
         {
             "capture_time_utc": "2026-08-10T12:20:35.383174Z",

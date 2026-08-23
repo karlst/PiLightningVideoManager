@@ -741,14 +741,11 @@ def main() -> int:
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=(
-            Path(__file__).with_name(
-                "solution_filter_smoke_tests.json"
-            )
-        ),
+        default=None,
         help=(
             "Ground-truth JSON manifest. "
-            "Default: beside this script."
+            "Default: solution_filter_smoke_tests.json "
+            "in the smoke-test folder."
         ),
     )
 
@@ -778,10 +775,19 @@ def main() -> int:
 
     arguments = parser.parse_args()
 
+    manifest_path = (
+        arguments.manifest
+        if arguments.manifest is not None
+        else (
+            arguments.folder /
+            "solution_filter_smoke_tests.json"
+        )
+    )
+
     try:
         return run_tests(
             arguments.folder,
-            arguments.manifest,
+            manifest_path,
             arguments.sensitivity,
             arguments.verbosity,
         )

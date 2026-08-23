@@ -1,0 +1,4799 @@
+{
+    "sidecar_version": 4,
+    "application": {
+        "name": "Pi Camera Capture",
+        "version": "0.68",
+        "start_utc": "2026-08-08T19:44:52.859Z"
+    },
+    "camera": {
+        "name": "ELP USB Camera",
+        "type": "ELP USB High Speed",
+        "input_format": "mjpeg",
+        "frame_width_pixels": 640,
+        "frame_height_pixels": 360,
+        "frame_rate_fps": 260.0,
+        "latitude_degrees": 32.22256,
+        "longitude_degrees": -111.59191,
+        "bearing_degrees": 95.0,
+        "hfov_degrees": 28.0,
+        "vfov_degrees": 20.0,
+        "site_name": "Flagstaff",
+        "search_bounding_box": {
+            "minimum_range_miles": 1.0,
+            "maximum_range_miles": 25.0,
+            "min_latitude_degrees": 32.1041178,
+            "max_latitude_degrees": 32.2784592,
+            "min_longitude_degrees": -111.5757348,
+            "max_longitude_degrees": -111.16421
+        }
+    },
+    "search_bounding_box": {
+        "minimum_range_miles": 1.0,
+        "maximum_range_miles": 25.0,
+        "min_latitude_degrees": 32.1041178,
+        "max_latitude_degrees": 32.2784592,
+        "min_longitude_degrees": -111.5757348,
+        "max_longitude_degrees": -111.16421
+    },
+    "capture": {
+        "saved_utc": "2026-08-09T21:15:10.590Z",
+        "start_utc": "2026-08-09T21:15:07.517669Z",
+        "end_utc": "2026-08-09T21:15:10.589796Z",
+        "duration_ms": 3072.126,
+        "frame_count": 520
+    },
+    "candidate": {
+        "trigger_type": "bright_pixel",
+        "trigger_display": "Bright Pixels",
+        "trigger_reason": "Bright pixel trigger: 0.001311 >= 0.001000 at pixel delta >= 10.0",
+        "trigger_utc": "2026-08-09T21:15:09.585933Z",
+        "trigger_sequence_number": 22242645,
+        "trigger_frame_index": 255,
+        "trigger_offset_ms": 2068.264,
+        "config": {
+            "candidate_brightness_threshold": 999.0,
+            "candidate_brightness_delta_threshold": 4.0,
+            "candidate_bright_pixel_delta_threshold": 10.0,
+            "candidate_bright_pixel_fraction_threshold": 0.001
+        }
+    },
+    "sensitivity_results": {
+        "high": {
+            "candidate_config": {
+                "sensitivity": "high",
+                "candidate_brightness_threshold": 999.0,
+                "candidate_brightness_delta_threshold": 2.0,
+                "candidate_bright_pixel_delta_threshold": 10.0,
+                "candidate_bright_pixel_fraction_threshold": 0.002
+            },
+            "candidate_found": true,
+            "trigger_frame_index": 259,
+            "trigger_frame_number": 260,
+            "trigger_offset_ms": 996.154,
+            "trigger_reason": "Bright pixel trigger: 0.002266 >= 0.002000 at pixel delta >= 10.0",
+            "solution_category": "TRUE_FLASH",
+            "solution_reason": "All solution filters passed"
+        },
+        "medium": {
+            "candidate_config": {
+                "sensitivity": "medium",
+                "candidate_brightness_threshold": 999.0,
+                "candidate_brightness_delta_threshold": 2.5,
+                "candidate_bright_pixel_delta_threshold": 10.0,
+                "candidate_bright_pixel_fraction_threshold": 0.01
+            },
+            "candidate_found": false,
+            "trigger_frame_index": null,
+            "trigger_frame_number": null,
+            "trigger_offset_ms": null,
+            "trigger_reason": "",
+            "solution_category": "FAILED_CANDIDATE",
+            "solution_reason": "CandidateFinder found no trigger at Medium sensitivity; SolutionFilter was not run."
+        },
+        "low": {
+            "candidate_config": {
+                "sensitivity": "low",
+                "candidate_brightness_threshold": 999.0,
+                "candidate_brightness_delta_threshold": 4.5,
+                "candidate_bright_pixel_delta_threshold": 10.0,
+                "candidate_bright_pixel_fraction_threshold": 0.1
+            },
+            "candidate_found": false,
+            "trigger_frame_index": null,
+            "trigger_frame_number": null,
+            "trigger_offset_ms": null,
+            "trigger_reason": "",
+            "solution_category": "FAILED_CANDIDATE",
+            "solution_reason": "CandidateFinder found no trigger at Low sensitivity; SolutionFilter was not run."
+        }
+    },
+    "frame_records": [
+        {
+            "frame_index": 0,
+            "sequence_number": 22242390,
+            "timestamp_utc": "2026-08-09T21:15:07.517669Z",
+            "offset_ms": 0.0,
+            "mean_brightness": 160.562,
+            "brightness_delta_adjacent": 0.0,
+            "frame_number": 1
+        },
+        {
+            "frame_index": 1,
+            "sequence_number": 22242391,
+            "timestamp_utc": "2026-08-09T21:15:07.521663Z",
+            "offset_ms": 3.993,
+            "mean_brightness": 160.584,
+            "brightness_delta_adjacent": 0.022,
+            "frame_number": 2
+        },
+        {
+            "frame_index": 2,
+            "sequence_number": 22242392,
+            "timestamp_utc": "2026-08-09T21:15:07.525653Z",
+            "offset_ms": 7.983,
+            "mean_brightness": 160.531,
+            "brightness_delta_adjacent": -0.053,
+            "frame_number": 3
+        },
+        {
+            "frame_index": 3,
+            "sequence_number": 22242393,
+            "timestamp_utc": "2026-08-09T21:15:07.529663Z",
+            "offset_ms": 11.993,
+            "mean_brightness": 160.606,
+            "brightness_delta_adjacent": 0.075,
+            "frame_number": 4
+        },
+        {
+            "frame_index": 4,
+            "sequence_number": 22242394,
+            "timestamp_utc": "2026-08-09T21:15:07.533666Z",
+            "offset_ms": 15.997,
+            "mean_brightness": 160.5,
+            "brightness_delta_adjacent": -0.107,
+            "frame_number": 5
+        },
+        {
+            "frame_index": 5,
+            "sequence_number": 22242395,
+            "timestamp_utc": "2026-08-09T21:15:07.537654Z",
+            "offset_ms": 19.985,
+            "mean_brightness": 160.616,
+            "brightness_delta_adjacent": 0.117,
+            "frame_number": 6
+        },
+        {
+            "frame_index": 6,
+            "sequence_number": 22242396,
+            "timestamp_utc": "2026-08-09T21:15:07.541655Z",
+            "offset_ms": 23.986,
+            "mean_brightness": 160.49,
+            "brightness_delta_adjacent": -0.127,
+            "frame_number": 7
+        },
+        {
+            "frame_index": 7,
+            "sequence_number": 22242397,
+            "timestamp_utc": "2026-08-09T21:15:07.545664Z",
+            "offset_ms": 27.994,
+            "mean_brightness": 160.618,
+            "brightness_delta_adjacent": 0.128,
+            "frame_number": 8
+        },
+        {
+            "frame_index": 8,
+            "sequence_number": 22242398,
+            "timestamp_utc": "2026-08-09T21:15:07.549656Z",
+            "offset_ms": 31.986,
+            "mean_brightness": 160.533,
+            "brightness_delta_adjacent": -0.086,
+            "frame_number": 9
+        },
+        {
+            "frame_index": 9,
+            "sequence_number": 22242399,
+            "timestamp_utc": "2026-08-09T21:15:07.553662Z",
+            "offset_ms": 35.992,
+            "mean_brightness": 160.613,
+            "brightness_delta_adjacent": 0.08,
+            "frame_number": 10
+        },
+        {
+            "frame_index": 10,
+            "sequence_number": 22242400,
+            "timestamp_utc": "2026-08-09T21:15:07.557660Z",
+            "offset_ms": 39.99,
+            "mean_brightness": 160.549,
+            "brightness_delta_adjacent": -0.064,
+            "frame_number": 11
+        },
+        {
+            "frame_index": 11,
+            "sequence_number": 22242401,
+            "timestamp_utc": "2026-08-09T21:15:07.561663Z",
+            "offset_ms": 43.993,
+            "mean_brightness": 160.565,
+            "brightness_delta_adjacent": 0.017,
+            "frame_number": 12
+        },
+        {
+            "frame_index": 12,
+            "sequence_number": 22242402,
+            "timestamp_utc": "2026-08-09T21:15:07.565698Z",
+            "offset_ms": 48.028,
+            "mean_brightness": 160.579,
+            "brightness_delta_adjacent": 0.014,
+            "frame_number": 13
+        },
+        {
+            "frame_index": 13,
+            "sequence_number": 22242403,
+            "timestamp_utc": "2026-08-09T21:15:07.569661Z",
+            "offset_ms": 51.991,
+            "mean_brightness": 160.563,
+            "brightness_delta_adjacent": -0.016,
+            "frame_number": 14
+        },
+        {
+            "frame_index": 14,
+            "sequence_number": 22242404,
+            "timestamp_utc": "2026-08-09T21:15:07.573680Z",
+            "offset_ms": 56.01,
+            "mean_brightness": 160.617,
+            "brightness_delta_adjacent": 0.054,
+            "frame_number": 15
+        },
+        {
+            "frame_index": 15,
+            "sequence_number": 22242405,
+            "timestamp_utc": "2026-08-09T21:15:07.577680Z",
+            "offset_ms": 60.01,
+            "mean_brightness": 160.541,
+            "brightness_delta_adjacent": -0.077,
+            "frame_number": 16
+        },
+        {
+            "frame_index": 16,
+            "sequence_number": 22242406,
+            "timestamp_utc": "2026-08-09T21:15:07.581643Z",
+            "offset_ms": 63.973,
+            "mean_brightness": 160.64,
+            "brightness_delta_adjacent": 0.1,
+            "frame_number": 17
+        },
+        {
+            "frame_index": 17,
+            "sequence_number": 22242407,
+            "timestamp_utc": "2026-08-09T21:15:07.583646Z",
+            "offset_ms": 65.977,
+            "mean_brightness": 160.501,
+            "brightness_delta_adjacent": -0.139,
+            "frame_number": 18
+        },
+        {
+            "frame_index": 18,
+            "sequence_number": 22242408,
+            "timestamp_utc": "2026-08-09T21:15:07.585707Z",
+            "offset_ms": 68.038,
+            "mean_brightness": 160.618,
+            "brightness_delta_adjacent": 0.116,
+            "frame_number": 19
+        },
+        {
+            "frame_index": 19,
+            "sequence_number": 22242409,
+            "timestamp_utc": "2026-08-09T21:15:07.589647Z",
+            "offset_ms": 71.977,
+            "mean_brightness": 160.509,
+            "brightness_delta_adjacent": -0.109,
+            "frame_number": 20
+        },
+        {
+            "frame_index": 20,
+            "sequence_number": 22242410,
+            "timestamp_utc": "2026-08-09T21:15:07.593672Z",
+            "offset_ms": 76.003,
+            "mean_brightness": 160.619,
+            "brightness_delta_adjacent": 0.11,
+            "frame_number": 21
+        },
+        {
+            "frame_index": 21,
+            "sequence_number": 22242411,
+            "timestamp_utc": "2026-08-09T21:15:07.597665Z",
+            "offset_ms": 79.995,
+            "mean_brightness": 160.546,
+            "brightness_delta_adjacent": -0.073,
+            "frame_number": 22
+        },
+        {
+            "frame_index": 22,
+            "sequence_number": 22242412,
+            "timestamp_utc": "2026-08-09T21:15:07.601687Z",
+            "offset_ms": 84.018,
+            "mean_brightness": 160.613,
+            "brightness_delta_adjacent": 0.067,
+            "frame_number": 23
+        },
+        {
+            "frame_index": 23,
+            "sequence_number": 22242413,
+            "timestamp_utc": "2026-08-09T21:15:07.605672Z",
+            "offset_ms": 88.003,
+            "mean_brightness": 160.575,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 24
+        },
+        {
+            "frame_index": 24,
+            "sequence_number": 22242414,
+            "timestamp_utc": "2026-08-09T21:15:07.609678Z",
+            "offset_ms": 92.008,
+            "mean_brightness": 160.587,
+            "brightness_delta_adjacent": 0.013,
+            "frame_number": 25
+        },
+        {
+            "frame_index": 25,
+            "sequence_number": 22242415,
+            "timestamp_utc": "2026-08-09T21:15:07.613673Z",
+            "offset_ms": 96.003,
+            "mean_brightness": 160.594,
+            "brightness_delta_adjacent": 0.006,
+            "frame_number": 26
+        },
+        {
+            "frame_index": 26,
+            "sequence_number": 22242416,
+            "timestamp_utc": "2026-08-09T21:15:07.617653Z",
+            "offset_ms": 99.984,
+            "mean_brightness": 160.565,
+            "brightness_delta_adjacent": -0.028,
+            "frame_number": 27
+        },
+        {
+            "frame_index": 27,
+            "sequence_number": 22242417,
+            "timestamp_utc": "2026-08-09T21:15:07.621659Z",
+            "offset_ms": 103.989,
+            "mean_brightness": 160.615,
+            "brightness_delta_adjacent": 0.05,
+            "frame_number": 28
+        },
+        {
+            "frame_index": 28,
+            "sequence_number": 22242418,
+            "timestamp_utc": "2026-08-09T21:15:07.625666Z",
+            "offset_ms": 107.996,
+            "mean_brightness": 160.537,
+            "brightness_delta_adjacent": -0.078,
+            "frame_number": 29
+        },
+        {
+            "frame_index": 29,
+            "sequence_number": 22242419,
+            "timestamp_utc": "2026-08-09T21:15:07.629673Z",
+            "offset_ms": 112.003,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": 0.111,
+            "frame_number": 30
+        },
+        {
+            "frame_index": 30,
+            "sequence_number": 22242420,
+            "timestamp_utc": "2026-08-09T21:15:07.633649Z",
+            "offset_ms": 115.979,
+            "mean_brightness": 160.517,
+            "brightness_delta_adjacent": -0.131,
+            "frame_number": 31
+        },
+        {
+            "frame_index": 31,
+            "sequence_number": 22242421,
+            "timestamp_utc": "2026-08-09T21:15:07.637667Z",
+            "offset_ms": 119.998,
+            "mean_brightness": 160.651,
+            "brightness_delta_adjacent": 0.135,
+            "frame_number": 32
+        },
+        {
+            "frame_index": 32,
+            "sequence_number": 22242422,
+            "timestamp_utc": "2026-08-09T21:15:07.641692Z",
+            "offset_ms": 124.023,
+            "mean_brightness": 160.537,
+            "brightness_delta_adjacent": -0.115,
+            "frame_number": 33
+        },
+        {
+            "frame_index": 33,
+            "sequence_number": 22242423,
+            "timestamp_utc": "2026-08-09T21:15:07.645661Z",
+            "offset_ms": 127.992,
+            "mean_brightness": 160.61,
+            "brightness_delta_adjacent": 0.074,
+            "frame_number": 34
+        },
+        {
+            "frame_index": 34,
+            "sequence_number": 22242424,
+            "timestamp_utc": "2026-08-09T21:15:07.649660Z",
+            "offset_ms": 131.99,
+            "mean_brightness": 160.563,
+            "brightness_delta_adjacent": -0.047,
+            "frame_number": 35
+        },
+        {
+            "frame_index": 35,
+            "sequence_number": 22242425,
+            "timestamp_utc": "2026-08-09T21:15:07.653663Z",
+            "offset_ms": 135.993,
+            "mean_brightness": 160.598,
+            "brightness_delta_adjacent": 0.035,
+            "frame_number": 36
+        },
+        {
+            "frame_index": 36,
+            "sequence_number": 22242426,
+            "timestamp_utc": "2026-08-09T21:15:07.657667Z",
+            "offset_ms": 139.997,
+            "mean_brightness": 160.591,
+            "brightness_delta_adjacent": -0.007,
+            "frame_number": 37
+        },
+        {
+            "frame_index": 37,
+            "sequence_number": 22242427,
+            "timestamp_utc": "2026-08-09T21:15:07.661667Z",
+            "offset_ms": 143.997,
+            "mean_brightness": 160.584,
+            "brightness_delta_adjacent": -0.007,
+            "frame_number": 38
+        },
+        {
+            "frame_index": 38,
+            "sequence_number": 22242428,
+            "timestamp_utc": "2026-08-09T21:15:07.665672Z",
+            "offset_ms": 148.002,
+            "mean_brightness": 160.604,
+            "brightness_delta_adjacent": 0.02,
+            "frame_number": 39
+        },
+        {
+            "frame_index": 39,
+            "sequence_number": 22242429,
+            "timestamp_utc": "2026-08-09T21:15:07.669699Z",
+            "offset_ms": 152.03,
+            "mean_brightness": 160.55,
+            "brightness_delta_adjacent": -0.053,
+            "frame_number": 40
+        },
+        {
+            "frame_index": 40,
+            "sequence_number": 22242430,
+            "timestamp_utc": "2026-08-09T21:15:07.673657Z",
+            "offset_ms": 155.987,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": 0.1,
+            "frame_number": 41
+        },
+        {
+            "frame_index": 41,
+            "sequence_number": 22242431,
+            "timestamp_utc": "2026-08-09T21:15:07.675680Z",
+            "offset_ms": 158.01,
+            "mean_brightness": 160.518,
+            "brightness_delta_adjacent": -0.132,
+            "frame_number": 42
+        },
+        {
+            "frame_index": 42,
+            "sequence_number": 22242432,
+            "timestamp_utc": "2026-08-09T21:15:07.677707Z",
+            "offset_ms": 160.038,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": 0.132,
+            "frame_number": 43
+        },
+        {
+            "frame_index": 43,
+            "sequence_number": 22242433,
+            "timestamp_utc": "2026-08-09T21:15:07.681667Z",
+            "offset_ms": 163.998,
+            "mean_brightness": 160.521,
+            "brightness_delta_adjacent": -0.128,
+            "frame_number": 44
+        },
+        {
+            "frame_index": 44,
+            "sequence_number": 22242434,
+            "timestamp_utc": "2026-08-09T21:15:07.685691Z",
+            "offset_ms": 168.022,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": 0.124,
+            "frame_number": 45
+        },
+        {
+            "frame_index": 45,
+            "sequence_number": 22242435,
+            "timestamp_utc": "2026-08-09T21:15:07.689683Z",
+            "offset_ms": 172.014,
+            "mean_brightness": 160.557,
+            "brightness_delta_adjacent": -0.087,
+            "frame_number": 46
+        },
+        {
+            "frame_index": 46,
+            "sequence_number": 22242436,
+            "timestamp_utc": "2026-08-09T21:15:07.693681Z",
+            "offset_ms": 176.012,
+            "mean_brightness": 160.615,
+            "brightness_delta_adjacent": 0.058,
+            "frame_number": 47
+        },
+        {
+            "frame_index": 47,
+            "sequence_number": 22242437,
+            "timestamp_utc": "2026-08-09T21:15:07.697697Z",
+            "offset_ms": 180.028,
+            "mean_brightness": 160.563,
+            "brightness_delta_adjacent": -0.052,
+            "frame_number": 48
+        },
+        {
+            "frame_index": 48,
+            "sequence_number": 22242438,
+            "timestamp_utc": "2026-08-09T21:15:07.701686Z",
+            "offset_ms": 184.017,
+            "mean_brightness": 160.598,
+            "brightness_delta_adjacent": 0.035,
+            "frame_number": 49
+        },
+        {
+            "frame_index": 49,
+            "sequence_number": 22242439,
+            "timestamp_utc": "2026-08-09T21:15:07.705660Z",
+            "offset_ms": 187.99,
+            "mean_brightness": 160.604,
+            "brightness_delta_adjacent": 0.005,
+            "frame_number": 50
+        },
+        {
+            "frame_index": 50,
+            "sequence_number": 22242440,
+            "timestamp_utc": "2026-08-09T21:15:07.709667Z",
+            "offset_ms": 191.997,
+            "mean_brightness": 160.576,
+            "brightness_delta_adjacent": -0.028,
+            "frame_number": 51
+        },
+        {
+            "frame_index": 51,
+            "sequence_number": 22242441,
+            "timestamp_utc": "2026-08-09T21:15:07.713673Z",
+            "offset_ms": 196.004,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": 0.057,
+            "frame_number": 52
+        },
+        {
+            "frame_index": 52,
+            "sequence_number": 22242442,
+            "timestamp_utc": "2026-08-09T21:15:07.717664Z",
+            "offset_ms": 199.994,
+            "mean_brightness": 160.554,
+            "brightness_delta_adjacent": -0.079,
+            "frame_number": 53
+        },
+        {
+            "frame_index": 53,
+            "sequence_number": 22242443,
+            "timestamp_utc": "2026-08-09T21:15:07.721666Z",
+            "offset_ms": 203.996,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": 0.091,
+            "frame_number": 54
+        },
+        {
+            "frame_index": 54,
+            "sequence_number": 22242444,
+            "timestamp_utc": "2026-08-09T21:15:07.725661Z",
+            "offset_ms": 207.992,
+            "mean_brightness": 160.54,
+            "brightness_delta_adjacent": -0.106,
+            "frame_number": 55
+        },
+        {
+            "frame_index": 55,
+            "sequence_number": 22242445,
+            "timestamp_utc": "2026-08-09T21:15:07.729667Z",
+            "offset_ms": 211.998,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": 0.109,
+            "frame_number": 56
+        },
+        {
+            "frame_index": 56,
+            "sequence_number": 22242446,
+            "timestamp_utc": "2026-08-09T21:15:07.733666Z",
+            "offset_ms": 215.997,
+            "mean_brightness": 160.529,
+            "brightness_delta_adjacent": -0.12,
+            "frame_number": 57
+        },
+        {
+            "frame_index": 57,
+            "sequence_number": 22242447,
+            "timestamp_utc": "2026-08-09T21:15:07.737668Z",
+            "offset_ms": 219.999,
+            "mean_brightness": 160.635,
+            "brightness_delta_adjacent": 0.106,
+            "frame_number": 58
+        },
+        {
+            "frame_index": 58,
+            "sequence_number": 22242448,
+            "timestamp_utc": "2026-08-09T21:15:07.741672Z",
+            "offset_ms": 224.002,
+            "mean_brightness": 160.568,
+            "brightness_delta_adjacent": -0.067,
+            "frame_number": 59
+        },
+        {
+            "frame_index": 59,
+            "sequence_number": 22242449,
+            "timestamp_utc": "2026-08-09T21:15:07.745672Z",
+            "offset_ms": 228.002,
+            "mean_brightness": 160.623,
+            "brightness_delta_adjacent": 0.055,
+            "frame_number": 60
+        },
+        {
+            "frame_index": 60,
+            "sequence_number": 22242450,
+            "timestamp_utc": "2026-08-09T21:15:07.749683Z",
+            "offset_ms": 232.014,
+            "mean_brightness": 160.59,
+            "brightness_delta_adjacent": -0.033,
+            "frame_number": 61
+        },
+        {
+            "frame_index": 61,
+            "sequence_number": 22242451,
+            "timestamp_utc": "2026-08-09T21:15:07.753687Z",
+            "offset_ms": 236.018,
+            "mean_brightness": 160.612,
+            "brightness_delta_adjacent": 0.022,
+            "frame_number": 62
+        },
+        {
+            "frame_index": 62,
+            "sequence_number": 22242452,
+            "timestamp_utc": "2026-08-09T21:15:07.757674Z",
+            "offset_ms": 240.005,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.012,
+            "frame_number": 63
+        },
+        {
+            "frame_index": 63,
+            "sequence_number": 22242453,
+            "timestamp_utc": "2026-08-09T21:15:07.761739Z",
+            "offset_ms": 244.069,
+            "mean_brightness": 160.57,
+            "brightness_delta_adjacent": -0.03,
+            "frame_number": 64
+        },
+        {
+            "frame_index": 64,
+            "sequence_number": 22242454,
+            "timestamp_utc": "2026-08-09T21:15:07.765668Z",
+            "offset_ms": 247.998,
+            "mean_brightness": 160.639,
+            "brightness_delta_adjacent": 0.069,
+            "frame_number": 65
+        },
+        {
+            "frame_index": 65,
+            "sequence_number": 22242455,
+            "timestamp_utc": "2026-08-09T21:15:07.767663Z",
+            "offset_ms": 249.994,
+            "mean_brightness": 160.56,
+            "brightness_delta_adjacent": -0.08,
+            "frame_number": 66
+        },
+        {
+            "frame_index": 66,
+            "sequence_number": 22242456,
+            "timestamp_utc": "2026-08-09T21:15:07.769712Z",
+            "offset_ms": 252.043,
+            "mean_brightness": 160.649,
+            "brightness_delta_adjacent": 0.089,
+            "frame_number": 67
+        },
+        {
+            "frame_index": 67,
+            "sequence_number": 22242457,
+            "timestamp_utc": "2026-08-09T21:15:07.773685Z",
+            "offset_ms": 256.015,
+            "mean_brightness": 160.526,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 68
+        },
+        {
+            "frame_index": 68,
+            "sequence_number": 22242458,
+            "timestamp_utc": "2026-08-09T21:15:07.777680Z",
+            "offset_ms": 260.011,
+            "mean_brightness": 160.661,
+            "brightness_delta_adjacent": 0.135,
+            "frame_number": 69
+        },
+        {
+            "frame_index": 69,
+            "sequence_number": 22242459,
+            "timestamp_utc": "2026-08-09T21:15:07.781688Z",
+            "offset_ms": 264.018,
+            "mean_brightness": 160.563,
+            "brightness_delta_adjacent": -0.097,
+            "frame_number": 70
+        },
+        {
+            "frame_index": 70,
+            "sequence_number": 22242460,
+            "timestamp_utc": "2026-08-09T21:15:07.785689Z",
+            "offset_ms": 268.019,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": 0.077,
+            "frame_number": 71
+        },
+        {
+            "frame_index": 71,
+            "sequence_number": 22242461,
+            "timestamp_utc": "2026-08-09T21:15:07.789683Z",
+            "offset_ms": 272.013,
+            "mean_brightness": 160.547,
+            "brightness_delta_adjacent": -0.094,
+            "frame_number": 72
+        },
+        {
+            "frame_index": 72,
+            "sequence_number": 22242462,
+            "timestamp_utc": "2026-08-09T21:15:07.793689Z",
+            "offset_ms": 276.02,
+            "mean_brightness": 160.612,
+            "brightness_delta_adjacent": 0.065,
+            "frame_number": 73
+        },
+        {
+            "frame_index": 73,
+            "sequence_number": 22242463,
+            "timestamp_utc": "2026-08-09T21:15:07.797664Z",
+            "offset_ms": 279.995,
+            "mean_brightness": 160.616,
+            "brightness_delta_adjacent": 0.004,
+            "frame_number": 74
+        },
+        {
+            "frame_index": 74,
+            "sequence_number": 22242464,
+            "timestamp_utc": "2026-08-09T21:15:07.801672Z",
+            "offset_ms": 284.003,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.016,
+            "frame_number": 75
+        },
+        {
+            "frame_index": 75,
+            "sequence_number": 22242465,
+            "timestamp_utc": "2026-08-09T21:15:07.805674Z",
+            "offset_ms": 288.005,
+            "mean_brightness": 160.613,
+            "brightness_delta_adjacent": 0.012,
+            "frame_number": 76
+        },
+        {
+            "frame_index": 76,
+            "sequence_number": 22242466,
+            "timestamp_utc": "2026-08-09T21:15:07.809677Z",
+            "offset_ms": 292.007,
+            "mean_brightness": 160.579,
+            "brightness_delta_adjacent": -0.034,
+            "frame_number": 77
+        },
+        {
+            "frame_index": 77,
+            "sequence_number": 22242467,
+            "timestamp_utc": "2026-08-09T21:15:07.813676Z",
+            "offset_ms": 296.006,
+            "mean_brightness": 160.665,
+            "brightness_delta_adjacent": 0.087,
+            "frame_number": 78
+        },
+        {
+            "frame_index": 78,
+            "sequence_number": 22242468,
+            "timestamp_utc": "2026-08-09T21:15:07.817676Z",
+            "offset_ms": 300.007,
+            "mean_brightness": 160.564,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 79
+        },
+        {
+            "frame_index": 79,
+            "sequence_number": 22242469,
+            "timestamp_utc": "2026-08-09T21:15:07.821669Z",
+            "offset_ms": 303.999,
+            "mean_brightness": 160.659,
+            "brightness_delta_adjacent": 0.095,
+            "frame_number": 80
+        },
+        {
+            "frame_index": 80,
+            "sequence_number": 22242470,
+            "timestamp_utc": "2026-08-09T21:15:07.825674Z",
+            "offset_ms": 308.004,
+            "mean_brightness": 160.539,
+            "brightness_delta_adjacent": -0.12,
+            "frame_number": 81
+        },
+        {
+            "frame_index": 81,
+            "sequence_number": 22242471,
+            "timestamp_utc": "2026-08-09T21:15:07.829674Z",
+            "offset_ms": 312.004,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": 0.134,
+            "frame_number": 82
+        },
+        {
+            "frame_index": 82,
+            "sequence_number": 22242472,
+            "timestamp_utc": "2026-08-09T21:15:07.833676Z",
+            "offset_ms": 316.007,
+            "mean_brightness": 160.569,
+            "brightness_delta_adjacent": -0.104,
+            "frame_number": 83
+        },
+        {
+            "frame_index": 83,
+            "sequence_number": 22242473,
+            "timestamp_utc": "2026-08-09T21:15:07.837674Z",
+            "offset_ms": 320.004,
+            "mean_brightness": 160.639,
+            "brightness_delta_adjacent": 0.071,
+            "frame_number": 84
+        },
+        {
+            "frame_index": 84,
+            "sequence_number": 22242474,
+            "timestamp_utc": "2026-08-09T21:15:07.841677Z",
+            "offset_ms": 324.007,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 85
+        },
+        {
+            "frame_index": 85,
+            "sequence_number": 22242475,
+            "timestamp_utc": "2026-08-09T21:15:07.845695Z",
+            "offset_ms": 328.025,
+            "mean_brightness": 160.623,
+            "brightness_delta_adjacent": 0.023,
+            "frame_number": 86
+        },
+        {
+            "frame_index": 86,
+            "sequence_number": 22242476,
+            "timestamp_utc": "2026-08-09T21:15:07.849673Z",
+            "offset_ms": 332.004,
+            "mean_brightness": 160.619,
+            "brightness_delta_adjacent": -0.004,
+            "frame_number": 87
+        },
+        {
+            "frame_index": 87,
+            "sequence_number": 22242477,
+            "timestamp_utc": "2026-08-09T21:15:07.853689Z",
+            "offset_ms": 336.02,
+            "mean_brightness": 160.595,
+            "brightness_delta_adjacent": -0.024,
+            "frame_number": 88
+        },
+        {
+            "frame_index": 88,
+            "sequence_number": 22242478,
+            "timestamp_utc": "2026-08-09T21:15:07.857662Z",
+            "offset_ms": 339.992,
+            "mean_brightness": 160.646,
+            "brightness_delta_adjacent": 0.051,
+            "frame_number": 89
+        },
+        {
+            "frame_index": 89,
+            "sequence_number": 22242479,
+            "timestamp_utc": "2026-08-09T21:15:07.859675Z",
+            "offset_ms": 342.005,
+            "mean_brightness": 160.571,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 90
+        },
+        {
+            "frame_index": 90,
+            "sequence_number": 22242480,
+            "timestamp_utc": "2026-08-09T21:15:07.861715Z",
+            "offset_ms": 344.046,
+            "mean_brightness": 160.678,
+            "brightness_delta_adjacent": 0.108,
+            "frame_number": 91
+        },
+        {
+            "frame_index": 91,
+            "sequence_number": 22242481,
+            "timestamp_utc": "2026-08-09T21:15:07.865659Z",
+            "offset_ms": 347.989,
+            "mean_brightness": 160.559,
+            "brightness_delta_adjacent": -0.12,
+            "frame_number": 92
+        },
+        {
+            "frame_index": 92,
+            "sequence_number": 22242482,
+            "timestamp_utc": "2026-08-09T21:15:07.869700Z",
+            "offset_ms": 352.03,
+            "mean_brightness": 160.678,
+            "brightness_delta_adjacent": 0.12,
+            "frame_number": 93
+        },
+        {
+            "frame_index": 93,
+            "sequence_number": 22242483,
+            "timestamp_utc": "2026-08-09T21:15:07.873705Z",
+            "offset_ms": 356.035,
+            "mean_brightness": 160.559,
+            "brightness_delta_adjacent": -0.119,
+            "frame_number": 94
+        },
+        {
+            "frame_index": 94,
+            "sequence_number": 22242484,
+            "timestamp_utc": "2026-08-09T21:15:07.877672Z",
+            "offset_ms": 360.002,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": 0.096,
+            "frame_number": 95
+        },
+        {
+            "frame_index": 95,
+            "sequence_number": 22242485,
+            "timestamp_utc": "2026-08-09T21:15:07.881696Z",
+            "offset_ms": 364.027,
+            "mean_brightness": 160.579,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 96
+        },
+        {
+            "frame_index": 96,
+            "sequence_number": 22242486,
+            "timestamp_utc": "2026-08-09T21:15:07.885674Z",
+            "offset_ms": 368.005,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": 0.061,
+            "frame_number": 97
+        },
+        {
+            "frame_index": 97,
+            "sequence_number": 22242487,
+            "timestamp_utc": "2026-08-09T21:15:07.889673Z",
+            "offset_ms": 372.004,
+            "mean_brightness": 160.595,
+            "brightness_delta_adjacent": -0.045,
+            "frame_number": 98
+        },
+        {
+            "frame_index": 98,
+            "sequence_number": 22242488,
+            "timestamp_utc": "2026-08-09T21:15:07.893680Z",
+            "offset_ms": 376.01,
+            "mean_brightness": 160.614,
+            "brightness_delta_adjacent": 0.019,
+            "frame_number": 99
+        },
+        {
+            "frame_index": 99,
+            "sequence_number": 22242489,
+            "timestamp_utc": "2026-08-09T21:15:07.897677Z",
+            "offset_ms": 380.008,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": 0.019,
+            "frame_number": 100
+        },
+        {
+            "frame_index": 100,
+            "sequence_number": 22242490,
+            "timestamp_utc": "2026-08-09T21:15:07.901672Z",
+            "offset_ms": 384.003,
+            "mean_brightness": 160.604,
+            "brightness_delta_adjacent": -0.029,
+            "frame_number": 101
+        },
+        {
+            "frame_index": 101,
+            "sequence_number": 22242491,
+            "timestamp_utc": "2026-08-09T21:15:07.905684Z",
+            "offset_ms": 388.014,
+            "mean_brightness": 160.651,
+            "brightness_delta_adjacent": 0.048,
+            "frame_number": 102
+        },
+        {
+            "frame_index": 102,
+            "sequence_number": 22242492,
+            "timestamp_utc": "2026-08-09T21:15:07.909670Z",
+            "offset_ms": 392.0,
+            "mean_brightness": 160.566,
+            "brightness_delta_adjacent": -0.085,
+            "frame_number": 103
+        },
+        {
+            "frame_index": 103,
+            "sequence_number": 22242493,
+            "timestamp_utc": "2026-08-09T21:15:07.913681Z",
+            "offset_ms": 396.011,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": 0.104,
+            "frame_number": 104
+        },
+        {
+            "frame_index": 104,
+            "sequence_number": 22242494,
+            "timestamp_utc": "2026-08-09T21:15:07.917692Z",
+            "offset_ms": 400.022,
+            "mean_brightness": 160.559,
+            "brightness_delta_adjacent": -0.112,
+            "frame_number": 105
+        },
+        {
+            "frame_index": 105,
+            "sequence_number": 22242495,
+            "timestamp_utc": "2026-08-09T21:15:07.921695Z",
+            "offset_ms": 404.026,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": 0.114,
+            "frame_number": 106
+        },
+        {
+            "frame_index": 106,
+            "sequence_number": 22242496,
+            "timestamp_utc": "2026-08-09T21:15:07.925682Z",
+            "offset_ms": 408.012,
+            "mean_brightness": 160.543,
+            "brightness_delta_adjacent": -0.131,
+            "frame_number": 107
+        },
+        {
+            "frame_index": 107,
+            "sequence_number": 22242497,
+            "timestamp_utc": "2026-08-09T21:15:07.929683Z",
+            "offset_ms": 412.013,
+            "mean_brightness": 160.649,
+            "brightness_delta_adjacent": 0.106,
+            "frame_number": 108
+        },
+        {
+            "frame_index": 108,
+            "sequence_number": 22242498,
+            "timestamp_utc": "2026-08-09T21:15:07.933686Z",
+            "offset_ms": 416.016,
+            "mean_brightness": 160.566,
+            "brightness_delta_adjacent": -0.082,
+            "frame_number": 109
+        },
+        {
+            "frame_index": 109,
+            "sequence_number": 22242499,
+            "timestamp_utc": "2026-08-09T21:15:07.937679Z",
+            "offset_ms": 420.009,
+            "mean_brightness": 160.653,
+            "brightness_delta_adjacent": 0.087,
+            "frame_number": 110
+        },
+        {
+            "frame_index": 110,
+            "sequence_number": 22242500,
+            "timestamp_utc": "2026-08-09T21:15:07.941690Z",
+            "offset_ms": 424.02,
+            "mean_brightness": 160.612,
+            "brightness_delta_adjacent": -0.041,
+            "frame_number": 111
+        },
+        {
+            "frame_index": 111,
+            "sequence_number": 22242501,
+            "timestamp_utc": "2026-08-09T21:15:07.945711Z",
+            "offset_ms": 428.042,
+            "mean_brightness": 160.618,
+            "brightness_delta_adjacent": 0.006,
+            "frame_number": 112
+        },
+        {
+            "frame_index": 112,
+            "sequence_number": 22242502,
+            "timestamp_utc": "2026-08-09T21:15:07.949665Z",
+            "offset_ms": 431.995,
+            "mean_brightness": 160.628,
+            "brightness_delta_adjacent": 0.01,
+            "frame_number": 113
+        },
+        {
+            "frame_index": 113,
+            "sequence_number": 22242503,
+            "timestamp_utc": "2026-08-09T21:15:07.951658Z",
+            "offset_ms": 433.989,
+            "mean_brightness": 160.598,
+            "brightness_delta_adjacent": -0.03,
+            "frame_number": 114
+        },
+        {
+            "frame_index": 114,
+            "sequence_number": 22242504,
+            "timestamp_utc": "2026-08-09T21:15:07.953706Z",
+            "offset_ms": 436.037,
+            "mean_brightness": 160.643,
+            "brightness_delta_adjacent": 0.045,
+            "frame_number": 115
+        },
+        {
+            "frame_index": 115,
+            "sequence_number": 22242505,
+            "timestamp_utc": "2026-08-09T21:15:07.957696Z",
+            "offset_ms": 440.027,
+            "mean_brightness": 160.549,
+            "brightness_delta_adjacent": -0.094,
+            "frame_number": 116
+        },
+        {
+            "frame_index": 116,
+            "sequence_number": 22242506,
+            "timestamp_utc": "2026-08-09T21:15:07.961689Z",
+            "offset_ms": 444.019,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": 0.109,
+            "frame_number": 117
+        },
+        {
+            "frame_index": 117,
+            "sequence_number": 22242507,
+            "timestamp_utc": "2026-08-09T21:15:07.965685Z",
+            "offset_ms": 448.015,
+            "mean_brightness": 160.545,
+            "brightness_delta_adjacent": -0.113,
+            "frame_number": 118
+        },
+        {
+            "frame_index": 118,
+            "sequence_number": 22242508,
+            "timestamp_utc": "2026-08-09T21:15:07.969708Z",
+            "offset_ms": 452.038,
+            "mean_brightness": 160.66,
+            "brightness_delta_adjacent": 0.115,
+            "frame_number": 119
+        },
+        {
+            "frame_index": 119,
+            "sequence_number": 22242509,
+            "timestamp_utc": "2026-08-09T21:15:07.973697Z",
+            "offset_ms": 456.028,
+            "mean_brightness": 160.57,
+            "brightness_delta_adjacent": -0.09,
+            "frame_number": 120
+        },
+        {
+            "frame_index": 120,
+            "sequence_number": 22242510,
+            "timestamp_utc": "2026-08-09T21:15:07.977683Z",
+            "offset_ms": 460.014,
+            "mean_brightness": 160.649,
+            "brightness_delta_adjacent": 0.079,
+            "frame_number": 121
+        },
+        {
+            "frame_index": 121,
+            "sequence_number": 22242511,
+            "timestamp_utc": "2026-08-09T21:15:07.981689Z",
+            "offset_ms": 464.019,
+            "mean_brightness": 160.571,
+            "brightness_delta_adjacent": -0.078,
+            "frame_number": 122
+        },
+        {
+            "frame_index": 122,
+            "sequence_number": 22242512,
+            "timestamp_utc": "2026-08-09T21:15:07.985692Z",
+            "offset_ms": 468.023,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": 0.07,
+            "frame_number": 123
+        },
+        {
+            "frame_index": 123,
+            "sequence_number": 22242513,
+            "timestamp_utc": "2026-08-09T21:15:07.989678Z",
+            "offset_ms": 472.008,
+            "mean_brightness": 160.622,
+            "brightness_delta_adjacent": -0.019,
+            "frame_number": 124
+        },
+        {
+            "frame_index": 124,
+            "sequence_number": 22242514,
+            "timestamp_utc": "2026-08-09T21:15:07.993685Z",
+            "offset_ms": 476.016,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.022,
+            "frame_number": 125
+        },
+        {
+            "frame_index": 125,
+            "sequence_number": 22242515,
+            "timestamp_utc": "2026-08-09T21:15:07.997686Z",
+            "offset_ms": 480.016,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": 0.055,
+            "frame_number": 126
+        },
+        {
+            "frame_index": 126,
+            "sequence_number": 22242516,
+            "timestamp_utc": "2026-08-09T21:15:08.001682Z",
+            "offset_ms": 484.012,
+            "mean_brightness": 160.59,
+            "brightness_delta_adjacent": -0.065,
+            "frame_number": 127
+        },
+        {
+            "frame_index": 127,
+            "sequence_number": 22242517,
+            "timestamp_utc": "2026-08-09T21:15:08.005690Z",
+            "offset_ms": 488.021,
+            "mean_brightness": 160.654,
+            "brightness_delta_adjacent": 0.064,
+            "frame_number": 128
+        },
+        {
+            "frame_index": 128,
+            "sequence_number": 22242518,
+            "timestamp_utc": "2026-08-09T21:15:08.009709Z",
+            "offset_ms": 492.039,
+            "mean_brightness": 160.556,
+            "brightness_delta_adjacent": -0.099,
+            "frame_number": 129
+        },
+        {
+            "frame_index": 129,
+            "sequence_number": 22242519,
+            "timestamp_utc": "2026-08-09T21:15:08.013686Z",
+            "offset_ms": 496.017,
+            "mean_brightness": 160.681,
+            "brightness_delta_adjacent": 0.125,
+            "frame_number": 130
+        },
+        {
+            "frame_index": 130,
+            "sequence_number": 22242520,
+            "timestamp_utc": "2026-08-09T21:15:08.017687Z",
+            "offset_ms": 500.017,
+            "mean_brightness": 160.564,
+            "brightness_delta_adjacent": -0.116,
+            "frame_number": 131
+        },
+        {
+            "frame_index": 131,
+            "sequence_number": 22242521,
+            "timestamp_utc": "2026-08-09T21:15:08.021686Z",
+            "offset_ms": 504.016,
+            "mean_brightness": 160.661,
+            "brightness_delta_adjacent": 0.097,
+            "frame_number": 132
+        },
+        {
+            "frame_index": 132,
+            "sequence_number": 22242522,
+            "timestamp_utc": "2026-08-09T21:15:08.025690Z",
+            "offset_ms": 508.02,
+            "mean_brightness": 160.553,
+            "brightness_delta_adjacent": -0.108,
+            "frame_number": 133
+        },
+        {
+            "frame_index": 133,
+            "sequence_number": 22242523,
+            "timestamp_utc": "2026-08-09T21:15:08.029715Z",
+            "offset_ms": 512.045,
+            "mean_brightness": 160.638,
+            "brightness_delta_adjacent": 0.085,
+            "frame_number": 134
+        },
+        {
+            "frame_index": 134,
+            "sequence_number": 22242524,
+            "timestamp_utc": "2026-08-09T21:15:08.033693Z",
+            "offset_ms": 516.023,
+            "mean_brightness": 160.583,
+            "brightness_delta_adjacent": -0.055,
+            "frame_number": 135
+        },
+        {
+            "frame_index": 135,
+            "sequence_number": 22242525,
+            "timestamp_utc": "2026-08-09T21:15:08.037699Z",
+            "offset_ms": 520.03,
+            "mean_brightness": 160.629,
+            "brightness_delta_adjacent": 0.046,
+            "frame_number": 136
+        },
+        {
+            "frame_index": 136,
+            "sequence_number": 22242526,
+            "timestamp_utc": "2026-08-09T21:15:08.041672Z",
+            "offset_ms": 524.003,
+            "mean_brightness": 160.618,
+            "brightness_delta_adjacent": -0.011,
+            "frame_number": 137
+        },
+        {
+            "frame_index": 137,
+            "sequence_number": 22242527,
+            "timestamp_utc": "2026-08-09T21:15:08.043683Z",
+            "offset_ms": 526.013,
+            "mean_brightness": 160.587,
+            "brightness_delta_adjacent": -0.031,
+            "frame_number": 138
+        },
+        {
+            "frame_index": 138,
+            "sequence_number": 22242528,
+            "timestamp_utc": "2026-08-09T21:15:08.045726Z",
+            "offset_ms": 528.057,
+            "mean_brightness": 160.637,
+            "brightness_delta_adjacent": 0.05,
+            "frame_number": 139
+        },
+        {
+            "frame_index": 139,
+            "sequence_number": 22242529,
+            "timestamp_utc": "2026-08-09T21:15:08.049679Z",
+            "offset_ms": 532.009,
+            "mean_brightness": 160.563,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 140
+        },
+        {
+            "frame_index": 140,
+            "sequence_number": 22242530,
+            "timestamp_utc": "2026-08-09T21:15:08.053691Z",
+            "offset_ms": 536.022,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": 0.093,
+            "frame_number": 141
+        },
+        {
+            "frame_index": 141,
+            "sequence_number": 22242531,
+            "timestamp_utc": "2026-08-09T21:15:08.057713Z",
+            "offset_ms": 540.043,
+            "mean_brightness": 160.555,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 142
+        },
+        {
+            "frame_index": 142,
+            "sequence_number": 22242532,
+            "timestamp_utc": "2026-08-09T21:15:08.061698Z",
+            "offset_ms": 544.029,
+            "mean_brightness": 160.664,
+            "brightness_delta_adjacent": 0.11,
+            "frame_number": 143
+        },
+        {
+            "frame_index": 143,
+            "sequence_number": 22242533,
+            "timestamp_utc": "2026-08-09T21:15:08.065733Z",
+            "offset_ms": 548.063,
+            "mean_brightness": 160.551,
+            "brightness_delta_adjacent": -0.113,
+            "frame_number": 144
+        },
+        {
+            "frame_index": 144,
+            "sequence_number": 22242534,
+            "timestamp_utc": "2026-08-09T21:15:08.069691Z",
+            "offset_ms": 552.02,
+            "mean_brightness": 160.663,
+            "brightness_delta_adjacent": 0.111,
+            "frame_number": 145
+        },
+        {
+            "frame_index": 145,
+            "sequence_number": 22242535,
+            "timestamp_utc": "2026-08-09T21:15:08.073693Z",
+            "offset_ms": 556.024,
+            "mean_brightness": 160.554,
+            "brightness_delta_adjacent": -0.109,
+            "frame_number": 146
+        },
+        {
+            "frame_index": 146,
+            "sequence_number": 22242536,
+            "timestamp_utc": "2026-08-09T21:15:08.077682Z",
+            "offset_ms": 560.012,
+            "mean_brightness": 160.627,
+            "brightness_delta_adjacent": 0.072,
+            "frame_number": 147
+        },
+        {
+            "frame_index": 147,
+            "sequence_number": 22242537,
+            "timestamp_utc": "2026-08-09T21:15:08.081723Z",
+            "offset_ms": 564.053,
+            "mean_brightness": 160.588,
+            "brightness_delta_adjacent": -0.038,
+            "frame_number": 148
+        },
+        {
+            "frame_index": 148,
+            "sequence_number": 22242538,
+            "timestamp_utc": "2026-08-09T21:15:08.085686Z",
+            "offset_ms": 568.016,
+            "mean_brightness": 160.611,
+            "brightness_delta_adjacent": 0.023,
+            "frame_number": 149
+        },
+        {
+            "frame_index": 149,
+            "sequence_number": 22242539,
+            "timestamp_utc": "2026-08-09T21:15:08.089686Z",
+            "offset_ms": 572.017,
+            "mean_brightness": 160.623,
+            "brightness_delta_adjacent": 0.012,
+            "frame_number": 150
+        },
+        {
+            "frame_index": 150,
+            "sequence_number": 22242540,
+            "timestamp_utc": "2026-08-09T21:15:08.093698Z",
+            "offset_ms": 576.029,
+            "mean_brightness": 160.596,
+            "brightness_delta_adjacent": -0.027,
+            "frame_number": 151
+        },
+        {
+            "frame_index": 151,
+            "sequence_number": 22242541,
+            "timestamp_utc": "2026-08-09T21:15:08.097708Z",
+            "offset_ms": 580.039,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": 0.061,
+            "frame_number": 152
+        },
+        {
+            "frame_index": 152,
+            "sequence_number": 22242542,
+            "timestamp_utc": "2026-08-09T21:15:08.101686Z",
+            "offset_ms": 584.016,
+            "mean_brightness": 160.56,
+            "brightness_delta_adjacent": -0.098,
+            "frame_number": 153
+        },
+        {
+            "frame_index": 153,
+            "sequence_number": 22242543,
+            "timestamp_utc": "2026-08-09T21:15:08.105691Z",
+            "offset_ms": 588.021,
+            "mean_brightness": 160.669,
+            "brightness_delta_adjacent": 0.109,
+            "frame_number": 154
+        },
+        {
+            "frame_index": 154,
+            "sequence_number": 22242544,
+            "timestamp_utc": "2026-08-09T21:15:08.109698Z",
+            "offset_ms": 592.029,
+            "mean_brightness": 160.54,
+            "brightness_delta_adjacent": -0.128,
+            "frame_number": 155
+        },
+        {
+            "frame_index": 155,
+            "sequence_number": 22242545,
+            "timestamp_utc": "2026-08-09T21:15:08.113696Z",
+            "offset_ms": 596.027,
+            "mean_brightness": 160.661,
+            "brightness_delta_adjacent": 0.121,
+            "frame_number": 156
+        },
+        {
+            "frame_index": 156,
+            "sequence_number": 22242546,
+            "timestamp_utc": "2026-08-09T21:15:08.117695Z",
+            "offset_ms": 600.025,
+            "mean_brightness": 160.543,
+            "brightness_delta_adjacent": -0.118,
+            "frame_number": 157
+        },
+        {
+            "frame_index": 157,
+            "sequence_number": 22242547,
+            "timestamp_utc": "2026-08-09T21:15:08.121695Z",
+            "offset_ms": 604.025,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 158
+        },
+        {
+            "frame_index": 158,
+            "sequence_number": 22242548,
+            "timestamp_utc": "2026-08-09T21:15:08.125711Z",
+            "offset_ms": 608.042,
+            "mean_brightness": 160.597,
+            "brightness_delta_adjacent": -0.053,
+            "frame_number": 159
+        },
+        {
+            "frame_index": 159,
+            "sequence_number": 22242549,
+            "timestamp_utc": "2026-08-09T21:15:08.129695Z",
+            "offset_ms": 612.025,
+            "mean_brightness": 160.623,
+            "brightness_delta_adjacent": 0.025,
+            "frame_number": 160
+        },
+        {
+            "frame_index": 160,
+            "sequence_number": 22242550,
+            "timestamp_utc": "2026-08-09T21:15:08.133679Z",
+            "offset_ms": 616.01,
+            "mean_brightness": 160.611,
+            "brightness_delta_adjacent": -0.012,
+            "frame_number": 161
+        },
+        {
+            "frame_index": 161,
+            "sequence_number": 22242551,
+            "timestamp_utc": "2026-08-09T21:15:08.135665Z",
+            "offset_ms": 617.996,
+            "mean_brightness": 160.609,
+            "brightness_delta_adjacent": -0.001,
+            "frame_number": 162
+        },
+        {
+            "frame_index": 162,
+            "sequence_number": 22242552,
+            "timestamp_utc": "2026-08-09T21:15:08.137711Z",
+            "offset_ms": 620.041,
+            "mean_brightness": 160.639,
+            "brightness_delta_adjacent": 0.03,
+            "frame_number": 163
+        },
+        {
+            "frame_index": 163,
+            "sequence_number": 22242553,
+            "timestamp_utc": "2026-08-09T21:15:08.141692Z",
+            "offset_ms": 624.022,
+            "mean_brightness": 160.568,
+            "brightness_delta_adjacent": -0.071,
+            "frame_number": 164
+        },
+        {
+            "frame_index": 164,
+            "sequence_number": 22242554,
+            "timestamp_utc": "2026-08-09T21:15:08.145686Z",
+            "offset_ms": 628.017,
+            "mean_brightness": 160.66,
+            "brightness_delta_adjacent": 0.092,
+            "frame_number": 165
+        },
+        {
+            "frame_index": 165,
+            "sequence_number": 22242555,
+            "timestamp_utc": "2026-08-09T21:15:08.149714Z",
+            "offset_ms": 632.044,
+            "mean_brightness": 160.553,
+            "brightness_delta_adjacent": -0.107,
+            "frame_number": 166
+        },
+        {
+            "frame_index": 166,
+            "sequence_number": 22242556,
+            "timestamp_utc": "2026-08-09T21:15:08.153710Z",
+            "offset_ms": 636.04,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": 0.117,
+            "frame_number": 167
+        },
+        {
+            "frame_index": 167,
+            "sequence_number": 22242557,
+            "timestamp_utc": "2026-08-09T21:15:08.157708Z",
+            "offset_ms": 640.038,
+            "mean_brightness": 160.536,
+            "brightness_delta_adjacent": -0.134,
+            "frame_number": 168
+        },
+        {
+            "frame_index": 168,
+            "sequence_number": 22242558,
+            "timestamp_utc": "2026-08-09T21:15:08.161694Z",
+            "offset_ms": 644.025,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": 0.138,
+            "frame_number": 169
+        },
+        {
+            "frame_index": 169,
+            "sequence_number": 22242559,
+            "timestamp_utc": "2026-08-09T21:15:08.165703Z",
+            "offset_ms": 648.034,
+            "mean_brightness": 160.574,
+            "brightness_delta_adjacent": -0.099,
+            "frame_number": 170
+        },
+        {
+            "frame_index": 170,
+            "sequence_number": 22242560,
+            "timestamp_utc": "2026-08-09T21:15:08.169696Z",
+            "offset_ms": 652.027,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": 0.071,
+            "frame_number": 171
+        },
+        {
+            "frame_index": 171,
+            "sequence_number": 22242561,
+            "timestamp_utc": "2026-08-09T21:15:08.173714Z",
+            "offset_ms": 656.044,
+            "mean_brightness": 160.595,
+            "brightness_delta_adjacent": -0.05,
+            "frame_number": 172
+        },
+        {
+            "frame_index": 172,
+            "sequence_number": 22242562,
+            "timestamp_utc": "2026-08-09T21:15:08.177686Z",
+            "offset_ms": 660.017,
+            "mean_brightness": 160.628,
+            "brightness_delta_adjacent": 0.033,
+            "frame_number": 173
+        },
+        {
+            "frame_index": 173,
+            "sequence_number": 22242563,
+            "timestamp_utc": "2026-08-09T21:15:08.181707Z",
+            "offset_ms": 664.037,
+            "mean_brightness": 160.617,
+            "brightness_delta_adjacent": -0.011,
+            "frame_number": 174
+        },
+        {
+            "frame_index": 174,
+            "sequence_number": 22242564,
+            "timestamp_utc": "2026-08-09T21:15:08.185696Z",
+            "offset_ms": 668.026,
+            "mean_brightness": 160.607,
+            "brightness_delta_adjacent": -0.01,
+            "frame_number": 175
+        },
+        {
+            "frame_index": 175,
+            "sequence_number": 22242565,
+            "timestamp_utc": "2026-08-09T21:15:08.189699Z",
+            "offset_ms": 672.03,
+            "mean_brightness": 160.636,
+            "brightness_delta_adjacent": 0.029,
+            "frame_number": 176
+        },
+        {
+            "frame_index": 176,
+            "sequence_number": 22242566,
+            "timestamp_utc": "2026-08-09T21:15:08.193701Z",
+            "offset_ms": 676.032,
+            "mean_brightness": 160.572,
+            "brightness_delta_adjacent": -0.064,
+            "frame_number": 177
+        },
+        {
+            "frame_index": 177,
+            "sequence_number": 22242567,
+            "timestamp_utc": "2026-08-09T21:15:08.197692Z",
+            "offset_ms": 680.023,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": 0.073,
+            "frame_number": 178
+        },
+        {
+            "frame_index": 178,
+            "sequence_number": 22242568,
+            "timestamp_utc": "2026-08-09T21:15:08.201691Z",
+            "offset_ms": 684.021,
+            "mean_brightness": 160.551,
+            "brightness_delta_adjacent": -0.094,
+            "frame_number": 179
+        },
+        {
+            "frame_index": 179,
+            "sequence_number": 22242569,
+            "timestamp_utc": "2026-08-09T21:15:08.205700Z",
+            "offset_ms": 688.031,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": 0.119,
+            "frame_number": 180
+        },
+        {
+            "frame_index": 180,
+            "sequence_number": 22242570,
+            "timestamp_utc": "2026-08-09T21:15:08.209703Z",
+            "offset_ms": 692.033,
+            "mean_brightness": 160.551,
+            "brightness_delta_adjacent": -0.119,
+            "frame_number": 181
+        },
+        {
+            "frame_index": 181,
+            "sequence_number": 22242571,
+            "timestamp_utc": "2026-08-09T21:15:08.213697Z",
+            "offset_ms": 696.028,
+            "mean_brightness": 160.654,
+            "brightness_delta_adjacent": 0.103,
+            "frame_number": 182
+        },
+        {
+            "frame_index": 182,
+            "sequence_number": 22242572,
+            "timestamp_utc": "2026-08-09T21:15:08.217693Z",
+            "offset_ms": 700.024,
+            "mean_brightness": 160.574,
+            "brightness_delta_adjacent": -0.08,
+            "frame_number": 183
+        },
+        {
+            "frame_index": 183,
+            "sequence_number": 22242573,
+            "timestamp_utc": "2026-08-09T21:15:08.221700Z",
+            "offset_ms": 704.031,
+            "mean_brightness": 160.653,
+            "brightness_delta_adjacent": 0.079,
+            "frame_number": 184
+        },
+        {
+            "frame_index": 184,
+            "sequence_number": 22242574,
+            "timestamp_utc": "2026-08-09T21:15:08.225689Z",
+            "offset_ms": 708.02,
+            "mean_brightness": 160.593,
+            "brightness_delta_adjacent": -0.06,
+            "frame_number": 185
+        },
+        {
+            "frame_index": 185,
+            "sequence_number": 22242575,
+            "timestamp_utc": "2026-08-09T21:15:08.227684Z",
+            "offset_ms": 710.015,
+            "mean_brightness": 160.629,
+            "brightness_delta_adjacent": 0.036,
+            "frame_number": 186
+        },
+        {
+            "frame_index": 186,
+            "sequence_number": 22242576,
+            "timestamp_utc": "2026-08-09T21:15:08.229730Z",
+            "offset_ms": 712.06,
+            "mean_brightness": 160.63,
+            "brightness_delta_adjacent": 0.001,
+            "frame_number": 187
+        },
+        {
+            "frame_index": 187,
+            "sequence_number": 22242577,
+            "timestamp_utc": "2026-08-09T21:15:08.233704Z",
+            "offset_ms": 716.034,
+            "mean_brightness": 160.607,
+            "brightness_delta_adjacent": -0.024,
+            "frame_number": 188
+        },
+        {
+            "frame_index": 188,
+            "sequence_number": 22242578,
+            "timestamp_utc": "2026-08-09T21:15:08.237716Z",
+            "offset_ms": 720.047,
+            "mean_brightness": 160.647,
+            "brightness_delta_adjacent": 0.04,
+            "frame_number": 189
+        },
+        {
+            "frame_index": 189,
+            "sequence_number": 22242579,
+            "timestamp_utc": "2026-08-09T21:15:08.241714Z",
+            "offset_ms": 724.045,
+            "mean_brightness": 160.581,
+            "brightness_delta_adjacent": -0.066,
+            "frame_number": 190
+        },
+        {
+            "frame_index": 190,
+            "sequence_number": 22242580,
+            "timestamp_utc": "2026-08-09T21:15:08.245712Z",
+            "offset_ms": 728.043,
+            "mean_brightness": 160.666,
+            "brightness_delta_adjacent": 0.085,
+            "frame_number": 191
+        },
+        {
+            "frame_index": 191,
+            "sequence_number": 22242581,
+            "timestamp_utc": "2026-08-09T21:15:08.249725Z",
+            "offset_ms": 732.056,
+            "mean_brightness": 160.546,
+            "brightness_delta_adjacent": -0.12,
+            "frame_number": 192
+        },
+        {
+            "frame_index": 192,
+            "sequence_number": 22242582,
+            "timestamp_utc": "2026-08-09T21:15:08.253700Z",
+            "offset_ms": 736.031,
+            "mean_brightness": 160.68,
+            "brightness_delta_adjacent": 0.134,
+            "frame_number": 193
+        },
+        {
+            "frame_index": 193,
+            "sequence_number": 22242583,
+            "timestamp_utc": "2026-08-09T21:15:08.257695Z",
+            "offset_ms": 740.026,
+            "mean_brightness": 160.549,
+            "brightness_delta_adjacent": -0.13,
+            "frame_number": 194
+        },
+        {
+            "frame_index": 194,
+            "sequence_number": 22242584,
+            "timestamp_utc": "2026-08-09T21:15:08.261697Z",
+            "offset_ms": 744.027,
+            "mean_brightness": 160.647,
+            "brightness_delta_adjacent": 0.098,
+            "frame_number": 195
+        },
+        {
+            "frame_index": 195,
+            "sequence_number": 22242585,
+            "timestamp_utc": "2026-08-09T21:15:08.265712Z",
+            "offset_ms": 748.043,
+            "mean_brightness": 160.581,
+            "brightness_delta_adjacent": -0.066,
+            "frame_number": 196
+        },
+        {
+            "frame_index": 196,
+            "sequence_number": 22242586,
+            "timestamp_utc": "2026-08-09T21:15:08.269695Z",
+            "offset_ms": 752.024,
+            "mean_brightness": 160.635,
+            "brightness_delta_adjacent": 0.054,
+            "frame_number": 197
+        },
+        {
+            "frame_index": 197,
+            "sequence_number": 22242587,
+            "timestamp_utc": "2026-08-09T21:15:08.273706Z",
+            "offset_ms": 756.036,
+            "mean_brightness": 160.61,
+            "brightness_delta_adjacent": -0.025,
+            "frame_number": 198
+        },
+        {
+            "frame_index": 198,
+            "sequence_number": 22242588,
+            "timestamp_utc": "2026-08-09T21:15:08.277714Z",
+            "offset_ms": 760.044,
+            "mean_brightness": 160.619,
+            "brightness_delta_adjacent": 0.009,
+            "frame_number": 199
+        },
+        {
+            "frame_index": 199,
+            "sequence_number": 22242589,
+            "timestamp_utc": "2026-08-09T21:15:08.281700Z",
+            "offset_ms": 764.031,
+            "mean_brightness": 160.628,
+            "brightness_delta_adjacent": 0.009,
+            "frame_number": 200
+        },
+        {
+            "frame_index": 200,
+            "sequence_number": 22242590,
+            "timestamp_utc": "2026-08-09T21:15:08.285707Z",
+            "offset_ms": 768.037,
+            "mean_brightness": 160.603,
+            "brightness_delta_adjacent": -0.025,
+            "frame_number": 201
+        },
+        {
+            "frame_index": 201,
+            "sequence_number": 22242591,
+            "timestamp_utc": "2026-08-09T21:15:08.289705Z",
+            "offset_ms": 772.035,
+            "mean_brightness": 160.642,
+            "brightness_delta_adjacent": 0.039,
+            "frame_number": 202
+        },
+        {
+            "frame_index": 202,
+            "sequence_number": 22242592,
+            "timestamp_utc": "2026-08-09T21:15:08.293701Z",
+            "offset_ms": 776.032,
+            "mean_brightness": 160.567,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 203
+        },
+        {
+            "frame_index": 203,
+            "sequence_number": 22242593,
+            "timestamp_utc": "2026-08-09T21:15:08.297709Z",
+            "offset_ms": 780.039,
+            "mean_brightness": 160.676,
+            "brightness_delta_adjacent": 0.11,
+            "frame_number": 204
+        },
+        {
+            "frame_index": 204,
+            "sequence_number": 22242594,
+            "timestamp_utc": "2026-08-09T21:15:08.301707Z",
+            "offset_ms": 784.037,
+            "mean_brightness": 160.551,
+            "brightness_delta_adjacent": -0.125,
+            "frame_number": 205
+        },
+        {
+            "frame_index": 205,
+            "sequence_number": 22242595,
+            "timestamp_utc": "2026-08-09T21:15:08.305717Z",
+            "offset_ms": 788.047,
+            "mean_brightness": 160.678,
+            "brightness_delta_adjacent": 0.127,
+            "frame_number": 206
+        },
+        {
+            "frame_index": 206,
+            "sequence_number": 22242596,
+            "timestamp_utc": "2026-08-09T21:15:08.309714Z",
+            "offset_ms": 792.044,
+            "mean_brightness": 160.569,
+            "brightness_delta_adjacent": -0.109,
+            "frame_number": 207
+        },
+        {
+            "frame_index": 207,
+            "sequence_number": 22242597,
+            "timestamp_utc": "2026-08-09T21:15:08.313700Z",
+            "offset_ms": 796.03,
+            "mean_brightness": 160.647,
+            "brightness_delta_adjacent": 0.078,
+            "frame_number": 208
+        },
+        {
+            "frame_index": 208,
+            "sequence_number": 22242598,
+            "timestamp_utc": "2026-08-09T21:15:08.317688Z",
+            "offset_ms": 800.018,
+            "mean_brightness": 160.599,
+            "brightness_delta_adjacent": -0.048,
+            "frame_number": 209
+        },
+        {
+            "frame_index": 209,
+            "sequence_number": 22242599,
+            "timestamp_utc": "2026-08-09T21:15:08.319707Z",
+            "offset_ms": 802.037,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": 0.042,
+            "frame_number": 210
+        },
+        {
+            "frame_index": 210,
+            "sequence_number": 22242600,
+            "timestamp_utc": "2026-08-09T21:15:08.321745Z",
+            "offset_ms": 804.075,
+            "mean_brightness": 160.635,
+            "brightness_delta_adjacent": -0.006,
+            "frame_number": 211
+        },
+        {
+            "frame_index": 211,
+            "sequence_number": 22242601,
+            "timestamp_utc": "2026-08-09T21:15:08.325724Z",
+            "offset_ms": 808.055,
+            "mean_brightness": 160.603,
+            "brightness_delta_adjacent": -0.032,
+            "frame_number": 212
+        },
+        {
+            "frame_index": 212,
+            "sequence_number": 22242602,
+            "timestamp_utc": "2026-08-09T21:15:08.329710Z",
+            "offset_ms": 812.041,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": 0.045,
+            "frame_number": 213
+        },
+        {
+            "frame_index": 213,
+            "sequence_number": 22242603,
+            "timestamp_utc": "2026-08-09T21:15:08.333709Z",
+            "offset_ms": 816.039,
+            "mean_brightness": 160.592,
+            "brightness_delta_adjacent": -0.056,
+            "frame_number": 214
+        },
+        {
+            "frame_index": 214,
+            "sequence_number": 22242604,
+            "timestamp_utc": "2026-08-09T21:15:08.337714Z",
+            "offset_ms": 820.045,
+            "mean_brightness": 160.699,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 215
+        },
+        {
+            "frame_index": 215,
+            "sequence_number": 22242605,
+            "timestamp_utc": "2026-08-09T21:15:08.341715Z",
+            "offset_ms": 824.046,
+            "mean_brightness": 160.562,
+            "brightness_delta_adjacent": -0.136,
+            "frame_number": 216
+        },
+        {
+            "frame_index": 216,
+            "sequence_number": 22242606,
+            "timestamp_utc": "2026-08-09T21:15:08.345727Z",
+            "offset_ms": 828.057,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": 0.111,
+            "frame_number": 217
+        },
+        {
+            "frame_index": 217,
+            "sequence_number": 22242607,
+            "timestamp_utc": "2026-08-09T21:15:08.349706Z",
+            "offset_ms": 832.036,
+            "mean_brightness": 160.548,
+            "brightness_delta_adjacent": -0.126,
+            "frame_number": 218
+        },
+        {
+            "frame_index": 218,
+            "sequence_number": 22242608,
+            "timestamp_utc": "2026-08-09T21:15:08.353707Z",
+            "offset_ms": 836.037,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": 0.126,
+            "frame_number": 219
+        },
+        {
+            "frame_index": 219,
+            "sequence_number": 22242609,
+            "timestamp_utc": "2026-08-09T21:15:08.357719Z",
+            "offset_ms": 840.049,
+            "mean_brightness": 160.585,
+            "brightness_delta_adjacent": -0.088,
+            "frame_number": 220
+        },
+        {
+            "frame_index": 220,
+            "sequence_number": 22242610,
+            "timestamp_utc": "2026-08-09T21:15:08.361712Z",
+            "offset_ms": 844.042,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": 0.073,
+            "frame_number": 221
+        },
+        {
+            "frame_index": 221,
+            "sequence_number": 22242611,
+            "timestamp_utc": "2026-08-09T21:15:08.365709Z",
+            "offset_ms": 848.04,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.058,
+            "frame_number": 222
+        },
+        {
+            "frame_index": 222,
+            "sequence_number": 22242612,
+            "timestamp_utc": "2026-08-09T21:15:08.369694Z",
+            "offset_ms": 852.025,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": 0.045,
+            "frame_number": 223
+        },
+        {
+            "frame_index": 223,
+            "sequence_number": 22242613,
+            "timestamp_utc": "2026-08-09T21:15:08.373710Z",
+            "offset_ms": 856.04,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": -0.012,
+            "frame_number": 224
+        },
+        {
+            "frame_index": 224,
+            "sequence_number": 22242614,
+            "timestamp_utc": "2026-08-09T21:15:08.377710Z",
+            "offset_ms": 860.04,
+            "mean_brightness": 160.612,
+            "brightness_delta_adjacent": -0.02,
+            "frame_number": 225
+        },
+        {
+            "frame_index": 225,
+            "sequence_number": 22242615,
+            "timestamp_utc": "2026-08-09T21:15:08.381700Z",
+            "offset_ms": 864.031,
+            "mean_brightness": 160.652,
+            "brightness_delta_adjacent": 0.039,
+            "frame_number": 226
+        },
+        {
+            "frame_index": 226,
+            "sequence_number": 22242616,
+            "timestamp_utc": "2026-08-09T21:15:08.385714Z",
+            "offset_ms": 868.045,
+            "mean_brightness": 160.59,
+            "brightness_delta_adjacent": -0.062,
+            "frame_number": 227
+        },
+        {
+            "frame_index": 227,
+            "sequence_number": 22242617,
+            "timestamp_utc": "2026-08-09T21:15:08.389724Z",
+            "offset_ms": 872.055,
+            "mean_brightness": 160.688,
+            "brightness_delta_adjacent": 0.098,
+            "frame_number": 228
+        },
+        {
+            "frame_index": 228,
+            "sequence_number": 22242618,
+            "timestamp_utc": "2026-08-09T21:15:08.393701Z",
+            "offset_ms": 876.032,
+            "mean_brightness": 160.565,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 229
+        },
+        {
+            "frame_index": 229,
+            "sequence_number": 22242619,
+            "timestamp_utc": "2026-08-09T21:15:08.397719Z",
+            "offset_ms": 880.049,
+            "mean_brightness": 160.697,
+            "brightness_delta_adjacent": 0.132,
+            "frame_number": 230
+        },
+        {
+            "frame_index": 230,
+            "sequence_number": 22242620,
+            "timestamp_utc": "2026-08-09T21:15:08.401717Z",
+            "offset_ms": 884.048,
+            "mean_brightness": 160.571,
+            "brightness_delta_adjacent": -0.126,
+            "frame_number": 231
+        },
+        {
+            "frame_index": 231,
+            "sequence_number": 22242621,
+            "timestamp_utc": "2026-08-09T21:15:08.405704Z",
+            "offset_ms": 888.035,
+            "mean_brightness": 160.688,
+            "brightness_delta_adjacent": 0.118,
+            "frame_number": 232
+        },
+        {
+            "frame_index": 232,
+            "sequence_number": 22242622,
+            "timestamp_utc": "2026-08-09T21:15:08.407705Z",
+            "offset_ms": 890.035,
+            "mean_brightness": 160.603,
+            "brightness_delta_adjacent": -0.085,
+            "frame_number": 233
+        },
+        {
+            "frame_index": 233,
+            "sequence_number": 22242623,
+            "timestamp_utc": "2026-08-09T21:15:08.409751Z",
+            "offset_ms": 892.082,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": 0.052,
+            "frame_number": 234
+        },
+        {
+            "frame_index": 234,
+            "sequence_number": 22242624,
+            "timestamp_utc": "2026-08-09T21:15:08.413695Z",
+            "offset_ms": 896.025,
+            "mean_brightness": 160.618,
+            "brightness_delta_adjacent": -0.037,
+            "frame_number": 235
+        },
+        {
+            "frame_index": 235,
+            "sequence_number": 22242625,
+            "timestamp_utc": "2026-08-09T21:15:08.417725Z",
+            "offset_ms": 900.055,
+            "mean_brightness": 160.644,
+            "brightness_delta_adjacent": 0.026,
+            "frame_number": 236
+        },
+        {
+            "frame_index": 236,
+            "sequence_number": 22242626,
+            "timestamp_utc": "2026-08-09T21:15:08.421726Z",
+            "offset_ms": 904.056,
+            "mean_brightness": 160.657,
+            "brightness_delta_adjacent": 0.013,
+            "frame_number": 237
+        },
+        {
+            "frame_index": 237,
+            "sequence_number": 22242627,
+            "timestamp_utc": "2026-08-09T21:15:08.425744Z",
+            "offset_ms": 908.075,
+            "mean_brightness": 160.628,
+            "brightness_delta_adjacent": -0.029,
+            "frame_number": 238
+        },
+        {
+            "frame_index": 238,
+            "sequence_number": 22242628,
+            "timestamp_utc": "2026-08-09T21:15:08.429729Z",
+            "offset_ms": 912.06,
+            "mean_brightness": 160.669,
+            "brightness_delta_adjacent": 0.041,
+            "frame_number": 239
+        },
+        {
+            "frame_index": 239,
+            "sequence_number": 22242629,
+            "timestamp_utc": "2026-08-09T21:15:08.433737Z",
+            "offset_ms": 916.068,
+            "mean_brightness": 160.585,
+            "brightness_delta_adjacent": -0.084,
+            "frame_number": 240
+        },
+        {
+            "frame_index": 240,
+            "sequence_number": 22242630,
+            "timestamp_utc": "2026-08-09T21:15:08.437713Z",
+            "offset_ms": 920.043,
+            "mean_brightness": 160.7,
+            "brightness_delta_adjacent": 0.115,
+            "frame_number": 241
+        },
+        {
+            "frame_index": 241,
+            "sequence_number": 22242631,
+            "timestamp_utc": "2026-08-09T21:15:08.441712Z",
+            "offset_ms": 924.043,
+            "mean_brightness": 160.569,
+            "brightness_delta_adjacent": -0.131,
+            "frame_number": 242
+        },
+        {
+            "frame_index": 242,
+            "sequence_number": 22242632,
+            "timestamp_utc": "2026-08-09T21:15:08.445714Z",
+            "offset_ms": 928.044,
+            "mean_brightness": 160.676,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 243
+        },
+        {
+            "frame_index": 243,
+            "sequence_number": 22242633,
+            "timestamp_utc": "2026-08-09T21:15:08.449716Z",
+            "offset_ms": 932.047,
+            "mean_brightness": 160.575,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 244
+        },
+        {
+            "frame_index": 244,
+            "sequence_number": 22242634,
+            "timestamp_utc": "2026-08-09T21:15:08.453709Z",
+            "offset_ms": 936.039,
+            "mean_brightness": 160.674,
+            "brightness_delta_adjacent": 0.099,
+            "frame_number": 245
+        },
+        {
+            "frame_index": 245,
+            "sequence_number": 22242635,
+            "timestamp_utc": "2026-08-09T21:15:08.457711Z",
+            "offset_ms": 940.041,
+            "mean_brightness": 160.62,
+            "brightness_delta_adjacent": -0.054,
+            "frame_number": 246
+        },
+        {
+            "frame_index": 246,
+            "sequence_number": 22242636,
+            "timestamp_utc": "2026-08-09T21:15:08.461710Z",
+            "offset_ms": 944.04,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": 0.03,
+            "frame_number": 247
+        },
+        {
+            "frame_index": 247,
+            "sequence_number": 22242637,
+            "timestamp_utc": "2026-08-09T21:15:08.465732Z",
+            "offset_ms": 948.063,
+            "mean_brightness": 160.637,
+            "brightness_delta_adjacent": -0.014,
+            "frame_number": 248
+        },
+        {
+            "frame_index": 248,
+            "sequence_number": 22242638,
+            "timestamp_utc": "2026-08-09T21:15:08.469706Z",
+            "offset_ms": 952.036,
+            "mean_brightness": 160.644,
+            "brightness_delta_adjacent": 0.007,
+            "frame_number": 249
+        },
+        {
+            "frame_index": 249,
+            "sequence_number": 22242639,
+            "timestamp_utc": "2026-08-09T21:15:08.473740Z",
+            "offset_ms": 956.07,
+            "mean_brightness": 160.667,
+            "brightness_delta_adjacent": 0.024,
+            "frame_number": 250
+        },
+        {
+            "frame_index": 250,
+            "sequence_number": 22242640,
+            "timestamp_utc": "2026-08-09T21:15:08.477716Z",
+            "offset_ms": 960.047,
+            "mean_brightness": 160.614,
+            "brightness_delta_adjacent": -0.054,
+            "frame_number": 251
+        },
+        {
+            "frame_index": 251,
+            "sequence_number": 22242641,
+            "timestamp_utc": "2026-08-09T21:15:08.481717Z",
+            "offset_ms": 964.047,
+            "mean_brightness": 160.68,
+            "brightness_delta_adjacent": 0.066,
+            "frame_number": 252
+        },
+        {
+            "frame_index": 252,
+            "sequence_number": 22242642,
+            "timestamp_utc": "2026-08-09T21:15:08.485724Z",
+            "offset_ms": 968.055,
+            "mean_brightness": 160.596,
+            "brightness_delta_adjacent": -0.084,
+            "frame_number": 253
+        },
+        {
+            "frame_index": 253,
+            "sequence_number": 22242643,
+            "timestamp_utc": "2026-08-09T21:15:08.489771Z",
+            "offset_ms": 972.101,
+            "mean_brightness": 160.702,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 254
+        },
+        {
+            "frame_index": 254,
+            "sequence_number": 22242644,
+            "timestamp_utc": "2026-08-09T21:15:08.493773Z",
+            "offset_ms": 976.103,
+            "mean_brightness": 160.576,
+            "brightness_delta_adjacent": -0.126,
+            "frame_number": 255
+        },
+        {
+            "frame_index": 255,
+            "sequence_number": 22242645,
+            "timestamp_utc": "2026-08-09T21:15:09.585933Z",
+            "offset_ms": 2068.264,
+            "mean_brightness": 160.708,
+            "brightness_delta_adjacent": 0.132,
+            "frame_number": 256
+        },
+        {
+            "frame_index": 256,
+            "sequence_number": 22242646,
+            "timestamp_utc": "2026-08-09T21:15:09.588904Z",
+            "offset_ms": 2071.235,
+            "mean_brightness": 160.6,
+            "brightness_delta_adjacent": -0.107,
+            "frame_number": 257
+        },
+        {
+            "frame_index": 257,
+            "sequence_number": 22242647,
+            "timestamp_utc": "2026-08-09T21:15:09.590872Z",
+            "offset_ms": 2073.202,
+            "mean_brightness": 160.691,
+            "brightness_delta_adjacent": 0.091,
+            "frame_number": 258
+        },
+        {
+            "frame_index": 258,
+            "sequence_number": 22242648,
+            "timestamp_utc": "2026-08-09T21:15:09.592784Z",
+            "offset_ms": 2075.115,
+            "mean_brightness": 160.635,
+            "brightness_delta_adjacent": -0.057,
+            "frame_number": 259
+        },
+        {
+            "frame_index": 259,
+            "sequence_number": 22242649,
+            "timestamp_utc": "2026-08-09T21:15:09.594720Z",
+            "offset_ms": 2077.05,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": 0.013,
+            "frame_number": 260
+        },
+        {
+            "frame_index": 260,
+            "sequence_number": 22242650,
+            "timestamp_utc": "2026-08-09T21:15:09.597730Z",
+            "offset_ms": 2080.06,
+            "mean_brightness": 160.748,
+            "brightness_delta_adjacent": 0.1,
+            "frame_number": 261
+        },
+        {
+            "frame_index": 261,
+            "sequence_number": 22242651,
+            "timestamp_utc": "2026-08-09T21:15:09.599676Z",
+            "offset_ms": 2082.006,
+            "mean_brightness": 160.667,
+            "brightness_delta_adjacent": -0.08,
+            "frame_number": 262
+        },
+        {
+            "frame_index": 262,
+            "sequence_number": 22242652,
+            "timestamp_utc": "2026-08-09T21:15:09.601732Z",
+            "offset_ms": 2084.062,
+            "mean_brightness": 160.725,
+            "brightness_delta_adjacent": 0.057,
+            "frame_number": 263
+        },
+        {
+            "frame_index": 263,
+            "sequence_number": 22242653,
+            "timestamp_utc": "2026-08-09T21:15:09.605744Z",
+            "offset_ms": 2088.075,
+            "mean_brightness": 160.683,
+            "brightness_delta_adjacent": -0.041,
+            "frame_number": 264
+        },
+        {
+            "frame_index": 264,
+            "sequence_number": 22242654,
+            "timestamp_utc": "2026-08-09T21:15:09.609767Z",
+            "offset_ms": 2092.097,
+            "mean_brightness": 160.704,
+            "brightness_delta_adjacent": 0.021,
+            "frame_number": 265
+        },
+        {
+            "frame_index": 265,
+            "sequence_number": 22242655,
+            "timestamp_utc": "2026-08-09T21:15:09.613770Z",
+            "offset_ms": 2096.1,
+            "mean_brightness": 160.723,
+            "brightness_delta_adjacent": 0.019,
+            "frame_number": 266
+        },
+        {
+            "frame_index": 266,
+            "sequence_number": 22242656,
+            "timestamp_utc": "2026-08-09T21:15:09.617762Z",
+            "offset_ms": 2100.093,
+            "mean_brightness": 160.686,
+            "brightness_delta_adjacent": -0.037,
+            "frame_number": 267
+        },
+        {
+            "frame_index": 267,
+            "sequence_number": 22242657,
+            "timestamp_utc": "2026-08-09T21:15:09.621756Z",
+            "offset_ms": 2104.087,
+            "mean_brightness": 160.748,
+            "brightness_delta_adjacent": 0.062,
+            "frame_number": 268
+        },
+        {
+            "frame_index": 268,
+            "sequence_number": 22242658,
+            "timestamp_utc": "2026-08-09T21:15:09.625753Z",
+            "offset_ms": 2108.083,
+            "mean_brightness": 160.666,
+            "brightness_delta_adjacent": -0.082,
+            "frame_number": 269
+        },
+        {
+            "frame_index": 269,
+            "sequence_number": 22242659,
+            "timestamp_utc": "2026-08-09T21:15:09.629748Z",
+            "offset_ms": 2112.078,
+            "mean_brightness": 160.746,
+            "brightness_delta_adjacent": 0.08,
+            "frame_number": 270
+        },
+        {
+            "frame_index": 270,
+            "sequence_number": 22242660,
+            "timestamp_utc": "2026-08-09T21:15:09.633737Z",
+            "offset_ms": 2116.067,
+            "mean_brightness": 160.642,
+            "brightness_delta_adjacent": -0.105,
+            "frame_number": 271
+        },
+        {
+            "frame_index": 271,
+            "sequence_number": 22242661,
+            "timestamp_utc": "2026-08-09T21:15:09.637744Z",
+            "offset_ms": 2120.074,
+            "mean_brightness": 160.752,
+            "brightness_delta_adjacent": 0.111,
+            "frame_number": 272
+        },
+        {
+            "frame_index": 272,
+            "sequence_number": 22242662,
+            "timestamp_utc": "2026-08-09T21:15:09.641746Z",
+            "offset_ms": 2124.076,
+            "mean_brightness": 160.644,
+            "brightness_delta_adjacent": -0.108,
+            "frame_number": 273
+        },
+        {
+            "frame_index": 273,
+            "sequence_number": 22242663,
+            "timestamp_utc": "2026-08-09T21:15:09.645743Z",
+            "offset_ms": 2128.073,
+            "mean_brightness": 160.734,
+            "brightness_delta_adjacent": 0.09,
+            "frame_number": 274
+        },
+        {
+            "frame_index": 274,
+            "sequence_number": 22242664,
+            "timestamp_utc": "2026-08-09T21:15:09.649744Z",
+            "offset_ms": 2132.075,
+            "mean_brightness": 160.667,
+            "brightness_delta_adjacent": -0.067,
+            "frame_number": 275
+        },
+        {
+            "frame_index": 275,
+            "sequence_number": 22242665,
+            "timestamp_utc": "2026-08-09T21:15:09.653747Z",
+            "offset_ms": 2136.078,
+            "mean_brightness": 160.723,
+            "brightness_delta_adjacent": 0.055,
+            "frame_number": 276
+        },
+        {
+            "frame_index": 276,
+            "sequence_number": 22242666,
+            "timestamp_utc": "2026-08-09T21:15:09.657765Z",
+            "offset_ms": 2140.095,
+            "mean_brightness": 160.717,
+            "brightness_delta_adjacent": -0.006,
+            "frame_number": 277
+        },
+        {
+            "frame_index": 277,
+            "sequence_number": 22242667,
+            "timestamp_utc": "2026-08-09T21:15:09.661736Z",
+            "offset_ms": 2144.066,
+            "mean_brightness": 160.702,
+            "brightness_delta_adjacent": -0.015,
+            "frame_number": 278
+        },
+        {
+            "frame_index": 278,
+            "sequence_number": 22242668,
+            "timestamp_utc": "2026-08-09T21:15:09.665752Z",
+            "offset_ms": 2148.083,
+            "mean_brightness": 160.723,
+            "brightness_delta_adjacent": 0.021,
+            "frame_number": 279
+        },
+        {
+            "frame_index": 279,
+            "sequence_number": 22242669,
+            "timestamp_utc": "2026-08-09T21:15:09.669755Z",
+            "offset_ms": 2152.085,
+            "mean_brightness": 160.676,
+            "brightness_delta_adjacent": -0.047,
+            "frame_number": 280
+        },
+        {
+            "frame_index": 280,
+            "sequence_number": 22242670,
+            "timestamp_utc": "2026-08-09T21:15:09.673734Z",
+            "offset_ms": 2156.065,
+            "mean_brightness": 160.733,
+            "brightness_delta_adjacent": 0.058,
+            "frame_number": 281
+        },
+        {
+            "frame_index": 281,
+            "sequence_number": 22242671,
+            "timestamp_utc": "2026-08-09T21:15:09.677750Z",
+            "offset_ms": 2160.08,
+            "mean_brightness": 160.656,
+            "brightness_delta_adjacent": -0.077,
+            "frame_number": 282
+        },
+        {
+            "frame_index": 282,
+            "sequence_number": 22242672,
+            "timestamp_utc": "2026-08-09T21:15:09.681753Z",
+            "offset_ms": 2164.084,
+            "mean_brightness": 160.751,
+            "brightness_delta_adjacent": 0.095,
+            "frame_number": 283
+        },
+        {
+            "frame_index": 283,
+            "sequence_number": 22242673,
+            "timestamp_utc": "2026-08-09T21:15:09.685750Z",
+            "offset_ms": 2168.081,
+            "mean_brightness": 160.636,
+            "brightness_delta_adjacent": -0.115,
+            "frame_number": 284
+        },
+        {
+            "frame_index": 284,
+            "sequence_number": 22242674,
+            "timestamp_utc": "2026-08-09T21:15:09.689720Z",
+            "offset_ms": 2172.05,
+            "mean_brightness": 160.76,
+            "brightness_delta_adjacent": 0.124,
+            "frame_number": 285
+        },
+        {
+            "frame_index": 285,
+            "sequence_number": 22242675,
+            "timestamp_utc": "2026-08-09T21:15:09.691689Z",
+            "offset_ms": 2174.019,
+            "mean_brightness": 160.659,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 286
+        },
+        {
+            "frame_index": 286,
+            "sequence_number": 22242676,
+            "timestamp_utc": "2026-08-09T21:15:09.693738Z",
+            "offset_ms": 2176.068,
+            "mean_brightness": 160.735,
+            "brightness_delta_adjacent": 0.076,
+            "frame_number": 287
+        },
+        {
+            "frame_index": 287,
+            "sequence_number": 22242677,
+            "timestamp_utc": "2026-08-09T21:15:09.697746Z",
+            "offset_ms": 2180.076,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": -0.08,
+            "frame_number": 288
+        },
+        {
+            "frame_index": 288,
+            "sequence_number": 22242678,
+            "timestamp_utc": "2026-08-09T21:15:09.701759Z",
+            "offset_ms": 2184.089,
+            "mean_brightness": 160.725,
+            "brightness_delta_adjacent": 0.07,
+            "frame_number": 289
+        },
+        {
+            "frame_index": 289,
+            "sequence_number": 22242679,
+            "timestamp_utc": "2026-08-09T21:15:09.705744Z",
+            "offset_ms": 2188.074,
+            "mean_brightness": 160.726,
+            "brightness_delta_adjacent": 0.0,
+            "frame_number": 290
+        },
+        {
+            "frame_index": 290,
+            "sequence_number": 22242680,
+            "timestamp_utc": "2026-08-09T21:15:09.709760Z",
+            "offset_ms": 2192.09,
+            "mean_brightness": 160.683,
+            "brightness_delta_adjacent": -0.043,
+            "frame_number": 291
+        },
+        {
+            "frame_index": 291,
+            "sequence_number": 22242681,
+            "timestamp_utc": "2026-08-09T21:15:09.713765Z",
+            "offset_ms": 2196.096,
+            "mean_brightness": 160.727,
+            "brightness_delta_adjacent": 0.044,
+            "frame_number": 292
+        },
+        {
+            "frame_index": 292,
+            "sequence_number": 22242682,
+            "timestamp_utc": "2026-08-09T21:15:09.717739Z",
+            "offset_ms": 2200.07,
+            "mean_brightness": 160.679,
+            "brightness_delta_adjacent": -0.048,
+            "frame_number": 293
+        },
+        {
+            "frame_index": 293,
+            "sequence_number": 22242683,
+            "timestamp_utc": "2026-08-09T21:15:09.721750Z",
+            "offset_ms": 2204.08,
+            "mean_brightness": 160.759,
+            "brightness_delta_adjacent": 0.08,
+            "frame_number": 294
+        },
+        {
+            "frame_index": 294,
+            "sequence_number": 22242684,
+            "timestamp_utc": "2026-08-09T21:15:09.725741Z",
+            "offset_ms": 2208.072,
+            "mean_brightness": 160.636,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 295
+        },
+        {
+            "frame_index": 295,
+            "sequence_number": 22242685,
+            "timestamp_utc": "2026-08-09T21:15:09.729752Z",
+            "offset_ms": 2212.082,
+            "mean_brightness": 160.771,
+            "brightness_delta_adjacent": 0.135,
+            "frame_number": 296
+        },
+        {
+            "frame_index": 296,
+            "sequence_number": 22242686,
+            "timestamp_utc": "2026-08-09T21:15:09.733736Z",
+            "offset_ms": 2216.066,
+            "mean_brightness": 160.642,
+            "brightness_delta_adjacent": -0.129,
+            "frame_number": 297
+        },
+        {
+            "frame_index": 297,
+            "sequence_number": 22242687,
+            "timestamp_utc": "2026-08-09T21:15:09.737741Z",
+            "offset_ms": 2220.071,
+            "mean_brightness": 160.771,
+            "brightness_delta_adjacent": 0.128,
+            "frame_number": 298
+        },
+        {
+            "frame_index": 298,
+            "sequence_number": 22242688,
+            "timestamp_utc": "2026-08-09T21:15:09.741751Z",
+            "offset_ms": 2224.082,
+            "mean_brightness": 160.656,
+            "brightness_delta_adjacent": -0.114,
+            "frame_number": 299
+        },
+        {
+            "frame_index": 299,
+            "sequence_number": 22242689,
+            "timestamp_utc": "2026-08-09T21:15:09.745766Z",
+            "offset_ms": 2228.097,
+            "mean_brightness": 160.733,
+            "brightness_delta_adjacent": 0.076,
+            "frame_number": 300
+        },
+        {
+            "frame_index": 300,
+            "sequence_number": 22242690,
+            "timestamp_utc": "2026-08-09T21:15:09.749757Z",
+            "offset_ms": 2232.087,
+            "mean_brightness": 160.676,
+            "brightness_delta_adjacent": -0.057,
+            "frame_number": 301
+        },
+        {
+            "frame_index": 301,
+            "sequence_number": 22242691,
+            "timestamp_utc": "2026-08-09T21:15:09.753744Z",
+            "offset_ms": 2236.075,
+            "mean_brightness": 160.716,
+            "brightness_delta_adjacent": 0.04,
+            "frame_number": 302
+        },
+        {
+            "frame_index": 302,
+            "sequence_number": 22242692,
+            "timestamp_utc": "2026-08-09T21:15:09.757746Z",
+            "offset_ms": 2240.077,
+            "mean_brightness": 160.702,
+            "brightness_delta_adjacent": -0.014,
+            "frame_number": 303
+        },
+        {
+            "frame_index": 303,
+            "sequence_number": 22242693,
+            "timestamp_utc": "2026-08-09T21:15:09.761796Z",
+            "offset_ms": 2244.125,
+            "mean_brightness": 160.696,
+            "brightness_delta_adjacent": -0.006,
+            "frame_number": 304
+        },
+        {
+            "frame_index": 304,
+            "sequence_number": 22242694,
+            "timestamp_utc": "2026-08-09T21:15:09.765764Z",
+            "offset_ms": 2248.095,
+            "mean_brightness": 160.752,
+            "brightness_delta_adjacent": 0.056,
+            "frame_number": 305
+        },
+        {
+            "frame_index": 305,
+            "sequence_number": 22242695,
+            "timestamp_utc": "2026-08-09T21:15:09.769757Z",
+            "offset_ms": 2252.088,
+            "mean_brightness": 160.668,
+            "brightness_delta_adjacent": -0.084,
+            "frame_number": 306
+        },
+        {
+            "frame_index": 306,
+            "sequence_number": 22242696,
+            "timestamp_utc": "2026-08-09T21:15:09.773762Z",
+            "offset_ms": 2256.092,
+            "mean_brightness": 160.758,
+            "brightness_delta_adjacent": 0.09,
+            "frame_number": 307
+        },
+        {
+            "frame_index": 307,
+            "sequence_number": 22242697,
+            "timestamp_utc": "2026-08-09T21:15:09.777757Z",
+            "offset_ms": 2260.088,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": -0.11,
+            "frame_number": 308
+        },
+        {
+            "frame_index": 308,
+            "sequence_number": 22242698,
+            "timestamp_utc": "2026-08-09T21:15:09.781720Z",
+            "offset_ms": 2264.051,
+            "mean_brightness": 160.766,
+            "brightness_delta_adjacent": 0.118,
+            "frame_number": 309
+        },
+        {
+            "frame_index": 309,
+            "sequence_number": 22242699,
+            "timestamp_utc": "2026-08-09T21:15:09.783659Z",
+            "offset_ms": 2265.99,
+            "mean_brightness": 160.638,
+            "brightness_delta_adjacent": -0.128,
+            "frame_number": 310
+        },
+        {
+            "frame_index": 310,
+            "sequence_number": 22242700,
+            "timestamp_utc": "2026-08-09T21:15:09.785765Z",
+            "offset_ms": 2268.096,
+            "mean_brightness": 160.746,
+            "brightness_delta_adjacent": 0.108,
+            "frame_number": 311
+        },
+        {
+            "frame_index": 311,
+            "sequence_number": 22242701,
+            "timestamp_utc": "2026-08-09T21:15:09.789763Z",
+            "offset_ms": 2272.094,
+            "mean_brightness": 160.665,
+            "brightness_delta_adjacent": -0.081,
+            "frame_number": 312
+        },
+        {
+            "frame_index": 312,
+            "sequence_number": 22242702,
+            "timestamp_utc": "2026-08-09T21:15:09.793755Z",
+            "offset_ms": 2276.086,
+            "mean_brightness": 160.726,
+            "brightness_delta_adjacent": 0.062,
+            "frame_number": 313
+        },
+        {
+            "frame_index": 313,
+            "sequence_number": 22242703,
+            "timestamp_utc": "2026-08-09T21:15:09.797771Z",
+            "offset_ms": 2280.101,
+            "mean_brightness": 160.684,
+            "brightness_delta_adjacent": -0.043,
+            "frame_number": 314
+        },
+        {
+            "frame_index": 314,
+            "sequence_number": 22242704,
+            "timestamp_utc": "2026-08-09T21:15:09.801764Z",
+            "offset_ms": 2284.095,
+            "mean_brightness": 160.704,
+            "brightness_delta_adjacent": 0.021,
+            "frame_number": 315
+        },
+        {
+            "frame_index": 315,
+            "sequence_number": 22242705,
+            "timestamp_utc": "2026-08-09T21:15:09.805753Z",
+            "offset_ms": 2288.083,
+            "mean_brightness": 160.713,
+            "brightness_delta_adjacent": 0.008,
+            "frame_number": 316
+        },
+        {
+            "frame_index": 316,
+            "sequence_number": 22242706,
+            "timestamp_utc": "2026-08-09T21:15:09.809750Z",
+            "offset_ms": 2292.08,
+            "mean_brightness": 160.675,
+            "brightness_delta_adjacent": -0.037,
+            "frame_number": 317
+        },
+        {
+            "frame_index": 317,
+            "sequence_number": 22242707,
+            "timestamp_utc": "2026-08-09T21:15:09.813752Z",
+            "offset_ms": 2296.082,
+            "mean_brightness": 160.749,
+            "brightness_delta_adjacent": 0.074,
+            "frame_number": 318
+        },
+        {
+            "frame_index": 318,
+            "sequence_number": 22242708,
+            "timestamp_utc": "2026-08-09T21:15:09.817741Z",
+            "offset_ms": 2300.072,
+            "mean_brightness": 160.646,
+            "brightness_delta_adjacent": -0.102,
+            "frame_number": 319
+        },
+        {
+            "frame_index": 319,
+            "sequence_number": 22242709,
+            "timestamp_utc": "2026-08-09T21:15:09.821769Z",
+            "offset_ms": 2304.1,
+            "mean_brightness": 160.745,
+            "brightness_delta_adjacent": 0.099,
+            "frame_number": 320
+        },
+        {
+            "frame_index": 320,
+            "sequence_number": 22242710,
+            "timestamp_utc": "2026-08-09T21:15:09.825750Z",
+            "offset_ms": 2308.081,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": -0.112,
+            "frame_number": 321
+        },
+        {
+            "frame_index": 321,
+            "sequence_number": 22242711,
+            "timestamp_utc": "2026-08-09T21:15:09.829751Z",
+            "offset_ms": 2312.081,
+            "mean_brightness": 160.757,
+            "brightness_delta_adjacent": 0.124,
+            "frame_number": 322
+        },
+        {
+            "frame_index": 322,
+            "sequence_number": 22242712,
+            "timestamp_utc": "2026-08-09T21:15:09.833759Z",
+            "offset_ms": 2316.09,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": -0.115,
+            "frame_number": 323
+        },
+        {
+            "frame_index": 323,
+            "sequence_number": 22242713,
+            "timestamp_utc": "2026-08-09T21:15:09.837754Z",
+            "offset_ms": 2320.084,
+            "mean_brightness": 160.749,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 324
+        },
+        {
+            "frame_index": 324,
+            "sequence_number": 22242714,
+            "timestamp_utc": "2026-08-09T21:15:09.841751Z",
+            "offset_ms": 2324.081,
+            "mean_brightness": 160.672,
+            "brightness_delta_adjacent": -0.076,
+            "frame_number": 325
+        },
+        {
+            "frame_index": 325,
+            "sequence_number": 22242715,
+            "timestamp_utc": "2026-08-09T21:15:09.845760Z",
+            "offset_ms": 2328.091,
+            "mean_brightness": 160.715,
+            "brightness_delta_adjacent": 0.043,
+            "frame_number": 326
+        },
+        {
+            "frame_index": 326,
+            "sequence_number": 22242716,
+            "timestamp_utc": "2026-08-09T21:15:09.849760Z",
+            "offset_ms": 2332.09,
+            "mean_brightness": 160.686,
+            "brightness_delta_adjacent": -0.029,
+            "frame_number": 327
+        },
+        {
+            "frame_index": 327,
+            "sequence_number": 22242717,
+            "timestamp_utc": "2026-08-09T21:15:09.853751Z",
+            "offset_ms": 2336.082,
+            "mean_brightness": 160.705,
+            "brightness_delta_adjacent": 0.018,
+            "frame_number": 328
+        },
+        {
+            "frame_index": 328,
+            "sequence_number": 22242718,
+            "timestamp_utc": "2026-08-09T21:15:09.857757Z",
+            "offset_ms": 2340.088,
+            "mean_brightness": 160.722,
+            "brightness_delta_adjacent": 0.017,
+            "frame_number": 329
+        },
+        {
+            "frame_index": 329,
+            "sequence_number": 22242719,
+            "timestamp_utc": "2026-08-09T21:15:09.861767Z",
+            "offset_ms": 2344.097,
+            "mean_brightness": 160.68,
+            "brightness_delta_adjacent": -0.042,
+            "frame_number": 330
+        },
+        {
+            "frame_index": 330,
+            "sequence_number": 22242720,
+            "timestamp_utc": "2026-08-09T21:15:09.865750Z",
+            "offset_ms": 2348.081,
+            "mean_brightness": 160.745,
+            "brightness_delta_adjacent": 0.065,
+            "frame_number": 331
+        },
+        {
+            "frame_index": 331,
+            "sequence_number": 22242721,
+            "timestamp_utc": "2026-08-09T21:15:09.869759Z",
+            "offset_ms": 2352.091,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": -0.097,
+            "frame_number": 332
+        },
+        {
+            "frame_index": 332,
+            "sequence_number": 22242722,
+            "timestamp_utc": "2026-08-09T21:15:09.873719Z",
+            "offset_ms": 2356.05,
+            "mean_brightness": 160.752,
+            "brightness_delta_adjacent": 0.104,
+            "frame_number": 333
+        },
+        {
+            "frame_index": 333,
+            "sequence_number": 22242723,
+            "timestamp_utc": "2026-08-09T21:15:09.875670Z",
+            "offset_ms": 2358.001,
+            "mean_brightness": 160.637,
+            "brightness_delta_adjacent": -0.115,
+            "frame_number": 334
+        },
+        {
+            "frame_index": 334,
+            "sequence_number": 22242724,
+            "timestamp_utc": "2026-08-09T21:15:09.877765Z",
+            "offset_ms": 2360.096,
+            "mean_brightness": 160.752,
+            "brightness_delta_adjacent": 0.116,
+            "frame_number": 335
+        },
+        {
+            "frame_index": 335,
+            "sequence_number": 22242725,
+            "timestamp_utc": "2026-08-09T21:15:09.881751Z",
+            "offset_ms": 2364.082,
+            "mean_brightness": 160.636,
+            "brightness_delta_adjacent": -0.117,
+            "frame_number": 336
+        },
+        {
+            "frame_index": 336,
+            "sequence_number": 22242726,
+            "timestamp_utc": "2026-08-09T21:15:09.885765Z",
+            "offset_ms": 2368.096,
+            "mean_brightness": 160.744,
+            "brightness_delta_adjacent": 0.109,
+            "frame_number": 337
+        },
+        {
+            "frame_index": 337,
+            "sequence_number": 22242727,
+            "timestamp_utc": "2026-08-09T21:15:09.889773Z",
+            "offset_ms": 2372.103,
+            "mean_brightness": 160.678,
+            "brightness_delta_adjacent": -0.066,
+            "frame_number": 338
+        },
+        {
+            "frame_index": 338,
+            "sequence_number": 22242728,
+            "timestamp_utc": "2026-08-09T21:15:09.893756Z",
+            "offset_ms": 2376.086,
+            "mean_brightness": 160.724,
+            "brightness_delta_adjacent": 0.046,
+            "frame_number": 339
+        },
+        {
+            "frame_index": 339,
+            "sequence_number": 22242729,
+            "timestamp_utc": "2026-08-09T21:15:09.897773Z",
+            "offset_ms": 2380.104,
+            "mean_brightness": 160.684,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 340
+        },
+        {
+            "frame_index": 340,
+            "sequence_number": 22242730,
+            "timestamp_utc": "2026-08-09T21:15:09.901749Z",
+            "offset_ms": 2384.079,
+            "mean_brightness": 160.695,
+            "brightness_delta_adjacent": 0.011,
+            "frame_number": 341
+        },
+        {
+            "frame_index": 341,
+            "sequence_number": 22242731,
+            "timestamp_utc": "2026-08-09T21:15:09.905762Z",
+            "offset_ms": 2388.092,
+            "mean_brightness": 160.74,
+            "brightness_delta_adjacent": 0.045,
+            "frame_number": 342
+        },
+        {
+            "frame_index": 342,
+            "sequence_number": 22242732,
+            "timestamp_utc": "2026-08-09T21:15:09.909753Z",
+            "offset_ms": 2392.083,
+            "mean_brightness": 160.66,
+            "brightness_delta_adjacent": -0.08,
+            "frame_number": 343
+        },
+        {
+            "frame_index": 343,
+            "sequence_number": 22242733,
+            "timestamp_utc": "2026-08-09T21:15:09.913773Z",
+            "offset_ms": 2396.104,
+            "mean_brightness": 160.746,
+            "brightness_delta_adjacent": 0.086,
+            "frame_number": 344
+        },
+        {
+            "frame_index": 344,
+            "sequence_number": 22242734,
+            "timestamp_utc": "2026-08-09T21:15:09.917753Z",
+            "offset_ms": 2400.084,
+            "mean_brightness": 160.641,
+            "brightness_delta_adjacent": -0.104,
+            "frame_number": 345
+        },
+        {
+            "frame_index": 345,
+            "sequence_number": 22242735,
+            "timestamp_utc": "2026-08-09T21:15:09.921763Z",
+            "offset_ms": 2404.093,
+            "mean_brightness": 160.76,
+            "brightness_delta_adjacent": 0.118,
+            "frame_number": 346
+        },
+        {
+            "frame_index": 346,
+            "sequence_number": 22242736,
+            "timestamp_utc": "2026-08-09T21:15:09.925774Z",
+            "offset_ms": 2408.104,
+            "mean_brightness": 160.637,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 347
+        },
+        {
+            "frame_index": 347,
+            "sequence_number": 22242737,
+            "timestamp_utc": "2026-08-09T21:15:09.929757Z",
+            "offset_ms": 2412.088,
+            "mean_brightness": 160.762,
+            "brightness_delta_adjacent": 0.125,
+            "frame_number": 348
+        },
+        {
+            "frame_index": 348,
+            "sequence_number": 22242738,
+            "timestamp_utc": "2026-08-09T21:15:09.933758Z",
+            "offset_ms": 2416.089,
+            "mean_brightness": 160.66,
+            "brightness_delta_adjacent": -0.102,
+            "frame_number": 349
+        },
+        {
+            "frame_index": 349,
+            "sequence_number": 22242739,
+            "timestamp_utc": "2026-08-09T21:15:09.937758Z",
+            "offset_ms": 2420.089,
+            "mean_brightness": 160.743,
+            "brightness_delta_adjacent": 0.083,
+            "frame_number": 350
+        },
+        {
+            "frame_index": 350,
+            "sequence_number": 22242740,
+            "timestamp_utc": "2026-08-09T21:15:09.941750Z",
+            "offset_ms": 2424.08,
+            "mean_brightness": 160.688,
+            "brightness_delta_adjacent": -0.055,
+            "frame_number": 351
+        },
+        {
+            "frame_index": 351,
+            "sequence_number": 22242741,
+            "timestamp_utc": "2026-08-09T21:15:09.945762Z",
+            "offset_ms": 2428.093,
+            "mean_brightness": 160.707,
+            "brightness_delta_adjacent": 0.019,
+            "frame_number": 352
+        },
+        {
+            "frame_index": 352,
+            "sequence_number": 22242742,
+            "timestamp_utc": "2026-08-09T21:15:09.949762Z",
+            "offset_ms": 2432.092,
+            "mean_brightness": 160.72,
+            "brightness_delta_adjacent": 0.013,
+            "frame_number": 353
+        },
+        {
+            "frame_index": 353,
+            "sequence_number": 22242743,
+            "timestamp_utc": "2026-08-09T21:15:09.953763Z",
+            "offset_ms": 2436.094,
+            "mean_brightness": 160.696,
+            "brightness_delta_adjacent": -0.024,
+            "frame_number": 354
+        },
+        {
+            "frame_index": 354,
+            "sequence_number": 22242744,
+            "timestamp_utc": "2026-08-09T21:15:09.957770Z",
+            "offset_ms": 2440.101,
+            "mean_brightness": 160.727,
+            "brightness_delta_adjacent": 0.031,
+            "frame_number": 355
+        },
+        {
+            "frame_index": 355,
+            "sequence_number": 22242745,
+            "timestamp_utc": "2026-08-09T21:15:09.961750Z",
+            "offset_ms": 2444.081,
+            "mean_brightness": 160.674,
+            "brightness_delta_adjacent": -0.053,
+            "frame_number": 356
+        },
+        {
+            "frame_index": 356,
+            "sequence_number": 22242746,
+            "timestamp_utc": "2026-08-09T21:15:09.965733Z",
+            "offset_ms": 2448.064,
+            "mean_brightness": 160.747,
+            "brightness_delta_adjacent": 0.074,
+            "frame_number": 357
+        },
+        {
+            "frame_index": 357,
+            "sequence_number": 22242747,
+            "timestamp_utc": "2026-08-09T21:15:09.967689Z",
+            "offset_ms": 2450.021,
+            "mean_brightness": 160.642,
+            "brightness_delta_adjacent": -0.105,
+            "frame_number": 358
+        },
+        {
+            "frame_index": 358,
+            "sequence_number": 22242748,
+            "timestamp_utc": "2026-08-09T21:15:09.969756Z",
+            "offset_ms": 2452.087,
+            "mean_brightness": 160.759,
+            "brightness_delta_adjacent": 0.117,
+            "frame_number": 359
+        },
+        {
+            "frame_index": 359,
+            "sequence_number": 22242749,
+            "timestamp_utc": "2026-08-09T21:15:09.973771Z",
+            "offset_ms": 2456.102,
+            "mean_brightness": 160.63,
+            "brightness_delta_adjacent": -0.129,
+            "frame_number": 360
+        },
+        {
+            "frame_index": 360,
+            "sequence_number": 22242750,
+            "timestamp_utc": "2026-08-09T21:15:09.977776Z",
+            "offset_ms": 2460.107,
+            "mean_brightness": 160.746,
+            "brightness_delta_adjacent": 0.116,
+            "frame_number": 361
+        },
+        {
+            "frame_index": 361,
+            "sequence_number": 22242751,
+            "timestamp_utc": "2026-08-09T21:15:09.981765Z",
+            "offset_ms": 2464.095,
+            "mean_brightness": 160.664,
+            "brightness_delta_adjacent": -0.082,
+            "frame_number": 362
+        },
+        {
+            "frame_index": 362,
+            "sequence_number": 22242752,
+            "timestamp_utc": "2026-08-09T21:15:09.985772Z",
+            "offset_ms": 2468.102,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.048,
+            "frame_number": 363
+        },
+        {
+            "frame_index": 363,
+            "sequence_number": 22242753,
+            "timestamp_utc": "2026-08-09T21:15:09.989773Z",
+            "offset_ms": 2472.104,
+            "mean_brightness": 160.678,
+            "brightness_delta_adjacent": -0.034,
+            "frame_number": 364
+        },
+        {
+            "frame_index": 364,
+            "sequence_number": 22242754,
+            "timestamp_utc": "2026-08-09T21:15:09.993770Z",
+            "offset_ms": 2476.101,
+            "mean_brightness": 160.697,
+            "brightness_delta_adjacent": 0.019,
+            "frame_number": 365
+        },
+        {
+            "frame_index": 365,
+            "sequence_number": 22242755,
+            "timestamp_utc": "2026-08-09T21:15:09.997770Z",
+            "offset_ms": 2480.1,
+            "mean_brightness": 160.727,
+            "brightness_delta_adjacent": 0.029,
+            "frame_number": 366
+        },
+        {
+            "frame_index": 366,
+            "sequence_number": 22242756,
+            "timestamp_utc": "2026-08-09T21:15:10.001751Z",
+            "offset_ms": 2484.081,
+            "mean_brightness": 160.666,
+            "brightness_delta_adjacent": -0.06,
+            "frame_number": 367
+        },
+        {
+            "frame_index": 367,
+            "sequence_number": 22242757,
+            "timestamp_utc": "2026-08-09T21:15:10.005780Z",
+            "offset_ms": 2488.11,
+            "mean_brightness": 160.751,
+            "brightness_delta_adjacent": 0.085,
+            "frame_number": 368
+        },
+        {
+            "frame_index": 368,
+            "sequence_number": 22242758,
+            "timestamp_utc": "2026-08-09T21:15:10.009779Z",
+            "offset_ms": 2492.11,
+            "mean_brightness": 160.647,
+            "brightness_delta_adjacent": -0.104,
+            "frame_number": 369
+        },
+        {
+            "frame_index": 369,
+            "sequence_number": 22242759,
+            "timestamp_utc": "2026-08-09T21:15:10.013764Z",
+            "offset_ms": 2496.095,
+            "mean_brightness": 160.764,
+            "brightness_delta_adjacent": 0.117,
+            "frame_number": 370
+        },
+        {
+            "frame_index": 370,
+            "sequence_number": 22242760,
+            "timestamp_utc": "2026-08-09T21:15:10.017748Z",
+            "offset_ms": 2500.079,
+            "mean_brightness": 160.642,
+            "brightness_delta_adjacent": -0.122,
+            "frame_number": 371
+        },
+        {
+            "frame_index": 371,
+            "sequence_number": 22242761,
+            "timestamp_utc": "2026-08-09T21:15:10.021761Z",
+            "offset_ms": 2504.091,
+            "mean_brightness": 160.755,
+            "brightness_delta_adjacent": 0.113,
+            "frame_number": 372
+        },
+        {
+            "frame_index": 372,
+            "sequence_number": 22242762,
+            "timestamp_utc": "2026-08-09T21:15:10.025760Z",
+            "offset_ms": 2508.09,
+            "mean_brightness": 160.654,
+            "brightness_delta_adjacent": -0.1,
+            "frame_number": 373
+        },
+        {
+            "frame_index": 373,
+            "sequence_number": 22242763,
+            "timestamp_utc": "2026-08-09T21:15:10.029759Z",
+            "offset_ms": 2512.089,
+            "mean_brightness": 160.754,
+            "brightness_delta_adjacent": 0.1,
+            "frame_number": 374
+        },
+        {
+            "frame_index": 374,
+            "sequence_number": 22242764,
+            "timestamp_utc": "2026-08-09T21:15:10.033776Z",
+            "offset_ms": 2516.106,
+            "mean_brightness": 160.675,
+            "brightness_delta_adjacent": -0.079,
+            "frame_number": 375
+        },
+        {
+            "frame_index": 375,
+            "sequence_number": 22242765,
+            "timestamp_utc": "2026-08-09T21:15:10.037771Z",
+            "offset_ms": 2520.101,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.037,
+            "frame_number": 376
+        },
+        {
+            "frame_index": 376,
+            "sequence_number": 22242766,
+            "timestamp_utc": "2026-08-09T21:15:10.041759Z",
+            "offset_ms": 2524.09,
+            "mean_brightness": 160.71,
+            "brightness_delta_adjacent": -0.002,
+            "frame_number": 377
+        },
+        {
+            "frame_index": 377,
+            "sequence_number": 22242767,
+            "timestamp_utc": "2026-08-09T21:15:10.045773Z",
+            "offset_ms": 2528.103,
+            "mean_brightness": 160.701,
+            "brightness_delta_adjacent": -0.009,
+            "frame_number": 378
+        },
+        {
+            "frame_index": 378,
+            "sequence_number": 22242768,
+            "timestamp_utc": "2026-08-09T21:15:10.049768Z",
+            "offset_ms": 2532.099,
+            "mean_brightness": 160.736,
+            "brightness_delta_adjacent": 0.035,
+            "frame_number": 379
+        },
+        {
+            "frame_index": 379,
+            "sequence_number": 22242769,
+            "timestamp_utc": "2026-08-09T21:15:10.053747Z",
+            "offset_ms": 2536.078,
+            "mean_brightness": 160.679,
+            "brightness_delta_adjacent": -0.056,
+            "frame_number": 380
+        },
+        {
+            "frame_index": 380,
+            "sequence_number": 22242770,
+            "timestamp_utc": "2026-08-09T21:15:10.057738Z",
+            "offset_ms": 2540.069,
+            "mean_brightness": 160.749,
+            "brightness_delta_adjacent": 0.069,
+            "frame_number": 381
+        },
+        {
+            "frame_index": 381,
+            "sequence_number": 22242771,
+            "timestamp_utc": "2026-08-09T21:15:10.059684Z",
+            "offset_ms": 2542.014,
+            "mean_brightness": 160.648,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 382
+        },
+        {
+            "frame_index": 382,
+            "sequence_number": 22242772,
+            "timestamp_utc": "2026-08-09T21:15:10.061767Z",
+            "offset_ms": 2544.097,
+            "mean_brightness": 160.751,
+            "brightness_delta_adjacent": 0.103,
+            "frame_number": 383
+        },
+        {
+            "frame_index": 383,
+            "sequence_number": 22242773,
+            "timestamp_utc": "2026-08-09T21:15:10.065789Z",
+            "offset_ms": 2548.12,
+            "mean_brightness": 160.639,
+            "brightness_delta_adjacent": -0.112,
+            "frame_number": 384
+        },
+        {
+            "frame_index": 384,
+            "sequence_number": 22242774,
+            "timestamp_utc": "2026-08-09T21:15:10.069781Z",
+            "offset_ms": 2552.111,
+            "mean_brightness": 160.768,
+            "brightness_delta_adjacent": 0.129,
+            "frame_number": 385
+        },
+        {
+            "frame_index": 385,
+            "sequence_number": 22242775,
+            "timestamp_utc": "2026-08-09T21:15:10.073786Z",
+            "offset_ms": 2556.116,
+            "mean_brightness": 160.652,
+            "brightness_delta_adjacent": -0.116,
+            "frame_number": 386
+        },
+        {
+            "frame_index": 386,
+            "sequence_number": 22242776,
+            "timestamp_utc": "2026-08-09T21:15:10.077786Z",
+            "offset_ms": 2560.117,
+            "mean_brightness": 160.716,
+            "brightness_delta_adjacent": 0.064,
+            "frame_number": 387
+        },
+        {
+            "frame_index": 387,
+            "sequence_number": 22242777,
+            "timestamp_utc": "2026-08-09T21:15:10.081792Z",
+            "offset_ms": 2564.122,
+            "mean_brightness": 160.709,
+            "brightness_delta_adjacent": -0.007,
+            "frame_number": 388
+        },
+        {
+            "frame_index": 388,
+            "sequence_number": 22242778,
+            "timestamp_utc": "2026-08-09T21:15:10.085779Z",
+            "offset_ms": 2568.11,
+            "mean_brightness": 160.711,
+            "brightness_delta_adjacent": 0.002,
+            "frame_number": 389
+        },
+        {
+            "frame_index": 389,
+            "sequence_number": 22242779,
+            "timestamp_utc": "2026-08-09T21:15:10.089764Z",
+            "offset_ms": 2572.095,
+            "mean_brightness": 160.708,
+            "brightness_delta_adjacent": -0.003,
+            "frame_number": 390
+        },
+        {
+            "frame_index": 390,
+            "sequence_number": 22242780,
+            "timestamp_utc": "2026-08-09T21:15:10.093768Z",
+            "offset_ms": 2576.098,
+            "mean_brightness": 160.694,
+            "brightness_delta_adjacent": -0.014,
+            "frame_number": 391
+        },
+        {
+            "frame_index": 391,
+            "sequence_number": 22242781,
+            "timestamp_utc": "2026-08-09T21:15:10.097776Z",
+            "offset_ms": 2580.106,
+            "mean_brightness": 160.722,
+            "brightness_delta_adjacent": 0.028,
+            "frame_number": 392
+        },
+        {
+            "frame_index": 392,
+            "sequence_number": 22242782,
+            "timestamp_utc": "2026-08-09T21:15:10.101761Z",
+            "offset_ms": 2584.091,
+            "mean_brightness": 160.66,
+            "brightness_delta_adjacent": -0.062,
+            "frame_number": 393
+        },
+        {
+            "frame_index": 393,
+            "sequence_number": 22242783,
+            "timestamp_utc": "2026-08-09T21:15:10.105766Z",
+            "offset_ms": 2588.096,
+            "mean_brightness": 160.75,
+            "brightness_delta_adjacent": 0.089,
+            "frame_number": 394
+        },
+        {
+            "frame_index": 394,
+            "sequence_number": 22242784,
+            "timestamp_utc": "2026-08-09T21:15:10.109777Z",
+            "offset_ms": 2592.106,
+            "mean_brightness": 160.643,
+            "brightness_delta_adjacent": -0.107,
+            "frame_number": 395
+        },
+        {
+            "frame_index": 395,
+            "sequence_number": 22242785,
+            "timestamp_utc": "2026-08-09T21:15:10.113790Z",
+            "offset_ms": 2596.12,
+            "mean_brightness": 160.769,
+            "brightness_delta_adjacent": 0.126,
+            "frame_number": 396
+        },
+        {
+            "frame_index": 396,
+            "sequence_number": 22242786,
+            "timestamp_utc": "2026-08-09T21:15:10.117754Z",
+            "offset_ms": 2600.084,
+            "mean_brightness": 160.637,
+            "brightness_delta_adjacent": -0.133,
+            "frame_number": 397
+        },
+        {
+            "frame_index": 397,
+            "sequence_number": 22242787,
+            "timestamp_utc": "2026-08-09T21:15:10.121766Z",
+            "offset_ms": 2604.097,
+            "mean_brightness": 160.758,
+            "brightness_delta_adjacent": 0.121,
+            "frame_number": 398
+        },
+        {
+            "frame_index": 398,
+            "sequence_number": 22242788,
+            "timestamp_utc": "2026-08-09T21:15:10.125778Z",
+            "offset_ms": 2608.109,
+            "mean_brightness": 160.649,
+            "brightness_delta_adjacent": -0.109,
+            "frame_number": 399
+        },
+        {
+            "frame_index": 399,
+            "sequence_number": 22242789,
+            "timestamp_utc": "2026-08-09T21:15:10.129777Z",
+            "offset_ms": 2612.108,
+            "mean_brightness": 160.729,
+            "brightness_delta_adjacent": 0.08,
+            "frame_number": 400
+        },
+        {
+            "frame_index": 400,
+            "sequence_number": 22242790,
+            "timestamp_utc": "2026-08-09T21:15:10.133771Z",
+            "offset_ms": 2616.102,
+            "mean_brightness": 160.691,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 401
+        },
+        {
+            "frame_index": 401,
+            "sequence_number": 22242791,
+            "timestamp_utc": "2026-08-09T21:15:10.137786Z",
+            "offset_ms": 2620.116,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.021,
+            "frame_number": 402
+        },
+        {
+            "frame_index": 402,
+            "sequence_number": 22242792,
+            "timestamp_utc": "2026-08-09T21:15:10.141776Z",
+            "offset_ms": 2624.106,
+            "mean_brightness": 160.726,
+            "brightness_delta_adjacent": 0.014,
+            "frame_number": 403
+        },
+        {
+            "frame_index": 403,
+            "sequence_number": 22242793,
+            "timestamp_utc": "2026-08-09T21:15:10.145763Z",
+            "offset_ms": 2628.093,
+            "mean_brightness": 160.703,
+            "brightness_delta_adjacent": -0.023,
+            "frame_number": 404
+        },
+        {
+            "frame_index": 404,
+            "sequence_number": 22242794,
+            "timestamp_utc": "2026-08-09T21:15:10.147713Z",
+            "offset_ms": 2630.043,
+            "mean_brightness": 160.734,
+            "brightness_delta_adjacent": 0.031,
+            "frame_number": 405
+        },
+        {
+            "frame_index": 405,
+            "sequence_number": 22242795,
+            "timestamp_utc": "2026-08-09T21:15:10.149762Z",
+            "offset_ms": 2632.093,
+            "mean_brightness": 160.675,
+            "brightness_delta_adjacent": -0.059,
+            "frame_number": 406
+        },
+        {
+            "frame_index": 406,
+            "sequence_number": 22242796,
+            "timestamp_utc": "2026-08-09T21:15:10.153781Z",
+            "offset_ms": 2636.112,
+            "mean_brightness": 160.762,
+            "brightness_delta_adjacent": 0.087,
+            "frame_number": 407
+        },
+        {
+            "frame_index": 407,
+            "sequence_number": 22242797,
+            "timestamp_utc": "2026-08-09T21:15:10.157797Z",
+            "offset_ms": 2640.127,
+            "mean_brightness": 160.64,
+            "brightness_delta_adjacent": -0.122,
+            "frame_number": 408
+        },
+        {
+            "frame_index": 408,
+            "sequence_number": 22242798,
+            "timestamp_utc": "2026-08-09T21:15:10.161771Z",
+            "offset_ms": 2644.102,
+            "mean_brightness": 160.748,
+            "brightness_delta_adjacent": 0.108,
+            "frame_number": 409
+        },
+        {
+            "frame_index": 409,
+            "sequence_number": 22242799,
+            "timestamp_utc": "2026-08-09T21:15:10.165800Z",
+            "offset_ms": 2648.13,
+            "mean_brightness": 160.646,
+            "brightness_delta_adjacent": -0.103,
+            "frame_number": 410
+        },
+        {
+            "frame_index": 410,
+            "sequence_number": 22242800,
+            "timestamp_utc": "2026-08-09T21:15:10.169781Z",
+            "offset_ms": 2652.111,
+            "mean_brightness": 160.762,
+            "brightness_delta_adjacent": 0.116,
+            "frame_number": 411
+        },
+        {
+            "frame_index": 411,
+            "sequence_number": 22242801,
+            "timestamp_utc": "2026-08-09T21:15:10.173789Z",
+            "offset_ms": 2656.119,
+            "mean_brightness": 160.668,
+            "brightness_delta_adjacent": -0.094,
+            "frame_number": 412
+        },
+        {
+            "frame_index": 412,
+            "sequence_number": 22242802,
+            "timestamp_utc": "2026-08-09T21:15:10.177779Z",
+            "offset_ms": 2660.109,
+            "mean_brightness": 160.722,
+            "brightness_delta_adjacent": 0.054,
+            "frame_number": 413
+        },
+        {
+            "frame_index": 413,
+            "sequence_number": 22242803,
+            "timestamp_utc": "2026-08-09T21:15:10.181770Z",
+            "offset_ms": 2664.1,
+            "mean_brightness": 160.697,
+            "brightness_delta_adjacent": -0.025,
+            "frame_number": 414
+        },
+        {
+            "frame_index": 414,
+            "sequence_number": 22242804,
+            "timestamp_utc": "2026-08-09T21:15:10.185774Z",
+            "offset_ms": 2668.105,
+            "mean_brightness": 160.709,
+            "brightness_delta_adjacent": 0.012,
+            "frame_number": 415
+        },
+        {
+            "frame_index": 415,
+            "sequence_number": 22242805,
+            "timestamp_utc": "2026-08-09T21:15:10.189784Z",
+            "offset_ms": 2672.115,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.003,
+            "frame_number": 416
+        },
+        {
+            "frame_index": 416,
+            "sequence_number": 22242806,
+            "timestamp_utc": "2026-08-09T21:15:10.193774Z",
+            "offset_ms": 2676.105,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 417
+        },
+        {
+            "frame_index": 417,
+            "sequence_number": 22242807,
+            "timestamp_utc": "2026-08-09T21:15:10.197775Z",
+            "offset_ms": 2680.105,
+            "mean_brightness": 160.76,
+            "brightness_delta_adjacent": 0.087,
+            "frame_number": 418
+        },
+        {
+            "frame_index": 418,
+            "sequence_number": 22242808,
+            "timestamp_utc": "2026-08-09T21:15:10.201774Z",
+            "offset_ms": 2684.105,
+            "mean_brightness": 160.654,
+            "brightness_delta_adjacent": -0.106,
+            "frame_number": 419
+        },
+        {
+            "frame_index": 419,
+            "sequence_number": 22242809,
+            "timestamp_utc": "2026-08-09T21:15:10.205792Z",
+            "offset_ms": 2688.122,
+            "mean_brightness": 160.762,
+            "brightness_delta_adjacent": 0.108,
+            "frame_number": 420
+        },
+        {
+            "frame_index": 420,
+            "sequence_number": 22242810,
+            "timestamp_utc": "2026-08-09T21:15:10.209775Z",
+            "offset_ms": 2692.106,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": -0.112,
+            "frame_number": 421
+        },
+        {
+            "frame_index": 421,
+            "sequence_number": 22242811,
+            "timestamp_utc": "2026-08-09T21:15:10.213773Z",
+            "offset_ms": 2696.104,
+            "mean_brightness": 160.75,
+            "brightness_delta_adjacent": 0.1,
+            "frame_number": 422
+        },
+        {
+            "frame_index": 422,
+            "sequence_number": 22242812,
+            "timestamp_utc": "2026-08-09T21:15:10.217773Z",
+            "offset_ms": 2700.103,
+            "mean_brightness": 160.638,
+            "brightness_delta_adjacent": -0.112,
+            "frame_number": 423
+        },
+        {
+            "frame_index": 423,
+            "sequence_number": 22242813,
+            "timestamp_utc": "2026-08-09T21:15:10.221775Z",
+            "offset_ms": 2704.106,
+            "mean_brightness": 160.73,
+            "brightness_delta_adjacent": 0.092,
+            "frame_number": 424
+        },
+        {
+            "frame_index": 424,
+            "sequence_number": 22242814,
+            "timestamp_utc": "2026-08-09T21:15:10.225782Z",
+            "offset_ms": 2708.112,
+            "mean_brightness": 160.677,
+            "brightness_delta_adjacent": -0.053,
+            "frame_number": 425
+        },
+        {
+            "frame_index": 425,
+            "sequence_number": 22242815,
+            "timestamp_utc": "2026-08-09T21:15:10.229784Z",
+            "offset_ms": 2712.115,
+            "mean_brightness": 160.714,
+            "brightness_delta_adjacent": 0.038,
+            "frame_number": 426
+        },
+        {
+            "frame_index": 426,
+            "sequence_number": 22242816,
+            "timestamp_utc": "2026-08-09T21:15:10.233783Z",
+            "offset_ms": 2716.113,
+            "mean_brightness": 160.719,
+            "brightness_delta_adjacent": 0.004,
+            "frame_number": 427
+        },
+        {
+            "frame_index": 427,
+            "sequence_number": 22242817,
+            "timestamp_utc": "2026-08-09T21:15:10.237764Z",
+            "offset_ms": 2720.095,
+            "mean_brightness": 160.682,
+            "brightness_delta_adjacent": -0.037,
+            "frame_number": 428
+        },
+        {
+            "frame_index": 428,
+            "sequence_number": 22242818,
+            "timestamp_utc": "2026-08-09T21:15:10.239708Z",
+            "offset_ms": 2722.039,
+            "mean_brightness": 160.715,
+            "brightness_delta_adjacent": 0.033,
+            "frame_number": 429
+        },
+        {
+            "frame_index": 429,
+            "sequence_number": 22242819,
+            "timestamp_utc": "2026-08-09T21:15:10.241762Z",
+            "offset_ms": 2724.093,
+            "mean_brightness": 160.661,
+            "brightness_delta_adjacent": -0.054,
+            "frame_number": 430
+        },
+        {
+            "frame_index": 430,
+            "sequence_number": 22242820,
+            "timestamp_utc": "2026-08-09T21:15:10.245795Z",
+            "offset_ms": 2728.126,
+            "mean_brightness": 160.734,
+            "brightness_delta_adjacent": 0.073,
+            "frame_number": 431
+        },
+        {
+            "frame_index": 431,
+            "sequence_number": 22242821,
+            "timestamp_utc": "2026-08-09T21:15:10.249792Z",
+            "offset_ms": 2732.122,
+            "mean_brightness": 160.638,
+            "brightness_delta_adjacent": -0.096,
+            "frame_number": 432
+        },
+        {
+            "frame_index": 432,
+            "sequence_number": 22242822,
+            "timestamp_utc": "2026-08-09T21:15:10.253781Z",
+            "offset_ms": 2736.111,
+            "mean_brightness": 160.751,
+            "brightness_delta_adjacent": 0.113,
+            "frame_number": 433
+        },
+        {
+            "frame_index": 433,
+            "sequence_number": 22242823,
+            "timestamp_utc": "2026-08-09T21:15:10.257784Z",
+            "offset_ms": 2740.114,
+            "mean_brightness": 160.64,
+            "brightness_delta_adjacent": -0.111,
+            "frame_number": 434
+        },
+        {
+            "frame_index": 434,
+            "sequence_number": 22242824,
+            "timestamp_utc": "2026-08-09T21:15:10.261784Z",
+            "offset_ms": 2744.114,
+            "mean_brightness": 160.74,
+            "brightness_delta_adjacent": 0.099,
+            "frame_number": 435
+        },
+        {
+            "frame_index": 435,
+            "sequence_number": 22242825,
+            "timestamp_utc": "2026-08-09T21:15:10.265801Z",
+            "offset_ms": 2748.132,
+            "mean_brightness": 160.665,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 436
+        },
+        {
+            "frame_index": 436,
+            "sequence_number": 22242826,
+            "timestamp_utc": "2026-08-09T21:15:10.269771Z",
+            "offset_ms": 2752.101,
+            "mean_brightness": 160.73,
+            "brightness_delta_adjacent": 0.065,
+            "frame_number": 437
+        },
+        {
+            "frame_index": 437,
+            "sequence_number": 22242827,
+            "timestamp_utc": "2026-08-09T21:15:10.273770Z",
+            "offset_ms": 2756.101,
+            "mean_brightness": 160.671,
+            "brightness_delta_adjacent": -0.059,
+            "frame_number": 438
+        },
+        {
+            "frame_index": 438,
+            "sequence_number": 22242828,
+            "timestamp_utc": "2026-08-09T21:15:10.277785Z",
+            "offset_ms": 2760.116,
+            "mean_brightness": 160.694,
+            "brightness_delta_adjacent": 0.023,
+            "frame_number": 439
+        },
+        {
+            "frame_index": 439,
+            "sequence_number": 22242829,
+            "timestamp_utc": "2026-08-09T21:15:10.281774Z",
+            "offset_ms": 2764.104,
+            "mean_brightness": 160.717,
+            "brightness_delta_adjacent": 0.023,
+            "frame_number": 440
+        },
+        {
+            "frame_index": 440,
+            "sequence_number": 22242830,
+            "timestamp_utc": "2026-08-09T21:15:10.285767Z",
+            "offset_ms": 2768.098,
+            "mean_brightness": 160.671,
+            "brightness_delta_adjacent": -0.047,
+            "frame_number": 441
+        },
+        {
+            "frame_index": 441,
+            "sequence_number": 22242831,
+            "timestamp_utc": "2026-08-09T21:15:10.289784Z",
+            "offset_ms": 2772.115,
+            "mean_brightness": 160.717,
+            "brightness_delta_adjacent": 0.047,
+            "frame_number": 442
+        },
+        {
+            "frame_index": 442,
+            "sequence_number": 22242832,
+            "timestamp_utc": "2026-08-09T21:15:10.293790Z",
+            "offset_ms": 2776.12,
+            "mean_brightness": 160.669,
+            "brightness_delta_adjacent": -0.048,
+            "frame_number": 443
+        },
+        {
+            "frame_index": 443,
+            "sequence_number": 22242833,
+            "timestamp_utc": "2026-08-09T21:15:10.297771Z",
+            "offset_ms": 2780.101,
+            "mean_brightness": 160.75,
+            "brightness_delta_adjacent": 0.081,
+            "frame_number": 444
+        },
+        {
+            "frame_index": 444,
+            "sequence_number": 22242834,
+            "timestamp_utc": "2026-08-09T21:15:10.301770Z",
+            "offset_ms": 2784.101,
+            "mean_brightness": 160.627,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 445
+        },
+        {
+            "frame_index": 445,
+            "sequence_number": 22242835,
+            "timestamp_utc": "2026-08-09T21:15:10.305789Z",
+            "offset_ms": 2788.119,
+            "mean_brightness": 160.75,
+            "brightness_delta_adjacent": 0.122,
+            "frame_number": 446
+        },
+        {
+            "frame_index": 446,
+            "sequence_number": 22242836,
+            "timestamp_utc": "2026-08-09T21:15:10.309777Z",
+            "offset_ms": 2792.108,
+            "mean_brightness": 160.631,
+            "brightness_delta_adjacent": -0.119,
+            "frame_number": 447
+        },
+        {
+            "frame_index": 447,
+            "sequence_number": 22242837,
+            "timestamp_utc": "2026-08-09T21:15:10.313790Z",
+            "offset_ms": 2796.12,
+            "mean_brightness": 160.738,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 448
+        },
+        {
+            "frame_index": 448,
+            "sequence_number": 22242838,
+            "timestamp_utc": "2026-08-09T21:15:10.317792Z",
+            "offset_ms": 2800.122,
+            "mean_brightness": 160.663,
+            "brightness_delta_adjacent": -0.075,
+            "frame_number": 449
+        },
+        {
+            "frame_index": 449,
+            "sequence_number": 22242839,
+            "timestamp_utc": "2026-08-09T21:15:10.321786Z",
+            "offset_ms": 2804.117,
+            "mean_brightness": 160.702,
+            "brightness_delta_adjacent": 0.039,
+            "frame_number": 450
+        },
+        {
+            "frame_index": 450,
+            "sequence_number": 22242840,
+            "timestamp_utc": "2026-08-09T21:15:10.325799Z",
+            "offset_ms": 2808.129,
+            "mean_brightness": 160.68,
+            "brightness_delta_adjacent": -0.022,
+            "frame_number": 451
+        },
+        {
+            "frame_index": 451,
+            "sequence_number": 22242841,
+            "timestamp_utc": "2026-08-09T21:15:10.329754Z",
+            "offset_ms": 2812.085,
+            "mean_brightness": 160.692,
+            "brightness_delta_adjacent": 0.012,
+            "frame_number": 452
+        },
+        {
+            "frame_index": 452,
+            "sequence_number": 22242842,
+            "timestamp_utc": "2026-08-09T21:15:10.331687Z",
+            "offset_ms": 2814.018,
+            "mean_brightness": 160.721,
+            "brightness_delta_adjacent": 0.029,
+            "frame_number": 453
+        },
+        {
+            "frame_index": 453,
+            "sequence_number": 22242843,
+            "timestamp_utc": "2026-08-09T21:15:10.333780Z",
+            "offset_ms": 2816.11,
+            "mean_brightness": 160.655,
+            "brightness_delta_adjacent": -0.066,
+            "frame_number": 454
+        },
+        {
+            "frame_index": 454,
+            "sequence_number": 22242844,
+            "timestamp_utc": "2026-08-09T21:15:10.337769Z",
+            "offset_ms": 2820.099,
+            "mean_brightness": 160.733,
+            "brightness_delta_adjacent": 0.078,
+            "frame_number": 455
+        },
+        {
+            "frame_index": 455,
+            "sequence_number": 22242845,
+            "timestamp_utc": "2026-08-09T21:15:10.341804Z",
+            "offset_ms": 2824.135,
+            "mean_brightness": 160.635,
+            "brightness_delta_adjacent": -0.097,
+            "frame_number": 456
+        },
+        {
+            "frame_index": 456,
+            "sequence_number": 22242846,
+            "timestamp_utc": "2026-08-09T21:15:10.345818Z",
+            "offset_ms": 2828.149,
+            "mean_brightness": 160.764,
+            "brightness_delta_adjacent": 0.129,
+            "frame_number": 457
+        },
+        {
+            "frame_index": 457,
+            "sequence_number": 22242847,
+            "timestamp_utc": "2026-08-09T21:15:10.349790Z",
+            "offset_ms": 2832.12,
+            "mean_brightness": 160.629,
+            "brightness_delta_adjacent": -0.135,
+            "frame_number": 458
+        },
+        {
+            "frame_index": 458,
+            "sequence_number": 22242848,
+            "timestamp_utc": "2026-08-09T21:15:10.353803Z",
+            "offset_ms": 2836.134,
+            "mean_brightness": 160.736,
+            "brightness_delta_adjacent": 0.107,
+            "frame_number": 459
+        },
+        {
+            "frame_index": 459,
+            "sequence_number": 22242849,
+            "timestamp_utc": "2026-08-09T21:15:10.357777Z",
+            "offset_ms": 2840.108,
+            "mean_brightness": 160.625,
+            "brightness_delta_adjacent": -0.111,
+            "frame_number": 460
+        },
+        {
+            "frame_index": 460,
+            "sequence_number": 22242850,
+            "timestamp_utc": "2026-08-09T21:15:10.361803Z",
+            "offset_ms": 2844.133,
+            "mean_brightness": 160.717,
+            "brightness_delta_adjacent": 0.092,
+            "frame_number": 461
+        },
+        {
+            "frame_index": 461,
+            "sequence_number": 22242851,
+            "timestamp_utc": "2026-08-09T21:15:10.365784Z",
+            "offset_ms": 2848.114,
+            "mean_brightness": 160.645,
+            "brightness_delta_adjacent": -0.073,
+            "frame_number": 462
+        },
+        {
+            "frame_index": 462,
+            "sequence_number": 22242852,
+            "timestamp_utc": "2026-08-09T21:15:10.369774Z",
+            "offset_ms": 2852.105,
+            "mean_brightness": 160.703,
+            "brightness_delta_adjacent": 0.058,
+            "frame_number": 463
+        },
+        {
+            "frame_index": 463,
+            "sequence_number": 22242853,
+            "timestamp_utc": "2026-08-09T21:15:10.373779Z",
+            "offset_ms": 2856.11,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": -0.033,
+            "frame_number": 464
+        },
+        {
+            "frame_index": 464,
+            "sequence_number": 22242854,
+            "timestamp_utc": "2026-08-09T21:15:10.377789Z",
+            "offset_ms": 2860.12,
+            "mean_brightness": 160.672,
+            "brightness_delta_adjacent": 0.002,
+            "frame_number": 465
+        },
+        {
+            "frame_index": 465,
+            "sequence_number": 22242855,
+            "timestamp_utc": "2026-08-09T21:15:10.381784Z",
+            "offset_ms": 2864.115,
+            "mean_brightness": 160.7,
+            "brightness_delta_adjacent": 0.029,
+            "frame_number": 466
+        },
+        {
+            "frame_index": 466,
+            "sequence_number": 22242856,
+            "timestamp_utc": "2026-08-09T21:15:10.385777Z",
+            "offset_ms": 2868.108,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": -0.042,
+            "frame_number": 467
+        },
+        {
+            "frame_index": 467,
+            "sequence_number": 22242857,
+            "timestamp_utc": "2026-08-09T21:15:10.389790Z",
+            "offset_ms": 2872.12,
+            "mean_brightness": 160.734,
+            "brightness_delta_adjacent": 0.076,
+            "frame_number": 468
+        },
+        {
+            "frame_index": 468,
+            "sequence_number": 22242858,
+            "timestamp_utc": "2026-08-09T21:15:10.393781Z",
+            "offset_ms": 2876.111,
+            "mean_brightness": 160.63,
+            "brightness_delta_adjacent": -0.104,
+            "frame_number": 469
+        },
+        {
+            "frame_index": 469,
+            "sequence_number": 22242859,
+            "timestamp_utc": "2026-08-09T21:15:10.397785Z",
+            "offset_ms": 2880.115,
+            "mean_brightness": 160.763,
+            "brightness_delta_adjacent": 0.133,
+            "frame_number": 470
+        },
+        {
+            "frame_index": 470,
+            "sequence_number": 22242860,
+            "timestamp_utc": "2026-08-09T21:15:10.401785Z",
+            "offset_ms": 2884.115,
+            "mean_brightness": 160.626,
+            "brightness_delta_adjacent": -0.137,
+            "frame_number": 471
+        },
+        {
+            "frame_index": 471,
+            "sequence_number": 22242861,
+            "timestamp_utc": "2026-08-09T21:15:10.405799Z",
+            "offset_ms": 2888.13,
+            "mean_brightness": 160.734,
+            "brightness_delta_adjacent": 0.108,
+            "frame_number": 472
+        },
+        {
+            "frame_index": 472,
+            "sequence_number": 22242862,
+            "timestamp_utc": "2026-08-09T21:15:10.409782Z",
+            "offset_ms": 2892.112,
+            "mean_brightness": 160.636,
+            "brightness_delta_adjacent": -0.098,
+            "frame_number": 473
+        },
+        {
+            "frame_index": 473,
+            "sequence_number": 22242863,
+            "timestamp_utc": "2026-08-09T21:15:10.413795Z",
+            "offset_ms": 2896.126,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.076,
+            "frame_number": 474
+        },
+        {
+            "frame_index": 474,
+            "sequence_number": 22242864,
+            "timestamp_utc": "2026-08-09T21:15:10.417803Z",
+            "offset_ms": 2900.133,
+            "mean_brightness": 160.657,
+            "brightness_delta_adjacent": -0.055,
+            "frame_number": 475
+        },
+        {
+            "frame_index": 475,
+            "sequence_number": 22242865,
+            "timestamp_utc": "2026-08-09T21:15:10.421767Z",
+            "offset_ms": 2904.098,
+            "mean_brightness": 160.694,
+            "brightness_delta_adjacent": 0.037,
+            "frame_number": 476
+        },
+        {
+            "frame_index": 476,
+            "sequence_number": 22242866,
+            "timestamp_utc": "2026-08-09T21:15:10.423709Z",
+            "offset_ms": 2906.039,
+            "mean_brightness": 160.682,
+            "brightness_delta_adjacent": -0.012,
+            "frame_number": 477
+        },
+        {
+            "frame_index": 477,
+            "sequence_number": 22242867,
+            "timestamp_utc": "2026-08-09T21:15:10.425798Z",
+            "offset_ms": 2908.128,
+            "mean_brightness": 160.666,
+            "brightness_delta_adjacent": -0.015,
+            "frame_number": 478
+        },
+        {
+            "frame_index": 478,
+            "sequence_number": 22242868,
+            "timestamp_utc": "2026-08-09T21:15:10.429793Z",
+            "offset_ms": 2912.123,
+            "mean_brightness": 160.72,
+            "brightness_delta_adjacent": 0.053,
+            "frame_number": 479
+        },
+        {
+            "frame_index": 479,
+            "sequence_number": 22242869,
+            "timestamp_utc": "2026-08-09T21:15:10.433819Z",
+            "offset_ms": 2916.149,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": -0.062,
+            "frame_number": 480
+        },
+        {
+            "frame_index": 480,
+            "sequence_number": 22242870,
+            "timestamp_utc": "2026-08-09T21:15:10.437818Z",
+            "offset_ms": 2920.149,
+            "mean_brightness": 160.738,
+            "brightness_delta_adjacent": 0.079,
+            "frame_number": 481
+        },
+        {
+            "frame_index": 481,
+            "sequence_number": 22242871,
+            "timestamp_utc": "2026-08-09T21:15:10.441808Z",
+            "offset_ms": 2924.138,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": -0.105,
+            "frame_number": 482
+        },
+        {
+            "frame_index": 482,
+            "sequence_number": 22242872,
+            "timestamp_utc": "2026-08-09T21:15:10.445814Z",
+            "offset_ms": 2928.144,
+            "mean_brightness": 160.767,
+            "brightness_delta_adjacent": 0.134,
+            "frame_number": 483
+        },
+        {
+            "frame_index": 483,
+            "sequence_number": 22242873,
+            "timestamp_utc": "2026-08-09T21:15:10.449794Z",
+            "offset_ms": 2932.124,
+            "mean_brightness": 160.62,
+            "brightness_delta_adjacent": -0.147,
+            "frame_number": 484
+        },
+        {
+            "frame_index": 484,
+            "sequence_number": 22242874,
+            "timestamp_utc": "2026-08-09T21:15:10.453802Z",
+            "offset_ms": 2936.133,
+            "mean_brightness": 160.733,
+            "brightness_delta_adjacent": 0.113,
+            "frame_number": 485
+        },
+        {
+            "frame_index": 485,
+            "sequence_number": 22242875,
+            "timestamp_utc": "2026-08-09T21:15:10.457786Z",
+            "offset_ms": 2940.117,
+            "mean_brightness": 160.633,
+            "brightness_delta_adjacent": -0.1,
+            "frame_number": 486
+        },
+        {
+            "frame_index": 486,
+            "sequence_number": 22242876,
+            "timestamp_utc": "2026-08-09T21:15:10.461783Z",
+            "offset_ms": 2944.113,
+            "mean_brightness": 160.713,
+            "brightness_delta_adjacent": 0.08,
+            "frame_number": 487
+        },
+        {
+            "frame_index": 487,
+            "sequence_number": 22242877,
+            "timestamp_utc": "2026-08-09T21:15:10.465794Z",
+            "offset_ms": 2948.124,
+            "mean_brightness": 160.657,
+            "brightness_delta_adjacent": -0.056,
+            "frame_number": 488
+        },
+        {
+            "frame_index": 488,
+            "sequence_number": 22242878,
+            "timestamp_utc": "2026-08-09T21:15:10.469787Z",
+            "offset_ms": 2952.118,
+            "mean_brightness": 160.685,
+            "brightness_delta_adjacent": 0.028,
+            "frame_number": 489
+        },
+        {
+            "frame_index": 489,
+            "sequence_number": 22242879,
+            "timestamp_utc": "2026-08-09T21:15:10.473792Z",
+            "offset_ms": 2956.123,
+            "mean_brightness": 160.697,
+            "brightness_delta_adjacent": 0.013,
+            "frame_number": 490
+        },
+        {
+            "frame_index": 490,
+            "sequence_number": 22242880,
+            "timestamp_utc": "2026-08-09T21:15:10.477795Z",
+            "offset_ms": 2960.125,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": -0.027,
+            "frame_number": 491
+        },
+        {
+            "frame_index": 491,
+            "sequence_number": 22242881,
+            "timestamp_utc": "2026-08-09T21:15:10.481819Z",
+            "offset_ms": 2964.149,
+            "mean_brightness": 160.712,
+            "brightness_delta_adjacent": 0.042,
+            "frame_number": 492
+        },
+        {
+            "frame_index": 492,
+            "sequence_number": 22242882,
+            "timestamp_utc": "2026-08-09T21:15:10.485788Z",
+            "offset_ms": 2968.118,
+            "mean_brightness": 160.643,
+            "brightness_delta_adjacent": -0.069,
+            "frame_number": 493
+        },
+        {
+            "frame_index": 493,
+            "sequence_number": 22242883,
+            "timestamp_utc": "2026-08-09T21:15:10.489797Z",
+            "offset_ms": 2972.127,
+            "mean_brightness": 160.736,
+            "brightness_delta_adjacent": 0.093,
+            "frame_number": 494
+        },
+        {
+            "frame_index": 494,
+            "sequence_number": 22242884,
+            "timestamp_utc": "2026-08-09T21:15:10.493791Z",
+            "offset_ms": 2976.121,
+            "mean_brightness": 160.616,
+            "brightness_delta_adjacent": -0.12,
+            "frame_number": 495
+        },
+        {
+            "frame_index": 495,
+            "sequence_number": 22242885,
+            "timestamp_utc": "2026-08-09T21:15:10.497796Z",
+            "offset_ms": 2980.126,
+            "mean_brightness": 160.75,
+            "brightness_delta_adjacent": 0.134,
+            "frame_number": 496
+        },
+        {
+            "frame_index": 496,
+            "sequence_number": 22242886,
+            "timestamp_utc": "2026-08-09T21:15:10.501790Z",
+            "offset_ms": 2984.12,
+            "mean_brightness": 160.631,
+            "brightness_delta_adjacent": -0.119,
+            "frame_number": 497
+        },
+        {
+            "frame_index": 497,
+            "sequence_number": 22242887,
+            "timestamp_utc": "2026-08-09T21:15:10.505798Z",
+            "offset_ms": 2988.129,
+            "mean_brightness": 160.74,
+            "brightness_delta_adjacent": 0.109,
+            "frame_number": 498
+        },
+        {
+            "frame_index": 498,
+            "sequence_number": 22242888,
+            "timestamp_utc": "2026-08-09T21:15:10.509805Z",
+            "offset_ms": 2992.135,
+            "mean_brightness": 160.64,
+            "brightness_delta_adjacent": -0.101,
+            "frame_number": 499
+        },
+        {
+            "frame_index": 499,
+            "sequence_number": 22242889,
+            "timestamp_utc": "2026-08-09T21:15:10.513773Z",
+            "offset_ms": 2996.104,
+            "mean_brightness": 160.715,
+            "brightness_delta_adjacent": 0.076,
+            "frame_number": 500
+        },
+        {
+            "frame_index": 500,
+            "sequence_number": 22242890,
+            "timestamp_utc": "2026-08-09T21:15:10.515723Z",
+            "offset_ms": 2998.053,
+            "mean_brightness": 160.67,
+            "brightness_delta_adjacent": -0.045,
+            "frame_number": 501
+        },
+        {
+            "frame_index": 501,
+            "sequence_number": 22242891,
+            "timestamp_utc": "2026-08-09T21:15:10.517785Z",
+            "offset_ms": 3000.115,
+            "mean_brightness": 160.672,
+            "brightness_delta_adjacent": 0.002,
+            "frame_number": 502
+        },
+        {
+            "frame_index": 502,
+            "sequence_number": 22242892,
+            "timestamp_utc": "2026-08-09T21:15:10.521808Z",
+            "offset_ms": 3004.138,
+            "mean_brightness": 160.697,
+            "brightness_delta_adjacent": 0.025,
+            "frame_number": 503
+        },
+        {
+            "frame_index": 503,
+            "sequence_number": 22242893,
+            "timestamp_utc": "2026-08-09T21:15:10.525804Z",
+            "offset_ms": 3008.135,
+            "mean_brightness": 160.658,
+            "brightness_delta_adjacent": -0.039,
+            "frame_number": 504
+        },
+        {
+            "frame_index": 504,
+            "sequence_number": 22242894,
+            "timestamp_utc": "2026-08-09T21:15:10.529796Z",
+            "offset_ms": 3012.127,
+            "mean_brightness": 160.729,
+            "brightness_delta_adjacent": 0.071,
+            "frame_number": 505
+        },
+        {
+            "frame_index": 505,
+            "sequence_number": 22242895,
+            "timestamp_utc": "2026-08-09T21:15:10.533808Z",
+            "offset_ms": 3016.138,
+            "mean_brightness": 160.673,
+            "brightness_delta_adjacent": -0.056,
+            "frame_number": 506
+        },
+        {
+            "frame_index": 506,
+            "sequence_number": 22242896,
+            "timestamp_utc": "2026-08-09T21:15:10.537817Z",
+            "offset_ms": 3020.147,
+            "mean_brightness": 160.737,
+            "brightness_delta_adjacent": 0.063,
+            "frame_number": 507
+        },
+        {
+            "frame_index": 507,
+            "sequence_number": 22242897,
+            "timestamp_utc": "2026-08-09T21:15:10.541795Z",
+            "offset_ms": 3024.126,
+            "mean_brightness": 160.614,
+            "brightness_delta_adjacent": -0.123,
+            "frame_number": 508
+        },
+        {
+            "frame_index": 508,
+            "sequence_number": 22242898,
+            "timestamp_utc": "2026-08-09T21:15:10.545793Z",
+            "offset_ms": 3028.124,
+            "mean_brightness": 160.727,
+            "brightness_delta_adjacent": 0.113,
+            "frame_number": 509
+        },
+        {
+            "frame_index": 509,
+            "sequence_number": 22242899,
+            "timestamp_utc": "2026-08-09T21:15:10.549791Z",
+            "offset_ms": 3032.122,
+            "mean_brightness": 160.632,
+            "brightness_delta_adjacent": -0.095,
+            "frame_number": 510
+        },
+        {
+            "frame_index": 510,
+            "sequence_number": 22242900,
+            "timestamp_utc": "2026-08-09T21:15:10.553800Z",
+            "offset_ms": 3036.13,
+            "mean_brightness": 160.717,
+            "brightness_delta_adjacent": 0.085,
+            "frame_number": 511
+        },
+        {
+            "frame_index": 511,
+            "sequence_number": 22242901,
+            "timestamp_utc": "2026-08-09T21:15:10.557786Z",
+            "offset_ms": 3040.117,
+            "mean_brightness": 160.663,
+            "brightness_delta_adjacent": -0.054,
+            "frame_number": 512
+        },
+        {
+            "frame_index": 512,
+            "sequence_number": 22242902,
+            "timestamp_utc": "2026-08-09T21:15:10.561782Z",
+            "offset_ms": 3044.113,
+            "mean_brightness": 160.703,
+            "brightness_delta_adjacent": 0.041,
+            "frame_number": 513
+        },
+        {
+            "frame_index": 513,
+            "sequence_number": 22242903,
+            "timestamp_utc": "2026-08-09T21:15:10.565795Z",
+            "offset_ms": 3048.125,
+            "mean_brightness": 160.682,
+            "brightness_delta_adjacent": -0.021,
+            "frame_number": 514
+        },
+        {
+            "frame_index": 514,
+            "sequence_number": 22242904,
+            "timestamp_utc": "2026-08-09T21:15:10.569792Z",
+            "offset_ms": 3052.122,
+            "mean_brightness": 160.698,
+            "brightness_delta_adjacent": 0.016,
+            "frame_number": 515
+        },
+        {
+            "frame_index": 515,
+            "sequence_number": 22242905,
+            "timestamp_utc": "2026-08-09T21:15:10.573813Z",
+            "offset_ms": 3056.143,
+            "mean_brightness": 160.721,
+            "brightness_delta_adjacent": 0.023,
+            "frame_number": 516
+        },
+        {
+            "frame_index": 516,
+            "sequence_number": 22242906,
+            "timestamp_utc": "2026-08-09T21:15:10.577804Z",
+            "offset_ms": 3060.135,
+            "mean_brightness": 160.662,
+            "brightness_delta_adjacent": -0.059,
+            "frame_number": 517
+        },
+        {
+            "frame_index": 517,
+            "sequence_number": 22242907,
+            "timestamp_utc": "2026-08-09T21:15:10.581810Z",
+            "offset_ms": 3064.141,
+            "mean_brightness": 160.727,
+            "brightness_delta_adjacent": 0.065,
+            "frame_number": 518
+        },
+        {
+            "frame_index": 518,
+            "sequence_number": 22242908,
+            "timestamp_utc": "2026-08-09T21:15:10.585812Z",
+            "offset_ms": 3068.141,
+            "mean_brightness": 160.65,
+            "brightness_delta_adjacent": -0.077,
+            "frame_number": 519
+        },
+        {
+            "frame_index": 519,
+            "sequence_number": 22242909,
+            "timestamp_utc": "2026-08-09T21:15:10.589796Z",
+            "offset_ms": 3072.126,
+            "mean_brightness": 160.749,
+            "brightness_delta_adjacent": 0.099,
+            "frame_number": 520
+        }
+    ],
+    "frame_count": 520,
+    "migration": {
+        "source_sidecar_version": 1,
+        "migrated_utc": "2026-08-23T15:16:18Z",
+        "tool": "RebuildSidecars",
+        "backup_sidecar": "OldTrigger_dayNoise01.json"
+    }
+}
