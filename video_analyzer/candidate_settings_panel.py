@@ -81,19 +81,19 @@ class CandidateSettingsPanel(QGroupBox):
         )
 
         outer_layout.setContentsMargins(
-            10,
-            10,
-            10,
-            10,
+            6,
+            4,
+            6,
+            4,
         )
 
         outer_layout.setSpacing(
-            8
+            4
         )
 
         settings_layout = QHBoxLayout()
         settings_layout.setSpacing(
-            18
+            10
         )
 
         # Sensitivity selection appears on the left side of the panel.
@@ -106,10 +106,13 @@ class CandidateSettingsPanel(QGroupBox):
         )
 
         sensitivity_layout.setContentsMargins(
-            10,
-            8,
-            10,
-            8,
+            6,
+            4,
+            6,
+            4,
+        )
+        sensitivity_layout.setSpacing(
+            2
         )
 
         self.high_radio = QRadioButton(
@@ -164,7 +167,7 @@ class CandidateSettingsPanel(QGroupBox):
 
         numeric_layout.setContentsMargins(
             0,
-            2,
+            0,
             0,
             0,
         )
@@ -174,7 +177,7 @@ class CandidateSettingsPanel(QGroupBox):
         )
 
         numeric_layout.setVerticalSpacing(
-            8
+            3
         )
 
         self.brightness_delta_spin = (

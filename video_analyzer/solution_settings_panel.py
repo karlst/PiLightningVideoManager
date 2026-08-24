@@ -63,8 +63,9 @@ class SolutionSettingsPanel(QGroupBox):
 
         noise_group = QGroupBox("Noise")
         noise_form = QFormLayout(noise_group)
-        noise_form.setHorizontalSpacing(10)
-        noise_form.setVerticalSpacing(4)
+        noise_form.setContentsMargins(6, 3, 6, 3)
+        noise_form.setHorizontalSpacing(8)
+        noise_form.setVerticalSpacing(0)
         noise_form.addRow("Window frames:", self._noise_window_frames)
         noise_form.addRow("Trigger exclusion:", self._noise_trigger_exclusion_frames)
         noise_form.addRow("Minimum |delta|:", self._noise_min_delta_magnitude)
@@ -108,8 +109,9 @@ class SolutionSettingsPanel(QGroupBox):
 
         stair_step_group = QGroupBox("Stair-step")
         stair_step_form = QFormLayout(stair_step_group)
-        stair_step_form.setHorizontalSpacing(10)
-        stair_step_form.setVerticalSpacing(4)
+        stair_step_form.setContentsMargins(6, 3, 6, 3)
+        stair_step_form.setHorizontalSpacing(8)
+        stair_step_form.setVerticalSpacing(0)
         stair_step_form.addRow(
             "Transient recovery frames:",
             self._stair_step_transient_recovery_frames,
@@ -166,8 +168,9 @@ class SolutionSettingsPanel(QGroupBox):
 
         steady_state_group = QGroupBox("SSA (Steady State)")
         steady_state_form = QFormLayout(steady_state_group)
-        steady_state_form.setHorizontalSpacing(10)
-        steady_state_form.setVerticalSpacing(4)
+        steady_state_form.setContentsMargins(6, 3, 6, 3)
+        steady_state_form.setHorizontalSpacing(8)
+        steady_state_form.setVerticalSpacing(0)
         steady_state_form.addRow("Baseline frames:", self._steady_state_baseline_frames)
         steady_state_form.addRow("Return tolerance:", self._steady_state_baseline_tolerance)
         steady_state_form.addRow("Rise threshold:", self._steady_state_rise_threshold)
@@ -179,8 +182,8 @@ class SolutionSettingsPanel(QGroupBox):
         self._apply_button.clicked.connect(self._apply)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(8, 8, 8, 8)
-        layout.setSpacing(8)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(4)
         layout.addWidget(noise_group)
         layout.addWidget(stair_step_group)
         layout.addWidget(steady_state_group)

@@ -20,13 +20,14 @@ from typing import Any
 import cv2
 import numpy as np
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QImage, QKeySequence, QPixmap
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
-    QFileDialog,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMessageBox,
     QPushButton,
@@ -150,51 +151,105 @@ class AnalyzerWindow(QMainWindow):
         self.setWindowTitle(
             f"Video Frame Analyzer — v{VERSION}"
         )
-        self.resize(1500, 1050)
+        self.resize(1500, 875)
 
-        self.create_menu()
         self.create_ui()
         self.connect_controls()
 
         self.update_capture_information()
         self.set_frame(0, force=True)
 
-    # ## Create the application menu bar and File -> Open command.
-    def create_menu(self) -> None:
-        file_menu = self.menuBar().addMenu(
-            "&File"
-        )
-
-        self.open_action = QAction(
-            "&Open...",
-            self,
-        )
-        self.open_action.setShortcut(
-            QKeySequence.StandardKey.Open
-        )
-        self.open_action.triggered.connect(
-            self.open_capture
-        )
-
-        file_menu.addAction(
-            self.open_action
-        )
-
-    # ## Show a native MP4-only file dialog starting in the last opened directory.
-    def open_capture(self) -> None:
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open MP4 file",
-            str(self.open_directory),
-            "MP4 files (*.mp4)",
-        )
-
-        if not filename:
+    # ## Populate the embedded capture browser for the current directory.
+    def refresh_file_browser(self) -> None:
+        if not hasattr(self, "file_list"):
             return
 
-        self.load_new_capture(
-            Path(filename)
+        self.directory_label.setText(
+            str(self.open_directory)
         )
+        self.file_list.clear()
+
+        try:
+            entries = sorted(
+                self.open_directory.iterdir(),
+                key=lambda path: (
+                    not path.is_dir(),
+                    path.name.lower(),
+                ),
+            )
+        except OSError as error:
+            QMessageBox.warning(
+                self,
+                "Unable to read folder",
+                str(error),
+            )
+            return
+
+        current_path = self.capture_data.video_path.resolve()
+        selected_item = None
+
+        for path in entries:
+            if not path.is_dir() and path.suffix.lower() != ".mp4":
+                continue
+
+            display_name = (
+                f"[Folder] {path.name}"
+                if path.is_dir()
+                else path.name
+            )
+            item = QListWidgetItem(display_name)
+            item.setData(
+                Qt.ItemDataRole.UserRole,
+                str(path),
+            )
+            self.file_list.addItem(item)
+
+            try:
+                if path.resolve() == current_path:
+                    selected_item = item
+            except OSError:
+                pass
+
+        if selected_item is not None:
+            self.file_list.setCurrentItem(
+                selected_item
+            )
+            self.file_list.scrollToItem(
+                selected_item
+            )
+
+    # ## Open the selected folder or MP4 from the embedded capture browser.
+    def open_selected_browser_item(self) -> None:
+        item = self.file_list.currentItem()
+
+        if item is None:
+            return
+
+        selected_path = Path(
+            item.data(
+                Qt.ItemDataRole.UserRole
+            )
+        )
+
+        if selected_path.is_dir():
+            self.open_directory = selected_path
+            self.refresh_file_browser()
+            return
+
+        if selected_path.suffix.lower() == ".mp4":
+            self.load_new_capture(
+                selected_path
+            )
+
+    # ## Navigate the embedded capture browser to the parent directory.
+    def browse_parent_directory(self) -> None:
+        parent = self.open_directory.parent
+
+        if parent == self.open_directory:
+            return
+
+        self.open_directory = parent
+        self.refresh_file_browser()
 
     # ## Load a new capture, reclassify it, and replace the current Analyzer contents.
     def load_new_capture(
@@ -266,9 +321,9 @@ class AnalyzerWindow(QMainWindow):
         group = QGroupBox(title)
         layout = QGridLayout(group)
 
-        layout.setContentsMargins(8, 6, 8, 6)
-        layout.setHorizontalSpacing(10)
-        layout.setVerticalSpacing(1)
+        layout.setContentsMargins(6, 3, 6, 3)
+        layout.setHorizontalSpacing(8)
+        layout.setVerticalSpacing(0)
 
         value_labels: dict[str, QLabel] = {}
 
@@ -320,16 +375,57 @@ class AnalyzerWindow(QMainWindow):
         workspace_layout.setHorizontalSpacing(6)
         workspace_layout.setVerticalSpacing(6)
 
-        workspace_layout.setColumnStretch(0, 7)
-        workspace_layout.setColumnStretch(1, 3)
+        workspace_layout.setColumnStretch(0, 0)
+        workspace_layout.setColumnStretch(1, 7)
+        workspace_layout.setColumnStretch(2, 3)
         workspace_layout.setRowStretch(0, 3)
         workspace_layout.setRowStretch(1, 2)
+
+        file_browser_group = QGroupBox("Captures")
+        file_browser_group.setMinimumWidth(220)
+        file_browser_group.setMaximumWidth(280)
+        file_browser_layout = QVBoxLayout(file_browser_group)
+        file_browser_layout.setContentsMargins(6, 5, 6, 6)
+        file_browser_layout.setSpacing(4)
+
+        self.directory_label = QLabel()
+        self.directory_label.setWordWrap(True)
+        self.directory_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.directory_label.setStyleSheet(
+            "QLabel { color: #555; font-size: 10px; }"
+        )
+
+        self.file_list = QListWidget()
+        self.file_list.setAlternatingRowColors(True)
+
+        browser_buttons = QHBoxLayout()
+        browser_buttons.setContentsMargins(0, 0, 0, 0)
+        browser_buttons.setSpacing(4)
+
+        self.parent_folder_button = QPushButton("Up")
+        self.open_browser_button = QPushButton("Open")
+        browser_buttons.addWidget(self.parent_folder_button)
+        browser_buttons.addWidget(self.open_browser_button)
+
+        file_browser_layout.addWidget(self.directory_label)
+        file_browser_layout.addWidget(self.file_list, stretch=1)
+        file_browser_layout.addLayout(browser_buttons)
+
+        workspace_layout.addWidget(
+            file_browser_group,
+            0,
+            0,
+            2,
+            1,
+        )
 
         self.image_label = QLabel()
         self.image_label.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
-        self.image_label.setMinimumHeight(300)
+        self.image_label.setMinimumHeight(240)
         self.image_label.setStyleSheet(
             "QLabel { background-color: black; }"
         )
@@ -337,7 +433,7 @@ class AnalyzerWindow(QMainWindow):
         workspace_layout.addWidget(
             self.image_label,
             0,
-            0,
+            1,
         )
 
         information_widget = QWidget()
@@ -350,7 +446,7 @@ class AnalyzerWindow(QMainWindow):
             0,
             0,
         )
-        information_layout.setSpacing(4)
+        information_layout.setSpacing(2)
 
         capture_fields = [
             ("video", "Video"),
@@ -404,7 +500,7 @@ class AnalyzerWindow(QMainWindow):
         workspace_layout.addWidget(
             information_widget,
             0,
-            1,
+            2,
         )
 
         self.graph_panel = GraphPanel(
@@ -416,7 +512,7 @@ class AnalyzerWindow(QMainWindow):
         workspace_layout.addWidget(
             self.graph_panel,
             1,
-            0,
+            1,
         )
 
         lower_right_widget = QWidget()
@@ -429,7 +525,7 @@ class AnalyzerWindow(QMainWindow):
             0,
             0,
         )
-        lower_right_layout.setSpacing(6)
+        lower_right_layout.setSpacing(3)
 
         self.solution_panel = SolutionPanel(
             self.solution_result
@@ -463,8 +559,10 @@ class AnalyzerWindow(QMainWindow):
         workspace_layout.addWidget(
             lower_right_widget,
             1,
-            1,
+            2,
         )
+
+        self.refresh_file_browser()
 
         main_layout.addLayout(
             workspace_layout,
@@ -511,6 +609,15 @@ class AnalyzerWindow(QMainWindow):
 
     # ## Connect buttons and slider signals to frame-navigation methods.
     def connect_controls(self) -> None:
+        self.parent_folder_button.clicked.connect(
+            self.browse_parent_directory
+        )
+        self.open_browser_button.clicked.connect(
+            self.open_selected_browser_item
+        )
+        self.file_list.itemDoubleClicked.connect(
+            lambda _item: self.open_selected_browser_item()
+        )
         self.first_button.clicked.connect(
             lambda: self.set_frame(0)
         )
