@@ -12,6 +12,10 @@ provides preview images, status information, and sampled metrics used by the
 web interface.
 """
 
+from queue import Queue
+from threading import Lock
+from threading import Thread
+
 import cv2
 
 from video_capture.brightness_plugin import BrightnessPlugin
@@ -95,6 +99,21 @@ class BufferManager:
             frame_rate_fps=
                 config.frame_rate_fps
         )
+
+        # Automatic capture files are written outside the CameraReader thread.
+        # The reader callback only takes a ring-buffer snapshot and queues it,
+        # so FFmpeg encoding and sidecar analysis cannot block camera.read().
+        # One worker serializes all automatic writes. The write lock also
+        # protects ClipWriter/SidecarWriter if a synchronous manual capture
+        # happens while an automatic capture is being written.
+        self._capture_write_lock = Lock()
+        self._capture_queue = Queue()
+        self._capture_writer_thread = Thread(
+            target=self._capture_writer_loop,
+            name="CaptureWriter",
+            daemon=True
+        )
+        self._capture_writer_thread.start()
 
         self._last_metric_time_monotonic: float = 0.0
         self._last_health_log_time_monotonic: float = 0.0
@@ -203,87 +222,191 @@ class BufferManager:
             trigger_timestamp_utc = newest_frame.timestamp_utc
             trigger_time_monotonic = newest_frame.timestamp_monotonic
 
-        success, message, writer_status = (
-            self._clip_writer.write_frames(
-                frames
-            )
+        return self._write_capture_frames(
+            frames=frames,
+            trigger_type=trigger_type,
+            trigger_display=trigger_display,
+            trigger_reason=trigger_reason,
+            trigger_sequence_number=trigger_sequence_number,
+            trigger_timestamp_utc=trigger_timestamp_utc,
+            trigger_time_monotonic=trigger_time_monotonic,
+            candidate_config=candidate_config
         )
 
-        sidecar_data = None
-
-        if success:
-            output_file = writer_status.get(
-                "output_file"
+    # ## Write one fixed frame snapshot to MP4 plus sidecar.
+    def _write_capture_frames(
+        self,
+        frames: list[CameraFrame],
+        trigger_type: str,
+        trigger_display: str,
+        trigger_reason: str,
+        trigger_sequence_number: int | None,
+        trigger_timestamp_utc: str,
+        trigger_time_monotonic: float | None,
+        candidate_config: dict
+    ) -> tuple[bool, str, dict]:
+        # Serialize ClipWriter and SidecarWriter use across the automatic
+        # writer thread and any synchronous manual-capture caller.
+        with self._capture_write_lock:
+            success, message, writer_status = (
+                self._clip_writer.write_frames(
+                    frames
+                )
             )
 
-            sidecar_metadata = self._create_sidecar_metadata(
-                frames=frames,
-                writer_status=writer_status,
-                trigger_type=trigger_type,
-                trigger_display=trigger_display,
-                trigger_reason=trigger_reason,
-                trigger_sequence_number=trigger_sequence_number,
-                trigger_timestamp_utc=trigger_timestamp_utc,
-                trigger_time_monotonic=trigger_time_monotonic,
-                candidate_config=candidate_config
-            )
+            sidecar_data = None
 
-            # Analyze the raw captured frames directly and write the JSON
-            # sidecar next to the MP4. This avoids decoding the MP4 later.
-            if output_file:
-                try:
-                    sidecar_data = (
-                        self._sidecar_writer.write_sidecar(
-                            frames,
-                            output_file,
-                            sidecar_metadata
+            if success:
+                output_file = writer_status.get(
+                    "output_file"
+                )
+
+                sidecar_metadata = self._create_sidecar_metadata(
+                    frames=frames,
+                    writer_status=writer_status,
+                    trigger_type=trigger_type,
+                    trigger_display=trigger_display,
+                    trigger_reason=trigger_reason,
+                    trigger_sequence_number=trigger_sequence_number,
+                    trigger_timestamp_utc=trigger_timestamp_utc,
+                    trigger_time_monotonic=trigger_time_monotonic,
+                    candidate_config=candidate_config
+                )
+
+                # Analyze the raw captured frames directly and write the JSON
+                # sidecar next to the MP4. This now runs on the capture writer
+                # thread for automatic captures, not on CameraReader.
+                if output_file:
+                    try:
+                        sidecar_data = (
+                            self._sidecar_writer.write_sidecar(
+                                frames,
+                                output_file,
+                                sidecar_metadata
+                            )
+                        )
+
+                    except Exception as error:
+                        self._event_log.add(
+                            f"Sidecar analysis failed: {error}",
+                            "error",
+                            event_type="error",
+                            summary="Sidecar analysis failed"
+                        )
+
+            capture_status = {
+                "buffer_count": len(
+                    frames
+                ),
+                **writer_status
+            }
+
+            if sidecar_data is not None:
+                capture_status["sidecar"] = sidecar_data
+
+            if len(frames) > 0:
+                first_frame = frames[0]
+                last_frame = frames[-1]
+
+                duration_seconds = (
+                    last_frame.timestamp_monotonic -
+                    first_frame.timestamp_monotonic
+                )
+
+                capture_status.update(
+                    {
+                        "first_sequence_number":
+                            first_frame.sequence_number,
+                        "last_sequence_number":
+                            last_frame.sequence_number,
+                        "first_timestamp_utc":
+                            first_frame.timestamp_utc,
+                        "last_timestamp_utc":
+                            last_frame.timestamp_utc,
+                        "duration_seconds":
+                            duration_seconds
+                    }
+                )
+
+        return success, message, capture_status
+
+    # ## Write queued automatic captures without blocking CameraReader.
+    def _capture_writer_loop(
+        self
+    ) -> None:
+        while True:
+            capture_job = self._capture_queue.get()
+
+            try:
+                success, message, capture_status = (
+                    self._write_capture_frames(
+                        frames=capture_job["frames"],
+                        trigger_type=capture_job["trigger_type"],
+                        trigger_display=capture_job["trigger_display"],
+                        trigger_reason=capture_job["trigger_reason"],
+                        trigger_sequence_number=capture_job[
+                            "trigger_sequence_number"
+                        ],
+                        trigger_timestamp_utc=capture_job[
+                            "trigger_timestamp_utc"
+                        ],
+                        trigger_time_monotonic=capture_job[
+                            "trigger_time_monotonic"
+                        ],
+                        candidate_config=capture_job[
+                            "candidate_config"
+                        ]
+                    )
+                )
+
+                if success:
+                    trigger_frame_text = (
+                        self._get_capture_trigger_frame_text(
+                            capture_status
                         )
                     )
 
-                except Exception as error:
                     self._event_log.add(
-                        f"Sidecar analysis failed: {error}",
+                        (
+                            f"Auto trigger captured: "
+                            f"{capture_job['trigger_reason']}; "
+                            f"{capture_status['frames_written']} frames, "
+                            f"{capture_status['duration_seconds']:.2f} sec, "
+                            f"{trigger_frame_text}, "
+                            f"{capture_status.get('output_file', '')}"
+                        ),
+                        event_type="trigger",
+                        summary=(
+                            f"Auto trigger captured, "
+                            f"{capture_status['frames_written']} frames"
+                        )
+                    )
+                else:
+                    self._event_log.add(
+                        (
+                            f"Auto trigger failed: "
+                            f"{capture_job['trigger_reason']}; "
+                            f"{message}"
+                        ),
                         "error",
                         event_type="error",
-                        summary="Sidecar analysis failed"
+                        summary="Auto trigger failed"
                     )
 
+            except Exception as error:
+                self._event_log.add(
+                    (
+                        f"Auto capture writer failure: "
+                        f"{capture_job.get('trigger_reason', '')}; "
+                        f"{error}"
+                    ),
+                    "error",
+                    event_type="error",
+                    summary="Auto capture writer failure"
+                )
 
-        capture_status = {
-            "buffer_count": len(
-                frames
-            ),
-            **writer_status
-        }
-
-        if sidecar_data is not None:
-            capture_status["sidecar"] = sidecar_data
-
-        if len(frames) > 0:
-            first_frame = frames[0]
-            last_frame = frames[-1]
-
-            duration_seconds = (
-                last_frame.timestamp_monotonic -
-                first_frame.timestamp_monotonic
-            )
-
-            capture_status.update(
-                {
-                    "first_sequence_number":
-                        first_frame.sequence_number,
-                    "last_sequence_number":
-                        last_frame.sequence_number,
-                    "first_timestamp_utc":
-                        first_frame.timestamp_utc,
-                    "last_timestamp_utc":
-                        last_frame.timestamp_utc,
-                    "duration_seconds":
-                        duration_seconds
-                }
-            )
-
-        return success, message, capture_status
+            finally:
+                self._capture_queue.task_done()
 
     # ## Encode the newest buffered frame as a JPEG preview image.
     def get_preview_jpeg(self) -> tuple[bytes | None, dict]:
@@ -605,7 +728,7 @@ class BufferManager:
             )
         )
 
-    # ## Save a pending auto-trigger after post-trigger time has elapsed.
+    # ## Queue a pending auto-trigger after post-trigger time has elapsed.
     def _capture_pending_trigger_if_ready(
         self,
         camera_frame: CameraFrame
@@ -632,71 +755,51 @@ class BufferManager:
                     self._pending_trigger
                 )
 
-                self._capture_state = "SAVING"
-                self._pending_trigger = None
-                captured_pending_trigger = True
-
-                success, message, capture_status = (
-                    self.capture(
-                        trigger_type=pending_trigger["trigger_type"],
-                        trigger_display=pending_trigger["trigger_display"],
-                        trigger_reason=pending_trigger["trigger_reason"],
-                        trigger_sequence_number=pending_trigger[
-                            "trigger_sequence_number"
-                        ],
-                        trigger_timestamp_utc=pending_trigger[
-                            "trigger_timestamp_utc"
-                        ],
-                        trigger_time_monotonic=pending_trigger[
-                            "trigger_time_monotonic"
-                        ],
-                        candidate_config=pending_trigger[
-                            "candidate_config"
-                        ]
-                    )
+                # Snapshot while still on the CameraReader thread. This copies
+                # only the list of CameraFrame references; RingBuffer does not
+                # mutate frames that have already been pushed. The queued list
+                # therefore owns the exact capture frames while the live ring
+                # buffer continues to overwrite its own references.
+                frames = (
+                    self._ring_buffer.snapshot()
                 )
 
+                capture_job = {
+                    "frames": frames,
+                    "trigger_type": pending_trigger["trigger_type"],
+                    "trigger_display": pending_trigger["trigger_display"],
+                    "trigger_reason": pending_trigger["trigger_reason"],
+                    "trigger_sequence_number": pending_trigger[
+                        "trigger_sequence_number"
+                    ],
+                    "trigger_timestamp_utc": pending_trigger[
+                        "trigger_timestamp_utc"
+                    ],
+                    "trigger_time_monotonic": pending_trigger[
+                        "trigger_time_monotonic"
+                    ],
+                    "candidate_config": pending_trigger[
+                        "candidate_config"
+                    ]
+                }
+
+                self._pending_trigger = None
                 self._capture_state = "IDLE"
+                captured_pending_trigger = True
 
-                if success:
-                    self._reset_live_analysis_state()
+                # Queue insertion is in-memory and returns immediately. The
+                # expensive FFmpeg and sidecar work runs on CaptureWriter.
+                self._capture_queue.put_nowait(
+                    capture_job
+                )
 
-                    self._last_metric_time_monotonic = (
-                        camera_frame.timestamp_monotonic
-                    )
-
-                    trigger_frame_text = self._get_capture_trigger_frame_text(
-                        capture_status
-                    )
-
-                    self._event_log.add(
-                        (
-                            f"Auto trigger captured: "
-                            f"{pending_trigger['trigger_reason']}; "
-                            f"{capture_status['frames_written']} frames, "
-                            f"{capture_status['duration_seconds']:.2f} sec, "
-                            f"{trigger_frame_text}, "
-                            f"{capture_status.get('output_file', '')}"
-                        ),
-                        event_type="trigger",
-                        summary=(
-                            f"Auto trigger captured, "
-                            f"{capture_status['frames_written']} frames"
-                        )
-                    )
-                else:
-                    self._event_log.add(
-                        (
-                            f"Auto trigger failed: "
-                            f"{pending_trigger['trigger_reason']}; "
-                            f"{message}"
-                        ),
-                        "error",
-                        event_type="error",
-                        summary="Auto trigger failed"
-                    )
-
-                    self._capture_state = "IDLE"
+                # Preserve the old post-capture live-analysis semantics for
+                # the very next camera frame, but do the reset immediately
+                # after snapshotting rather than after file writing finishes.
+                self._reset_live_analysis_state()
+                self._last_metric_time_monotonic = (
+                    camera_frame.timestamp_monotonic
+                )
 
         return captured_pending_trigger
 
