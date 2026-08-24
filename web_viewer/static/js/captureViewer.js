@@ -235,12 +235,8 @@ export class CaptureViewer extends HTMLElement
                          * metadata agree. This also opens the viewer one frame
                          * before the trigger, which is useful for inspection.
                          */
-                        const displayedInitialIndex =
-                            Math.max(
-                                0,
-                                initialIndex - 1
-                            );
-
+                        const displayedInitialIndex = initialIndex;
+                            
                         this._frameIndex =
                             displayedInitialIndex;
 
@@ -1391,14 +1387,16 @@ export class CaptureViewer extends HTMLElement
 
             .miniButton
             {
-                min-width: 42px;
-                padding: 3px 6px;
-                font-size: 11px;
+                min-width: 50px;
+                min-height: 36px;
+                padding: 6px 10px;
+                font-size: 13px;
                 font-weight: 600;
                 border: 1px solid #888;
                 border-radius: 4px;
                 background: #eee;
                 cursor: pointer;
+                touch-action: manipulation;
             }
 
             .miniButton:hover

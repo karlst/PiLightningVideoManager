@@ -1,6 +1,6 @@
 "use strict";
 
-import "./captureViewer.js?v=24";
+import "./captureViewer.js?v=26";
 
 
 class CaptureGallery
