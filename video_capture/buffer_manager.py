@@ -549,6 +549,7 @@ class BufferManager:
         self._ring_buffer.push(
             camera_frame
         )
+        return;
 
         self._log_periodic_health(
             camera_frame
