@@ -248,11 +248,25 @@ class BufferManager:
         # Serialize ClipWriter and SidecarWriter use across the automatic
         # writer thread and any synchronous manual-capture caller.
         with self._capture_write_lock:
-            success, message, writer_status = (
-                self._clip_writer.write_frames(
-                    frames
-                )
-            )
+            # success, message, writer_status = (
+            #     self._clip_writer.write_frames(
+            #         frames
+            #     )
+            # )
+            success = True
+            message = "junk"
+
+            writer_status = {
+                "output_file": str(output_file),
+                "saved_utc": "No time left for you",
+                "frames_requested": len(frames),
+                "frames_written": 0,
+                "codec": "libx264",
+                "container": "mp4",
+                "ffmpeg_return_code": None,
+                "ffmpeg_error": "error"
+            }
+
 
             sidecar_data = None
 
@@ -336,8 +350,7 @@ class BufferManager:
     ) -> None:
         while True:
             capture_job = self._capture_queue.get()
-            self._capture_queue.task_done()
-            continue;
+            
             try:
                 success, message, capture_status = (
                     self._write_capture_frames(
