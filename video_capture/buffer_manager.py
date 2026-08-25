@@ -596,9 +596,9 @@ class BufferManager:
             #     camera_frame
             # )
 
-            self._metric_history.push(
-                metric
-            )
+            # self._metric_history.push(
+            #     metric
+            # )
 
             self._last_metric_time_monotonic = (
                 camera_frame.timestamp_monotonic
