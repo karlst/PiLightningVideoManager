@@ -549,7 +549,6 @@ class BufferManager:
         self._ring_buffer.push(
             camera_frame
         )
-        return;
 
         self._log_periodic_health(
             camera_frame
@@ -558,7 +557,7 @@ class BufferManager:
         captured_pending_trigger = self._capture_pending_trigger_if_ready(
             camera_frame
         )
-
+        return;
         # Run the lightweight trigger metric on every frame. Graph history
         # sampling remains slower, but trigger detection no longer waits for
         # metric_history_sample_seconds.
