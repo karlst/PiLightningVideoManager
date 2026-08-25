@@ -336,7 +336,8 @@ class BufferManager:
     ) -> None:
         while True:
             capture_job = self._capture_queue.get()
-
+            self._capture_queue.task_done()
+            continue;
             try:
                 success, message, capture_status = (
                     self._write_capture_frames(
