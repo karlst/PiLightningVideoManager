@@ -588,7 +588,7 @@ class BufferManager:
                 self._last_metric_time_monotonic
             ) >= self._config.metric_history_sample_seconds
         )
-        return;
+        
         if should_sample_metric:
             # Full plugin analysis is for graph/history display only. It is
             # intentionally not used to decide lightning triggers.
