@@ -260,7 +260,7 @@ class BufferManager:
                 "output_file": "",
                 "saved_utc": "No time left for you",
                 "frames_requested": len(frames),
-                "frames_written": 0,
+                "frames_written": len(frames),
                 "codec": "libx264",
                 "container": "mp4",
                 "ffmpeg_return_code": None,
