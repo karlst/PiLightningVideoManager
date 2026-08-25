@@ -592,9 +592,9 @@ class BufferManager:
         if should_sample_metric:
             # Full plugin analysis is for graph/history display only. It is
             # intentionally not used to decide lightning triggers.
-            metric = self._frame_analyzer.analyze(
-                camera_frame
-            )
+            # metric = self._frame_analyzer.analyze(
+            #     camera_frame
+            # )
 
             self._metric_history.push(
                 metric
