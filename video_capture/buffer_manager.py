@@ -592,13 +592,13 @@ class BufferManager:
         if should_sample_metric:
             # Full plugin analysis is for graph/history display only. It is
             # intentionally not used to decide lightning triggers.
-            # metric = self._frame_analyzer.analyze(
-            #     camera_frame
-            # )
+            metric = self._frame_analyzer.analyze(
+                camera_frame
+            )
 
-            # self._metric_history.push(
-            #     metric
-            # )
+            self._metric_history.push(
+                metric
+            )
 
             self._last_metric_time_monotonic = (
                 camera_frame.timestamp_monotonic
@@ -628,33 +628,33 @@ class BufferManager:
                 self._previous_trigger_mean_brightness
             )
 
-        # if self._previous_trigger_gray_frame is not None:
-        #     candidate_config = (
-        #         self._trigger_manager.get_candidate_config()
-        #     )
+        if self._previous_trigger_gray_frame is not None:
+            candidate_config = (
+                self._trigger_manager.get_candidate_config()
+            )
 
-        #     positive_delta = cv2.subtract(
-        #         gray_frame,
-        #         self._previous_trigger_gray_frame
-        #     )
+            positive_delta = cv2.subtract(
+                gray_frame,
+                self._previous_trigger_gray_frame
+            )
 
-        #     threshold_mask = cv2.compare(
-        #         positive_delta,
-        #         candidate_config.
-        #         candidate_bright_pixel_delta_threshold,
-        #         cv2.CMP_GE
-        #     )
+            threshold_mask = cv2.compare(
+                positive_delta,
+                candidate_config.
+                candidate_bright_pixel_delta_threshold,
+                cv2.CMP_GE
+            )
 
-        #     bright_pixel_count = (
-        #         cv2.countNonZero(
-        #             threshold_mask
-        #         )
-        #     )
+            bright_pixel_count = (
+                cv2.countNonZero(
+                    threshold_mask
+                )
+            )
 
-        #     bright_pixel_fraction = (
-        #         float(bright_pixel_count) /
-        #         float(positive_delta.size)
-        #     )
+            bright_pixel_fraction = (
+                float(bright_pixel_count) /
+                float(positive_delta.size)
+            )
 
         self._previous_trigger_mean_brightness = (
             mean_brightness
