@@ -557,7 +557,7 @@ class BufferManager:
         captured_pending_trigger = self._capture_pending_trigger_if_ready(
             camera_frame
         )
-        return;
+        
         # Run the lightweight trigger metric on every frame. Graph history
         # sampling remains slower, but trigger detection no longer waits for
         # metric_history_sample_seconds.
@@ -588,7 +588,7 @@ class BufferManager:
                 self._last_metric_time_monotonic
             ) >= self._config.metric_history_sample_seconds
         )
-
+        return;
         if should_sample_metric:
             # Full plugin analysis is for graph/history display only. It is
             # intentionally not used to decide lightning triggers.
