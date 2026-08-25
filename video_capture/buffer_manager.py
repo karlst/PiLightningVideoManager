@@ -257,7 +257,7 @@ class BufferManager:
             message = "junk"
 
             writer_status = {
-                "output_file": str(output_file),
+                "output_file": "",
                 "saved_utc": "No time left for you",
                 "frames_requested": len(frames),
                 "frames_written": 0,
