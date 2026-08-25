@@ -24,6 +24,7 @@ capture should occur; CameraReader and BufferManager handle those jobs.
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
+import os
 import subprocess
 
 import numpy as np
@@ -103,6 +104,13 @@ class ClipWriter:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE
+            )
+
+            # Keep FFmpeg off the CPU reserved for CameraReader and lower
+            # its scheduler priority. This is best-effort: failure to apply
+            # either setting must not prevent a capture from being saved.
+            self._limit_ffmpeg_resources(
+                process.pid
             )
 
             frames_written = 0
@@ -197,6 +205,42 @@ class ClipWriter:
                 }
 
         return success, message, status
+
+    # ## Keep FFmpeg away from the camera CPU and lower its priority.
+    def _limit_ffmpeg_resources(
+        self,
+        process_id: int
+    ) -> None:
+        try:
+            if (
+                hasattr(os, "sched_getaffinity") and
+                hasattr(os, "sched_setaffinity")
+            ):
+                available_cpus = sorted(
+                    os.sched_getaffinity(0)
+                )
+
+                if len(available_cpus) > 1:
+                    ffmpeg_cpus = set(
+                        available_cpus[:-1]
+                    )
+                    os.sched_setaffinity(
+                        process_id,
+                        ffmpeg_cpus
+                    )
+
+            if (
+                hasattr(os, "setpriority") and
+                hasattr(os, "PRIO_PROCESS")
+            ):
+                os.setpriority(
+                    os.PRIO_PROCESS,
+                    process_id,
+                    10
+                )
+
+        except Exception:
+            pass
 
     # ## Build the FFmpeg command used to encode raw BGR frames.
     def _create_ffmpeg_command(

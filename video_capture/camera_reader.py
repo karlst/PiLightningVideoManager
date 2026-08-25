@@ -20,6 +20,7 @@ from threading import Lock
 from threading import Thread
 from typing import Callable
 from typing import Optional
+import os
 import time
 
 import cv2
@@ -182,6 +183,24 @@ class CameraReader:
         camera = None
 
         try:
+            # Reserve the highest-numbered available CPU for CameraReader.
+            # On Linux, sched_setaffinity(0, ...) applies to the calling
+            # thread, so the rest of PCM remains free to use the other CPUs.
+            if (
+                hasattr(os, "sched_getaffinity") and
+                hasattr(os, "sched_setaffinity")
+            ):
+                available_cpus = sorted(
+                    os.sched_getaffinity(0)
+                )
+
+                if len(available_cpus) > 1:
+                    camera_cpu = available_cpus[-1]
+                    os.sched_setaffinity(
+                        0,
+                        {camera_cpu}
+                    )
+
             camera = self._open_camera()
 
             if camera is None:
