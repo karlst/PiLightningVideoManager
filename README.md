@@ -120,6 +120,49 @@ The Pi's job is therefore **capture-oriented**. It tries to preserve
 anything that could plausibly be useful rather than performing expensive
 final classification while frames are arriving.
 
+### Protecting High-Speed Capture While Files Are Written
+
+At approximately 260 FPS, the Pi has only about 3.8 ms between incoming
+frames. Writing a capture is much more expensive than receiving a frame: the
+raw buffered images must be fed to FFmpeg for H.264 encoding and the JSON
+sidecar must be analyzed and written. Early implementations allowed this work
+to contend too directly with camera acquisition, producing large gaps in the
+per-frame timestamps.
+
+Automatic capture writing is now deliberately deferred and isolated from the
+CameraReader path:
+
+``` text
+CameraReader thread
+    |
+    | receive/timestamp frame
+    | update ring buffer and trigger logic
+    | after post-trigger interval: snapshot frame references
+    v
+capture queue
+    |
+    v
+CaptureWriter thread
+    | wait until configured time after original trigger
+    | run FFmpeg
+    | write JSON sidecar
+    v
+MP4 + JSON
+```
+
+The writer delay is measured from the **original Candidate trigger time**, not
+from the time the job enters the queue. This lets the system finish collecting
+the important post-trigger frames before CPU-intensive encoding begins without
+adding an unnecessary second full delay.
+
+FFmpeg is also run with deliberately conservative CPU scheduling: `nice -n 5`
+and a single libx264 encoding thread (`-threads 1`). CPU affinity is not forced;
+the Linux scheduler remains free to place the work. These settings were chosen
+from measured Pi timing tests, not as general FFmpeg recommendations.
+
+The practical design rule is: **the camera path captures frames; the writer path
+encodes them later.**
+
 ### Stage 2 --- Apply Solution Filtering on the Desktop
 
 `video_analyzer` loads the saved MP4 and its matching JSON sidecar.

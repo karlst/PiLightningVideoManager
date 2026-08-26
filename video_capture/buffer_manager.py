@@ -1,15 +1,42 @@
 """
 @file buffer_manager.py
 
-@brief Coordinates the live camera capture pipeline.
+@brief Coordinates real-time frame acquisition, triggering, buffering, and deferred capture writing.
 
-BufferManager is the central coordinator for camera capture on the Pi. It
-receives every frame from CameraReader, keeps recent frames in the ring
-buffer, calculates the metrics used for candidate detection, asks
-TriggerManager whether a candidate has been found, and saves the buffered
-frames as an MP4 plus JSON sidecar when a capture is triggered. It also
-provides preview images, status information, and sampled metrics used by the
-web interface.
+BufferManager sits between CameraReader and the file writers. The critical
+architectural rule is that the CameraReader callback must stay fast: at roughly
+260 FPS, expensive work in that path can delay the next camera.read() and create
+large gaps in the frame timestamps saved in the JSON sidecar.
+
+Automatic capture therefore has two phases:
+
+1. CameraReader / trigger path (time-critical)
+   - receive and timestamp every frame;
+   - push it into the RingBuffer;
+   - evaluate CandidateFinder/trigger metrics;
+   - after post_trigger_seconds, snapshot the RingBuffer and enqueue a capture
+     job containing references to those fixed CameraFrame objects.
+
+2. CaptureWriter path (not time-critical)
+   - a dedicated Python thread removes automatic jobs from _capture_queue;
+   - it waits until capture_write_delay_seconds after the ORIGINAL trigger;
+   - it serializes file output under _capture_write_lock;
+   - ClipWriter launches FFmpeg and writes the MP4;
+   - SidecarWriter analyzes the same raw frame snapshot and writes the JSON.
+
+The delay is measured from the trigger, not from queue insertion. This is
+intentional: post-trigger acquisition has already consumed part of the delay by
+the time the job is queued. If the configured delay has already expired, the
+writer starts immediately.
+
+Manual capture is deliberately different: capture() writes synchronously in the
+calling thread. _capture_write_lock prevents a manual write from colliding with
+an automatic write.
+
+Why this architecture exists: testing showed that FFmpeg encoding could starve
+camera acquisition when it began close to a trigger. Moving automatic writing
+off CameraReader, delaying it until the captured event is safely buffered, and
+constraining FFmpeg CPU use greatly reduced capture-correlated frame gaps.
 """
 
 from queue import Queue
@@ -101,12 +128,14 @@ class BufferManager:
                 config.frame_rate_fps
         )
 
-        # Automatic capture files are written outside the CameraReader thread.
-        # The reader callback only takes a ring-buffer snapshot and queues it,
-        # so FFmpeg encoding and sidecar analysis cannot block camera.read().
-        # One worker serializes all automatic writes. The write lock also
-        # protects ClipWriter/SidecarWriter if a synchronous manual capture
-        # happens while an automatic capture is being written.
+        # AUTOMATIC WRITER TASKING:
+        # CameraReader must never run FFmpeg or SidecarWriter. At capture time
+        # it snapshots the ring buffer and puts a small job on this queue. A
+        # single daemon CaptureWriter thread consumes those jobs in FIFO order.
+        #
+        # One worker is intentional. Multiple simultaneous FFmpeg encoders would
+        # increase CPU contention and make camera starvation more likely. The
+        # lock also serializes a synchronous manual capture against this worker.
         self._capture_write_lock = Lock()
         self._capture_queue = Queue()
         self._capture_writer_thread = Thread(
@@ -246,8 +275,11 @@ class BufferManager:
         trigger_time_monotonic: float | None,
         candidate_config: dict
     ) -> tuple[bool, str, dict]:
-        # Serialize ClipWriter and SidecarWriter use across the automatic
-        # writer thread and any synchronous manual-capture caller.
+        # === DOC UPDATE 2026-08-26 BEGIN ===
+        # File output is serialized. Automatic jobs normally arrive here from
+        # CaptureWriter; manual capture() can arrive synchronously from another
+        # thread. Never allow two FFmpeg/sidecar write sequences to overlap.
+        # === DOC UPDATE 2026-08-26 END ===
         with self._capture_write_lock:
             success, message, writer_status = (
                 self._clip_writer.write_frames(
@@ -331,7 +363,14 @@ class BufferManager:
 
         return success, message, capture_status
 
-    # ## Write the queued automatic captures without blocking CameraReader.
+    # ## Consume automatic capture jobs on the dedicated CaptureWriter thread.
+    #
+    # The job is normally queued after post_trigger_seconds has elapsed. Before
+    # starting FFmpeg, wait only until trigger_time + capture_write_delay_seconds.
+    # Example: trigger at T=0, job queued at T=1, configured delay=2 -> sleep
+    # about 1 additional second and start writing at T=2. This protects the
+    # trigger/post-trigger acquisition window without adding an unnecessary full
+    # delay after the snapshot is already complete.
     def _capture_writer_loop(
         self
     ) -> None:
@@ -812,8 +851,12 @@ class BufferManager:
                 self._capture_state = "IDLE"
                 captured_pending_trigger = True
 
-                # Queue insertion is in-memory and returns immediately. The
-                # expensive FFmpeg and sidecar work runs on CaptureWriter.
+                # === DOC UPDATE 2026-08-26 BEGIN ===
+                # This is the handoff from the time-critical CameraReader path
+                # to the deferred writer path. put_nowait() only queues Python
+                # references; FFmpeg encoding and sidecar analysis happen later
+                # on CaptureWriter. Do not move file-writing work back here.
+                # === DOC UPDATE 2026-08-26 END ===
                 self._capture_queue.put_nowait(
                     capture_job
                 )

@@ -1,24 +1,36 @@
 """
 @file clip_writer.py
 
-@brief Writes buffered camera frames to one MP4/H.264 file using FFmpeg.
+@brief Encodes one fixed CameraFrame snapshot as MP4/H.264 using FFmpeg.
 
-ClipWriter is the final video-output stage of the buffered capture pipeline.
-BufferManager keeps recent CameraFrame objects in memory. When a manual or
-automatic capture is saved, BufferManager passes a snapshot of those frames to
-ClipWriter.
+ClipWriter is deliberately a synchronous encoder: write_frames() does not
+return until all raw BGR frames have been fed to FFmpeg and FFmpeg exits. The
+separate OS process created by subprocess.Popen() does NOT make the Python call
+asynchronous; writes to process.stdin and process.wait() can still occupy/block
+the calling Python thread.
 
-The frames held in memory are OpenCV BGR images, not an already encoded video
-stream. ClipWriter starts an FFmpeg process and writes the raw BGR pixel bytes
-to FFmpeg through standard input. FFmpeg then encodes those frames as H.264
-video inside an MP4 container.
+For automatic captures, BufferManager solves that problem by calling ClipWriter
+from its dedicated CaptureWriter thread, never from CameraReader. Manual
+captures may call it synchronously, and BufferManager serializes both paths.
 
-ClipWriter writes only the video pixels. Per-frame timing, trigger information,
-camera metadata, and analysis measurements are stored separately in the JSON
-sidecar written by SidecarWriter.
+FFmpeg tasking choices are intentionally conservative because camera acquisition
+has higher priority than encoding:
 
-This class does not read directly from the camera and does not decide when a
-capture should occur; CameraReader and BufferManager handle those jobs.
+- `nice -n 5` lowers the FFmpeg process CPU scheduling priority relative to the
+  normal-priority camera process/thread. This is a modest bias, not CPU affinity.
+- `-threads 1` asks libx264 to use one encoding thread. FFmpeg may still appear
+  with several OS threads for internal I/O/framework work; the option limits the
+  codec's worker threading rather than guaranteeing a one-thread process.
+- No `taskset`/CPU affinity is used. Affinity experiments did not show a
+  compelling advantage and unnecessarily constrain the Linux scheduler.
+- `ultrafast` minimizes encoder CPU work. CRF 18 retains high image quality.
+
+These choices came from capture-timing tests: unconstrained FFmpeg created
+capture-correlated frame starvation. The present settings, combined with
+BufferManager's deferred writer, substantially reduced those gaps.
+
+ClipWriter writes video pixels only. Capture timing, trigger provenance, and
+per-frame measurements belong in the JSON sidecar.
 """
 
 from datetime import datetime
@@ -92,8 +104,10 @@ class ClipWriter:
                 first_frame.shape[1]
             )
 
-            # Feed raw BGR frames to FFmpeg through stdin. The MP4 carries
-            # pixels only; detailed frame timing stays in the JSON sidecar.
+            # Popen creates FFmpeg as a separate OS process, but this method is
+            # still synchronous: stdin.write() feeds every raw frame and wait()
+            # waits for encoder completion. BufferManager therefore calls this
+            # method from CaptureWriter for automatic captures.
             process = subprocess.Popen(
                 self._create_ffmpeg_command(
                     output_file=output_file,
@@ -198,7 +212,10 @@ class ClipWriter:
 
         return success, message, status
 
-    # ## Build the FFmpeg command used to encode raw BGR frames.
+    # ## Build the deliberately low-impact FFmpeg command.
+    # `nice -n 5` lowers process priority; `-threads 1` limits libx264 encoder
+    # workers. Do not casually remove these or add CPU affinity: these settings
+    # were selected after measuring camera frame gaps while captures were saved.
     def _create_ffmpeg_command(
         self,
         output_file: Path,

@@ -114,6 +114,82 @@ post-trigger frames.
 
 The trigger frame must remain identifiable in the saved capture.
 
+## Capture Writer Architecture and Timing
+
+This is a critical implementation detail. Do not simplify the capture path by
+moving file writing back into `CameraReader` or its frame callback.
+
+The camera currently runs at roughly 260 FPS, leaving about 3.8 ms between
+frames. Timing tests showed that FFmpeg encoding could consume enough CPU to
+starve camera acquisition and create large gaps in the frame timestamps. The
+current architecture was introduced specifically to prevent that failure mode.
+
+### Automatic capture tasking
+
+Automatic captures use three execution contexts:
+
+1. **CameraReader Python thread** --- performs `camera.read()`, timestamps the
+   frame, and calls `BufferManager._on_frame()`. This is the time-critical path.
+2. **CaptureWriter Python thread** --- consumes queued automatic capture jobs and
+   performs MP4 + sidecar writing. There is exactly one worker so automatic
+   encodes are serialized rather than competing with one another.
+3. **FFmpeg OS process** --- launched synchronously by `ClipWriter.write_frames()`
+   from the CaptureWriter thread. FFmpeg being a separate process does *not* make
+   `write_frames()` asynchronous; the caller still feeds stdin and waits for
+   FFmpeg to exit.
+
+When an automatic Candidate triggers, BufferManager first waits for
+`post_trigger_seconds` so the ring buffer contains the required later frames. It
+then takes a snapshot of the ring-buffer frame references and places that fixed
+frame list on `_capture_queue`. Queue insertion is intentionally cheap.
+
+CaptureWriter does not necessarily encode immediately. It waits until:
+
+``` text
+original trigger monotonic time + capture_write_delay_seconds
+```
+
+If that time has already passed, it starts immediately. The delay is therefore
+relative to the original trigger, **not** relative to queue insertion.
+
+Current tested configuration is a 2-second write delay. Capture writing itself
+was measured at roughly 1.8 seconds on the current Pi/camera configuration. The
+trigger cooldown was increased to keep captures from being initiated too close
+together; see `cam_config.py` for the current values rather than duplicating
+configuration constants here.
+
+### Manual captures
+
+Manual `BufferManager.capture()` remains synchronous. Both manual and automatic
+writes pass through `_capture_write_lock`, so ClipWriter and SidecarWriter cannot
+be used concurrently. A manual capture can therefore wait behind an automatic
+write, or vice versa. This is intentional; protecting camera acquisition is more
+important than maximizing file-write concurrency.
+
+### FFmpeg tasking choices
+
+`ClipWriter` currently launches FFmpeg with:
+
+- `nice -n 5` --- modestly lowers FFmpeg CPU scheduling priority;
+- `-threads 1` --- limits libx264 encoding workers;
+- `-preset ultrafast` --- minimizes encoding CPU cost;
+- **no `taskset`/CPU affinity** --- affinity experiments did not provide a
+  compelling improvement, so Linux is allowed to schedule normally.
+
+`-threads 1` does not mean process monitors will show exactly one FFmpeg thread.
+FFmpeg can create additional framework/I/O threads; the option constrains codec
+threading.
+
+### Result of the timing work
+
+Before these changes, capture-associated encoding produced substantial frame
+timestamp gaps. After moving automatic writing to CaptureWriter, delaying the
+write, and constraining FFmpeg, production sidecars showed frame intervals
+clustered near the expected camera cadence with no sequence-number
+discontinuities in the validation sample. Treat this architecture as a
+performance requirement unless new measurements demonstrate that it can safely
+be changed.
+
 ## MP4 and JSON Sidecar
 
 A normal Candidate consists of a matching pair:

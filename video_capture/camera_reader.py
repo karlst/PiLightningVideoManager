@@ -4,13 +4,77 @@
 @brief Camera-interface layer for the USB high-speed camera.
 
 CameraReader is the lowest application-level interface to the physical camera.
-It performs much the same job as a device driver within Pi Camera Capture:
-it opens the Linux V4L2 camera device through OpenCV, configures the MJPEG
-format, image size, and frame rate required by the ELP High Speed camera,
-then continuously reads frames on a background thread. Each frame is given
-sequence and timing information and passed upward to BufferManager through a
-callback. The implementation is suitable for the current ELP camera and other
-V4L2/OpenCV cameras that support the same capture interface and settings.
+It opens the Linux V4L2 camera device through OpenCV, requests the configured
+MJPEG format, image dimensions, and frame rate, then continuously reads frames
+on one dedicated Python thread.
+
+CAMERA STREAM / THREADING MODEL
+
+The live path is:
+
+    USB camera
+        |
+        | MJPEG frames delivered by the Linux V4L2 driver
+        v
+    cv2.VideoCapture
+        |
+        | camera.read()
+        | OpenCV returns one decoded image as a BGR frame
+        v
+    CameraReader thread
+        |
+        | assign sequence number and timestamps
+        | construct CameraFrame
+        v
+    BufferManager._on_frame(camera_frame)
+        |
+        v
+    ring buffer + trigger analysis + lightweight live processing
+
+CameraReader owns one Python worker thread. That thread executes the complete
+read/callback loop. The important consequence is that the callback is
+SYNCHRONOUS: CameraReader does not call BufferManager on a second worker and
+does not queue the frame for later processing. BufferManager._on_frame() must
+return before this thread calls camera.read() again.
+
+That detail is critical to capture timing. Any expensive work performed
+directly or indirectly inside the callback delays the next call to
+camera.read(). Earlier versions allowed MP4 encoding and sidecar work to occur
+on this path, producing measurable gaps in frame timestamps. Automatic file
+writing is therefore now handed off by BufferManager to a separate
+CaptureWriter thread. CameraReader itself should remain as small and
+predictable as possible.
+
+camera.read() is the boundary between the Linux/OpenCV camera stream and this
+application. The code requests MJPEG from the camera because the USB camera
+transmits compressed frames efficiently at the required high frame rate.
+OpenCV/V4L2 handles receipt of that MJPEG stream and camera.read() returns the
+decoded image used by the rest of the application.
+
+TIMESTAMP SEMANTICS
+
+The timestamps stored in CameraFrame are taken immediately AFTER
+camera.read() returns successfully. They are therefore application-side
+arrival/read-completion timestamps, not hardware exposure timestamps supplied
+by the camera.
+
+timestamp_monotonic is used for elapsed-time and frame-gap calculations because
+it is immune to wall-clock changes. timestamp_utc is retained for human-readable
+capture metadata and correlation with external events.
+
+The sequence number is incremented once for each successful camera.read().
+Failed reads are counted separately and do not receive a CameraFrame sequence
+number.
+
+DESIGN INTENT
+
+CameraReader should do only the work necessary to:
+  * keep reading the camera continuously,
+  * timestamp and number each successful frame,
+  * pass the frame upward immediately.
+
+Encoding, sidecar generation, classification, disk I/O, and other expensive
+operations do not belong on this thread.
 """
 
 from dataclasses import dataclass
@@ -241,6 +305,13 @@ class CameraReader:
         return camera
 
     # ## Read frames until stop is requested.
+    #
+    # This loop is the application's live camera stream. It runs entirely on
+    # the CameraReader worker thread. After each successful camera.read(), the
+    # frame is passed synchronously to _handle_frame(), which in turn invokes
+    # BufferManager's callback. The next camera.read() does not occur until
+    # that callback returns, so callback latency directly affects how quickly
+    # the application gets back to the camera.
     def _capture_frames(
         self,
         camera
@@ -259,6 +330,10 @@ class CameraReader:
                 )
 
     # ## Timestamp one frame and deliver it to the frame callback.
+    #
+    # The timestamps describe when this application received/completed the
+    # read of the frame; they are not exposure timestamps from camera hardware.
+    # The callback is executed inline on the CameraReader thread.
     def _handle_frame(
         self,
         frame
