@@ -17,6 +17,7 @@ from threading import Lock
 from threading import Thread
 
 import cv2
+import time
 
 from video_capture.brightness_plugin import BrightnessPlugin
 from video_capture.cam_config import CamConfig
@@ -253,7 +254,7 @@ class BufferManager:
                     frames
                 )
             )
-
+           
             sidecar_data = None
 
             if success:
@@ -330,14 +331,38 @@ class BufferManager:
 
         return success, message, capture_status
 
-    # ## Write queued automatic captures without blocking CameraReader.
+    # ## Write the queued automatic captures without blocking CameraReader.
     def _capture_writer_loop(
         self
     ) -> None:
         while True:
             capture_job = self._capture_queue.get()
 
+            
+            
             try:
+
+                trigger_time = float(
+                    capture_job["trigger_time_monotonic"]
+                )
+    
+                write_not_before = (
+                    trigger_time +
+                    self._config.capture_write_delay_seconds
+                )
+    
+                now = time.monotonic()
+    
+                delay_seconds = (
+                    write_not_before - now
+                )
+    
+                if delay_seconds > 0.0:
+                    time.sleep(
+                        delay_seconds
+                    )
+    
+
                 success, message, capture_status = (
                     self._write_capture_frames(
                         frames=capture_job["frames"],
@@ -557,7 +582,7 @@ class BufferManager:
         captured_pending_trigger = self._capture_pending_trigger_if_ready(
             camera_frame
         )
-
+        
         # Run the lightweight trigger metric on every frame. Graph history
         # sampling remains slower, but trigger detection no longer waits for
         # metric_history_sample_seconds.
@@ -588,7 +613,7 @@ class BufferManager:
                 self._last_metric_time_monotonic
             ) >= self._config.metric_history_sample_seconds
         )
-
+        
         if should_sample_metric:
             # Full plugin analysis is for graph/history display only. It is
             # intentionally not used to decide lightning triggers.

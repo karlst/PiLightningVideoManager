@@ -206,6 +206,9 @@ class ClipWriter:
         frame_height_pixels: int
     ) -> list[str]:
         command = [
+             "nice",
+            "-n",
+            "5",
             self._ffmpeg_path,
             "-y",
             "-hide_banner",
@@ -229,6 +232,8 @@ class ClipWriter:
             "-an",
             "-c:v",
             "libx264",
+            "-threads",
+             "1",
             "-preset",
             "ultrafast",
             "-crf",
