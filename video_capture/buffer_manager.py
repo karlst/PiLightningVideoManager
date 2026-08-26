@@ -17,6 +17,7 @@ from threading import Lock
 from threading import Thread
 
 import cv2
+import time
 
 from video_capture.brightness_plugin import BrightnessPlugin
 from video_capture.cam_config import CamConfig
@@ -138,6 +139,11 @@ class BufferManager:
         # by the slower metric-history sampling interval.
         self._previous_trigger_mean_brightness: float | None = None
 
+        # Temporary automatic-capture timing test.
+        self._test_start_time_monotonic = None
+        self._test_capture_times = [5.0, 10.0, 20.0, 30.0, 50.0, 80.0]
+        self._test_capture_index = 0
+
     # ## Start the camera reader and clear existing runtime buffers.
     def start(self) -> tuple[bool, str]:
         success = False
@@ -245,6 +251,9 @@ class BufferManager:
         trigger_time_monotonic: float | None,
         candidate_config: dict
     ) -> tuple[bool, str, dict]:
+
+        write_start = time.monotonic();
+        
         # Serialize ClipWriter and SidecarWriter use across the automatic
         # writer thread and any synchronous manual-capture caller.
         with self._capture_write_lock:
@@ -253,9 +262,37 @@ class BufferManager:
                     frames
                 )
             )
-
+            
             sidecar_data = None
 
+            capture_status = {
+                "buffer_count": len(frames),
+                **writer_status
+            }
+            if len(frames) > 0:
+                first_frame = frames[0]
+                last_frame = frames[-1]
+
+                duration_seconds = (
+                    last_frame.timestamp_monotonic -
+                    first_frame.timestamp_monotonic
+                )
+
+                capture_status.update(
+                    {
+                        "first_sequence_number":
+                            first_frame.sequence_number,
+                        "last_sequence_number":
+                            last_frame.sequence_number,
+                        "first_timestamp_utc":
+                            first_frame.timestamp_utc,
+                        "last_timestamp_utc":
+                            last_frame.timestamp_utc,
+                        "duration_seconds":
+                            duration_seconds
+                    }
+                )
+            print ("foo")
             if success:
                 output_file = writer_status.get(
                     "output_file"
@@ -328,6 +365,10 @@ class BufferManager:
                     }
                 )
 
+        write_elapsed = time.monotonic() - write_start
+        print ("goodbye")
+        print(f"Capture Write time: ", f"{write_elapsed:.3f} sec", flush = True)
+
         return success, message, capture_status
 
     # ## Write queued automatic captures without blocking CameraReader.
@@ -337,8 +378,30 @@ class BufferManager:
         while True:
             capture_job = self._capture_queue.get()
 
+            trigger_time = float(
+                capture_job["trigger_time_monotonic"]
+            )
+
+            write_not_before = (
+                trigger_time +
+                self._config.capture_write_delay_seconds
+            )
+
+            now = time.monotonic()
+
+            delay_seconds = (
+                write_not_before - now
+            )
+
+            if delay_seconds > 0.0:
+                time.sleep(
+                    delay_seconds
+                )
+
             try:
                 success, message, capture_status = (
+
+                    
                     self._write_capture_frames(
                         frames=capture_job["frames"],
                         trigger_type=capture_job["trigger_type"],
@@ -357,6 +420,8 @@ class BufferManager:
                             "candidate_config"
                         ]
                     )
+                    
+
                 )
 
                 if success:
@@ -549,6 +614,39 @@ class BufferManager:
         self._ring_buffer.push(
             camera_frame
         )
+
+        # Temporary automatic-capture timing test.
+        if self._test_start_time_monotonic is None:
+            self._test_start_time_monotonic = (
+                camera_frame.timestamp_monotonic
+            )
+
+        test_elapsed = (
+            camera_frame.timestamp_monotonic -
+            self._test_start_time_monotonic
+        )
+
+        if (
+            self._test_capture_index <
+            len(self._test_capture_times) and
+            self._capture_state == "IDLE" and
+            test_elapsed >=
+            self._test_capture_times[
+                self._test_capture_index
+            ]
+        ):
+            print(
+                f"TIMING TEST: arming capture "
+                f"{self._test_capture_index + 1} "
+                f"at {test_elapsed:.3f} sec"
+            )
+
+            self._arm_pending_trigger(
+                trigger_reason="Timing test trigger",
+                trigger_frame=camera_frame
+            )
+
+            self._test_capture_index += 1
 
         self._log_periodic_health(
             camera_frame

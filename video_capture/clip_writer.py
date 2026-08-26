@@ -25,6 +25,7 @@ from datetime import datetime
 from datetime import timezone
 from pathlib import Path
 import subprocess
+import time
 
 import numpy as np
 
@@ -55,7 +56,8 @@ class ClipWriter:
     ) -> tuple[bool, str, dict]:
         success = False
         message = "No frames to write"
-
+        start_time = time.monotonic()
+        
         status = {
             "output_file": "",
             "saved_utc": "",
@@ -83,7 +85,7 @@ class ClipWriter:
             )
 
             first_frame = frames[0].frame
-
+            
             frame_height_pixels = int(
                 first_frame.shape[0]
             )
@@ -92,8 +94,12 @@ class ClipWriter:
                 first_frame.shape[1]
             )
 
-            # Feed raw BGR frames to FFmpeg through stdin. The MP4 carries
-            # pixels only; detailed frame timing stays in the JSON sidecar.
+           
+
+            
+
+            #Feed raw BGR frames to FFmpeg through stdin. The MP4 carries
+            #pixels only; detailed frame timing stays in the JSON sidecar.
             process = subprocess.Popen(
                 self._create_ffmpeg_command(
                     output_file=output_file,
@@ -107,7 +113,7 @@ class ClipWriter:
 
             frames_written = 0
             ffmpeg_error = ""
-
+           
             try:
                 if process.stdin is not None:
                     for camera_frame in frames:
@@ -125,13 +131,18 @@ class ClipWriter:
                             frame_width == frame_width_pixels and
                             frame_height == frame_height_pixels
                         ):
-                            contiguous_frame = np.ascontiguousarray(
-                                frame
-                            )
+                            if frame.flags["C_CONTIGUOUS"]:
+                                process.stdin.write(
+                                    memoryview(frame)
+                                )
+                            else:
+                                contiguous_frame = np.ascontiguousarray(
+                                    frame
+                                )
 
-                            process.stdin.write(
-                                contiguous_frame.tobytes()
-                            )
+                                process.stdin.write(
+                                    memoryview(contiguous_frame)
+                                )
 
                             frames_written += 1
 
@@ -147,6 +158,8 @@ class ClipWriter:
                     )
 
                 return_code = process.wait()
+                elapsed_time = time.monotonic() - start_time
+                print (f"clipWriter time = {elapsed_time:.3f} seconds", flush = True)
 
                 success = (
                     return_code == 0 and
@@ -206,6 +219,9 @@ class ClipWriter:
         frame_height_pixels: int
     ) -> list[str]:
         command = [
+            "nice",
+            "-n",
+            "5",
             self._ffmpeg_path,
             "-y",
             "-hide_banner",
@@ -229,6 +245,8 @@ class ClipWriter:
             "-an",
             "-c:v",
             "libx264",
+            "-threads",
+             "1",
             "-preset",
             "ultrafast",
             "-crf",

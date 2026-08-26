@@ -23,6 +23,7 @@ from typing import Optional
 import time
 
 import cv2
+import csv
 
 from video_capture.cam_config import CamConfig
 
@@ -241,22 +242,145 @@ class CameraReader:
         return camera
 
     # ## Read frames until stop is requested.
+    # def _capture_frames(
+    #     self,
+    #     camera
+    # ) -> None:
+    #     while not self._is_stop_requested():
+    #         success, frame = camera.read()
+
+    #         if success:
+    #             self._handle_frame(
+    #                 frame
+    #             )
+    #         else:
+    #             self._record_failed_read()
+    #             time.sleep(
+    #                 0.001
+    #             )
+
     def _capture_frames(
         self,
         camera
     ) -> None:
+        test_start = time.monotonic()
+        test_duration_seconds = 120.0
+        next_status_time = test_start + 1.0
+
+        print(
+            f"TIMING TEST: starting "
+            f"{test_duration_seconds:.0f} second run"
+        )
+
+        # test_start = time.monotonic()
+        # test_duration_seconds = 120.0
+        next_status_time = test_start + 1.0
+
+        timing_samples = []
+        previous_frame_time = None
+
+        print(
+            f"TIMING TEST: starting "
+            f"{test_duration_seconds:.0f} second run"
+        )
+
         while not self._is_stop_requested():
+            now = time.monotonic()
+
+            if (
+                now - test_start
+            ) >= test_duration_seconds:
+                break
+
+            read_start = time.monotonic_ns()
+
             success, frame = camera.read()
 
+            read_end = time.monotonic_ns()
+
+            read_ms = (
+                read_end - read_start
+            ) / 1_000_000.0
+
             if success:
-                self._handle_frame(
+                frame_time, on_frame_ms = self._handle_frame(
                     frame
                 )
+
+                frame_gap_ms = None
+
+                if previous_frame_time is not None:
+                    frame_gap_ms = (
+                        frame_time - previous_frame_time
+                    ) * 1000.0
+
+                previous_frame_time = frame_time
+
+                timing_samples.append(
+                    (
+                        self._frame_count,
+                        frame_gap_ms,
+                        read_ms,
+                        on_frame_ms
+                    )
+                )
+
             else:
                 self._record_failed_read()
                 time.sleep(
                     0.001
                 )
+
+            now = time.monotonic()
+
+            if now >= next_status_time:
+                elapsed = now - test_start
+
+                print(
+                    f"TIMING TEST: "
+                    f"{elapsed:.1f} sec, "
+                    f"{self._frame_count} frames"
+                )
+
+                next_status_time += 1.0
+
+        elapsed = time.monotonic() - test_start
+
+        output_file = "camera_timing_baseline.csv"
+
+        with open(
+            output_file,
+            "w",
+            newline=""
+        ) as csv_file:
+            writer = csv.writer(
+                csv_file
+            )
+
+            writer.writerow(
+                [
+                    "sequence",
+                    "frame_gap_ms",
+                    "read_ms",
+                    "on_frame_ms"
+                ]
+            )
+
+            writer.writerows(
+                timing_samples
+            )
+
+        print(
+            f"TIMING TEST: wrote "
+            f"{len(timing_samples)} samples to "
+            f"{output_file}"
+        )
+
+        print(
+            f"TIMING TEST: finished, "
+            f"{elapsed:.2f} sec, "
+            f"{self._frame_count} frames"
+        )
 
     # ## Timestamp one frame and deliver it to the frame callback.
     def _handle_frame(
@@ -283,10 +407,23 @@ class CameraReader:
             frame=frame
         )
 
+        on_frame_ms = None
+
         if self._on_frame is not None:
+
+            on_frame_start = time.monotonic_ns()
+
             self._on_frame(
                 camera_frame
             )
+
+            on_frame_end = time.monotonic_ns()
+
+            on_frame_ms = (
+                on_frame_end - on_frame_start
+            ) / 1_000_000.0
+
+        return timestamp_monotonic, on_frame_ms
 
     # ## Increment the failed read counter.
     def _record_failed_read(self) -> None:
