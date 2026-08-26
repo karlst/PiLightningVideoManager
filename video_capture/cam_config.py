@@ -517,6 +517,10 @@ class CamConfig:
 
     trigger_enabled: bool = True
 
+    # Wait time after capture to analyze and write capture data - avoids thread starvation
+    # of camera reader
+    capture_write_delay_seconds: float = 2.0
+
     # Minimum time between automatic trigger events.
     trigger_cooldown_seconds: float = 1.0
 
