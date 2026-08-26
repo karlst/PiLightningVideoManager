@@ -3,5 +3,5 @@
     "program_root": "/home/karlst/Documents/videoManager",
     "data_root": "/home/karlst/elpData3709",
     "psf_interval_seconds": 60,
-    "save_filtered_false_positives": true
+    "save_filtered_false_positives": false
 }

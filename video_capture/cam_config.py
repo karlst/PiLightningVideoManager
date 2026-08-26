@@ -16,6 +16,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from version import VERSION
+
 
 CAMERA_CONFIG_PATH = (
     Path(__file__).resolve().parents[1]
@@ -438,7 +440,7 @@ def build_search_bounding_box(
 # ## Camera, capture, trigger, analysis, and storage configuration.
 @dataclass
 class CamConfig:
-    app_version: str = "0.70"
+    app_version: str = VERSION
 
     # Set once by create_app() for the lifetime of the capture application.
     application_start_utc: str = ""

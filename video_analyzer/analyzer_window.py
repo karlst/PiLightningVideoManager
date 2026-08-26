@@ -52,7 +52,7 @@ from video_analyzer.solution_filter import failed_candidate_result
 from video_analyzer.solution_filter import SolutionResult
 from video_analyzer.solution_panel import SolutionPanel
 from video_analyzer.solution_settings_panel import SolutionSettingsPanel
-from video_analyzer.version import VERSION
+from version import VERSION
 from video_analyzer.video_reader import VideoReader
 from pathlib import Path
 from typing import Any

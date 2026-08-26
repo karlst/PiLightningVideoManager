@@ -1,10 +1,11 @@
 """
 Run Pi-side SolutionFilter classification periodically.
 
-This small service runner deliberately reuses BatchSolutionFilter rather than
+This small service runner deliberately reuses SolutionFilter batch engine rather than
 creating another classification path. Every interval it scans the capture
-folder, moves TRUE_FLASH pairs into true_flashes, and deletes rejected
-Candidate pairs.
+folder. TRUE_FLASH pairs are renamed from trigger_* to flash_* and remain in
+the capture folder. Rejected Candidate pairs are either moved to anomaly
+folders or deleted according to system_config.json.
 
 The capture application and this process remain independent; Linux schedules
 them separately.
@@ -18,7 +19,7 @@ import signal
 import sys
 import time
 
-from video_analyzer.batch_solution_filter import run_batch_solution_filter
+from common.solution_batch import run_batch_solution_filter
 from common.system_config import load_system_settings
 
 
@@ -51,7 +52,7 @@ def main() -> int:
         type=float,
         default=60.0,
         help=(
-            "Seconds between BatchSolutionFilter runs "
+            "Seconds between SolutionFilter batch engine runs "
             "(default: 60)"
         ),
     )
@@ -62,7 +63,7 @@ def main() -> int:
         type=int,
         default=0,
         choices=[0, 1, 2],
-        help="BatchSolutionFilter verbosity",
+        help="SolutionFilter batch engine verbosity",
     )
 
     arguments = parser.parse_args()
