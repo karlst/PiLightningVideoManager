@@ -6,12 +6,13 @@ import sys
 from pathlib import Path
 
 
-ROOT_DIRECTORY = Path(__file__).resolve().parent
+PACKAGING_DIRECTORY = Path(__file__).resolve().parent
+REPOSITORY_ROOT = PACKAGING_DIRECTORY.parent
 
-SPEC_FILE = ROOT_DIRECTORY / "Vfa.spec"
+SPEC_FILE = PACKAGING_DIRECTORY / "Vfa.spec"
 
-BUILD_DIRECTORY = ROOT_DIRECTORY / "build"
-DIST_DIRECTORY = ROOT_DIRECTORY / "dist"
+BUILD_DIRECTORY = REPOSITORY_ROOT / "build"
+DIST_DIRECTORY = REPOSITORY_ROOT / "dist"
 
 DIST_VFA_DIRECTORY = DIST_DIRECTORY / "Vfa"
 
@@ -32,7 +33,7 @@ def run_pyinstaller() -> None:
             "PyInstaller",
             str(SPEC_FILE),
         ],
-        cwd=ROOT_DIRECTORY,
+        cwd=REPOSITORY_ROOT,
         check=True,
     )
 
@@ -151,19 +152,19 @@ def main() -> int:
                 "Usage:"
             )
             print(
-                "  python build.py"
+                "  python packaging/buildVfa.py"
             )
             print(
-                "  python build.py build"
+                "  python packaging/buildVfa.py build"
             )
             print(
-                "  python build.py clean"
+                "  python packaging/buildVfa.py clean"
             )
             print(
-                "  python build.py install"
+                "  python packaging/buildVfa.py install"
             )
             print(
-                "  python build.py clean-install"
+                "  python packaging/buildVfa.py clean-install"
             )
 
             return 1

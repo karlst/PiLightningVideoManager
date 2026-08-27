@@ -1,9 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
+from pathlib import Path
 
+REPOSITORY_ROOT = Path(SPECPATH).resolve().parent
 
 a = Analysis(
-    ['video_analyzer\\analyzer.py'],
-    pathex=[],
+    [str(REPOSITORY_ROOT / 'video_analyzer' / 'analyzer.py')],
+    pathex=[str(REPOSITORY_ROOT)],
     binaries=[],
     datas=[],
     hiddenimports=[],
