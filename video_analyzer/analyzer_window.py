@@ -1,6 +1,12 @@
 """
 Main Qt window for the desktop Video Analyzer.
 
+0827 Analyzer information-panel cleanup:
+- removes redundant sidecar/replay/frame/codec details
+- adds site name plus mean/max frame gap timing
+- max frame gap includes the 1-based frame pair, e.g. (252-253)
+- combines brightness and brightness change on one row
+
 AnalyzerWindow is the coordinator for the desktop GUI. It displays one decoded
 video frame at a time, capture and frame metadata, brightness graphs, the
 original Pi trigger, the replayed CandidateFinder trigger, SolutionFilter
@@ -450,27 +456,23 @@ class AnalyzerWindow(QMainWindow):
 
         capture_fields = [
             ("video", "Video"),
-            ("sidecar", "Sidecar"),
+            ("site_name", "Site"),
             ("capture_start", "Capture start UTC"),
             ("capture_duration", "Duration"),
             ("trigger", "Trigger"),
             ("trigger_reason", "Trigger reason"),
             ("trigger_frame", "Pi trigger frame"),
             ("replay_trigger_frame", "Replay trigger frame"),
-            ("replay_result", "Replay result"),
             ("trigger_offset", "Trigger offset"),
-            ("frame_count", "Frame count"),
+            ("mean_frame_gap", "Mean frame gap"),
+            ("max_frame_gap", "Max frame gap"),
         ]
 
         frame_fields = [
             ("frame_number", "Frame"),
             ("timestamp_utc", "Timestamp UTC"),
             ("offset", "Offset"),
-            ("sequence", "Sequence"),
-            ("picture_type", "Encoded type"),
-            ("key_frame", "Key frame"),
-            ("pi_brightness", "Pi brightness"),
-            ("pi_brightness_delta", "Pi brightness change"),
+            ("brightness_change", "Brightness, change"),
         ]
 
         (
@@ -763,15 +765,21 @@ class AnalyzerWindow(QMainWindow):
         capture_labels["video"].setText(
             self.capture_data.video_path.name
         )
-        capture_labels["sidecar"].setText(
-            self.capture_data.sidecar_path.name
-            if sidecar is not None
-            else "Not found"
-        )
-
         if sidecar is None:
             self.update_trigger_replay_information()
+            self.update_frame_gap_information()
             return
+
+        capture_labels["site_name"].setText(
+            format_value(
+                sidecar_value(
+                    sidecar,
+                    "camera",
+                    "site_name",
+                    "site_name",
+                )
+            )
+        )
 
         capture_labels["capture_start"].setText(
             format_value(
@@ -857,25 +865,12 @@ class AnalyzerWindow(QMainWindow):
                 " ms",
             )
         )
-        capture_labels["frame_count"].setText(
-            format_value(
-                sidecar_value(
-                    sidecar,
-                    "capture",
-                    "frame_count",
-                    "frame_count",
-                )
-            )
-        )
-
         self.update_trigger_replay_information()
+        self.update_frame_gap_information()
 
-    # ## Compare the replay trigger with the trigger originally recorded by the Pi.
+    # ## Display the trigger produced by replaying CandidateFinder.
     def update_trigger_replay_information(self) -> None:
         capture_labels = self.capture_value_labels
-        trigger_frame_index = (
-            self.capture_data.original_trigger_frame_index
-        )
         replay_frame_index = self.candidate_result.frame_index
 
         replay_frame_number = (
@@ -888,20 +883,81 @@ class AnalyzerWindow(QMainWindow):
             format_value(replay_frame_number)
         )
 
-        if trigger_frame_index is None:
-            replay_result = "Pi trigger unavailable"
-        elif replay_frame_index is None:
-            replay_result = "NO REPLAY TRIGGER"
-        elif replay_frame_index == trigger_frame_index:
-            replay_result = "MATCH"
-        else:
-            difference = (
-                replay_frame_index - trigger_frame_index
-            )
-            replay_result = f"DIFF {difference:+d} frames"
+    # ## Calculate and display mean/max gaps between consecutive Pi frame offsets.
+    def update_frame_gap_information(self) -> None:
+        offsets: list[float] = []
 
-        capture_labels["replay_result"].setText(
-            replay_result
+        for frame_index in sorted(
+            self.capture_data.frame_records
+        ):
+            record = self.capture_data.frame_records.get(
+                frame_index,
+                {},
+            )
+
+            offset_ms = record.get(
+                "offset_ms"
+            )
+
+            try:
+                offset = float(
+                    offset_ms
+                )
+            except (TypeError, ValueError):
+                continue
+
+            if np.isfinite(offset):
+                offsets.append(
+                    offset
+                )
+
+        if len(offsets) < 2:
+            mean_gap = None
+            max_gap = None
+            max_gap_frame_text = ""
+        else:
+            gaps = np.diff(
+                np.asarray(
+                    offsets,
+                    dtype=float,
+                )
+            )
+            mean_gap = float(
+                np.mean(gaps)
+            )
+
+            max_gap_index = int(
+                np.argmax(gaps)
+            )
+            max_gap = float(
+                gaps[max_gap_index]
+            )
+
+            # Display frame numbers are 1-based. A gap at index N is the
+            # interval between displayed frames N+1 and N+2.
+            max_gap_frame_text = (
+                f" ({max_gap_index + 1}-{max_gap_index + 2})"
+            )
+
+        self.capture_value_labels["mean_frame_gap"].setText(
+            format_number(
+                mean_gap,
+                3,
+                " ms",
+            )
+        )
+
+        max_gap_text = format_number(
+            max_gap,
+            3,
+            " ms",
+        )
+
+        if max_gap is not None:
+            max_gap_text += max_gap_frame_text
+
+        self.capture_value_labels["max_frame_gap"].setText(
+            max_gap_text
         )
 
     # ## Populate metadata and Pi metrics for the currently displayed frame.
@@ -922,14 +978,6 @@ class AnalyzerWindow(QMainWindow):
                 self.frame_number
             ]
 
-        picture_type = encoded_info.get(
-            "pict_type",
-            "—",
-        )
-        key_frame = encoded_info.get(
-            "key_frame",
-            "—",
-        )
         ffprobe_time = encoded_info.get(
             "best_effort_timestamp_time"
         )
@@ -941,7 +989,6 @@ class AnalyzerWindow(QMainWindow):
 
         timestamp_utc = record.get("timestamp_utc")
         offset_ms = record.get("offset_ms")
-        sequence_number = record.get("sequence_number")
 
         if offset_ms is None and ffprobe_time is not None:
             try:
@@ -959,15 +1006,6 @@ class AnalyzerWindow(QMainWindow):
                 " ms",
             )
         )
-        labels["sequence"].setText(
-            format_value(sequence_number)
-        )
-        labels["picture_type"].setText(
-            format_value(picture_type)
-        )
-        labels["key_frame"].setText(
-            format_value(key_frame)
-        )
 
         pi_brightness = (
             self.capture_data.pi_brightness[
@@ -980,15 +1018,22 @@ class AnalyzerWindow(QMainWindow):
             ]
         )
 
-        labels["pi_brightness"].setText(
-            format_number(pi_brightness, 3)
+        brightness_text = (
+            format_number(
+                pi_brightness,
+                3,
+            )
             if np.isfinite(pi_brightness)
             else "—"
         )
-        labels["pi_brightness_delta"].setText(
+        delta_text = (
             f"{pi_delta:+.3f}"
             if np.isfinite(pi_delta)
             else "—"
+        )
+
+        labels["brightness_change"].setText(
+            f"{brightness_text}, {delta_text}"
         )
 
     # ## Clamp, decode, display, and synchronize the requested frame.
