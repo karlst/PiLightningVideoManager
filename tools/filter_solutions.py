@@ -1,3 +1,4 @@
+# VERIFIED FLASH-REFILTER VERSION 2026-08-26
 """
 @file filter_solutions.py
 
@@ -171,6 +172,7 @@ def main() -> int:
             delete_rejects=arguments.delete_rejects,
             find_candidates=arguments.findCandidates,
             candidate_config=candidate_config,
+            include_flashes=True,
         )
 
     except (

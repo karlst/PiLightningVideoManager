@@ -1,3 +1,4 @@
+# VERIFIED FLASH-REFILTER VERSION 2026-08-26
 """
 @file solution_batch.py
 
@@ -650,6 +651,7 @@ def run_batch_solution_filter(
     delete_rejects: bool = False,
     find_candidates: bool = False,
     candidate_config: CandidateConfig = CANDIDATE_CONFIG,
+    include_flashes: bool = False,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -709,11 +711,18 @@ def run_batch_solution_filter(
     )
     counts: Counter[str] = Counter()
 
-    # flash_* files are already accepted Solutions and must not be
-    # reclassified on later periodic PSF runs.
-    video_files = sorted(
+    # Pi PSF uses the default include_flashes=False. The manual
+    # FilterSolutions tool sets it True so copied flash_* files are re-evaluated.
+    video_files = list(
         input_directory.glob("trigger_*.mp4")
     )
+
+    if include_flashes:
+        video_files.extend(
+            input_directory.glob("flash_*.mp4")
+        )
+
+    video_files = sorted(video_files)
 
     for video_path in video_files:
         sidecar_path = video_path.with_suffix(
@@ -747,25 +756,36 @@ def run_batch_solution_filter(
                             f"(copied): {reason}"
                         )
                 else:
-                    flash_video_path, _ = rename_true_flash_pair(
-                        video_path,
-                        sidecar_path,
-                    )
+                    if video_path.name.startswith("flash_"):
+                        # A previously accepted flash that still passes remains
+                        # in place; there is nothing to rename.
+                        flash_video_path = video_path
 
-                    if log_path is not None:
-                        write_psf_log(
-                            log_path,
-                            CATEGORY_TRUE_FLASH,
-                            video_path.name,
-                            "RENAMED",
-                            flash_video_path.name,
+                        if verbosity >= 1:
+                            print(
+                                f"{video_path.name} -> "
+                                f"UNCHANGED: {reason}"
+                            )
+                    else:
+                        flash_video_path, _ = rename_true_flash_pair(
+                            video_path,
+                            sidecar_path,
                         )
 
-                    if verbosity >= 1:
-                        print(
-                            f"{video_path.name} -> "
-                            f"{flash_video_path.name}: {reason}"
-                        )
+                        if log_path is not None:
+                            write_psf_log(
+                                log_path,
+                                CATEGORY_TRUE_FLASH,
+                                video_path.name,
+                                "RENAMED",
+                                flash_video_path.name,
+                            )
+
+                        if verbosity >= 1:
+                            print(
+                                f"{video_path.name} -> "
+                                f"{flash_video_path.name}: {reason}"
+                            )
 
             elif delete_rejects:
                 delete_capture_pair(
