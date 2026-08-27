@@ -14,7 +14,7 @@ For each MP4:
         Reconstruct a current sidecar from the encoded MP4 as far as possible.
 
     * Older/incomplete sidecar:
-        Preserve the original JSON under "Old Triggers/OldTrigger_....json", retain historical
+        Preserve the original JSON under "Old Sidecars/OldTrigger_....json" or "Old Sidecars/OldFlash_....json", retain historical
         metadata that cannot be recovered from the MP4, reconstruct current
         analysis, and write a current sidecar under the normal filename.
 
@@ -23,7 +23,8 @@ For each MP4:
 
 The current schema stores High, Medium, and Low CandidateFinder/SolutionFilter
 results so the P Site and static G Site can switch sensitivity without running
-analysis in the browser.
+analysis in the browser. Version 5 also adds user-editable classification and
+description fields.
 
 The MP4 is never modified.
 
@@ -75,7 +76,7 @@ from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 
 
-CURRENT_SIDECAR_VERSION = 4
+CURRENT_SIDECAR_VERSION = 5
 TOOL_NAME = "RebuildSidecars"
 DEFAULT_SITE_NAME = "Flagstaff"
 DEFAULT_MINIMUM_RANGE_MILES = 1.0
@@ -235,7 +236,7 @@ def saved_utc_from_filename(
     video_path: Path,
 ) -> str:
     match = re.search(
-        r"trigger_(\d{8})T(\d{6})Z",
+        r"(?:trigger|flash)_(\d{8})T(\d{6})Z",
         video_path.stem,
         flags=re.IGNORECASE,
     )
@@ -800,6 +801,12 @@ def is_current_complete_sidecar(
     if "analysis_version" in sidecar:
         return False
 
+    if (
+        "classification" not in sidecar or
+        "description" not in sidecar
+    ):
+        return False
+
     for required_section in (
         "application",
         "camera",
@@ -844,7 +851,7 @@ def is_current_complete_sidecar(
     return True
 
 
-# ## Create the OldTrigger backup path in the sibling "Old Triggers" folder.
+# ## Create the historical backup path in the sibling "Old Sidecars" folder.
 def backup_sidecar_path(
     sidecar_path: Path,
 ) -> Path:
@@ -861,15 +868,26 @@ def backup_sidecar_path(
                 ):
             ]
         )
+    elif stem.lower().startswith(
+        "flash_"
+    ):
+        backup_stem = (
+            "OldFlash_" +
+            stem[
+                len(
+                    "flash_"
+                ):
+            ]
+        )
     else:
         backup_stem = (
-            "OldTrigger_" +
+            "OldSidecar_" +
             stem
         )
 
     return (
         sidecar_path.parent /
-        "Old Triggers" /
+        "Old Sidecars" /
         (
             backup_stem +
             sidecar_path.suffix
@@ -1585,13 +1603,33 @@ def build_current_sidecar(
             )
 
     # Build a clean canonical v4 sidecar. Legacy analysis-era top-level fields
-    # are migration inputs only and are deliberately not copied into v3.
+    # are migration inputs only and are deliberately not copied into v5.
     result: dict[
         str,
         Any
     ] = {
         "sidecar_version":
             CURRENT_SIDECAR_VERSION,
+
+        "classification":
+            (
+                old_sidecar.get(
+                    "classification",
+                    ""
+                )
+                if old_sidecar is not None
+                else ""
+            ),
+
+        "description":
+            (
+                old_sidecar.get(
+                    "description",
+                    ""
+                )
+                if old_sidecar is not None
+                else ""
+            ),
 
         "application":
             application,
@@ -1675,6 +1713,14 @@ def validate_built_sidecar(
     ):
         raise RuntimeError(
             "Built sidecar has wrong version"
+        )
+
+    if (
+        "classification" not in sidecar or
+        "description" not in sidecar
+    ):
+        raise RuntimeError(
+            "Built sidecar is missing v5 annotation fields"
         )
 
     records = sidecar.get(
@@ -1881,23 +1927,27 @@ def process_file(
             sidecar_path
         )
 
-        legacy_backup_path = (
+        legacy_backup_paths = [
             sidecar_path.parent /
-            backup_path.name
-        )
+            backup_path.name,
 
-        if (
-            not backup_path.exists() and
-            legacy_backup_path.exists()
-        ):
-            backup_path.parent.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
+            sidecar_path.parent /
+            "Old Triggers" /
+            backup_path.name,
+        ]
 
-            legacy_backup_path.replace(
-                backup_path
-            )
+        if not backup_path.exists():
+            for legacy_backup_path in legacy_backup_paths:
+                if legacy_backup_path.exists():
+                    backup_path.parent.mkdir(
+                        parents=True,
+                        exist_ok=True,
+                    )
+
+                    legacy_backup_path.replace(
+                        backup_path
+                    )
+                    break
 
         repair_from_backup = (
             backup_path.exists()

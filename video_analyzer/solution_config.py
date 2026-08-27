@@ -66,6 +66,9 @@ class SolutionConfig:
     # a multi-pulse transient rather than a monotonic stair-step decay.
     stair_step_rebrightening_fraction: float = 0.30
 
+    # Stair step anomalies never occur at night
+    stair_step_min_baseline_brightness = 10.0
+
     # --------------------------------------------------------------
     # Steady-state anomaly filtering
     # --------------------------------------------------------------

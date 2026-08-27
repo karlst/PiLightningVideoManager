@@ -51,6 +51,7 @@ class StairStepDecayFilter:
         transient_recovery_fraction: float = 0.70,
         step_separation_frames: int = 1,
         rebrightening_fraction: float = 0.30,
+        min_baseline_brightness: float = 10.0,
     ) -> None:
         self._baseline_frames = int(
             baseline_frames
@@ -88,6 +89,14 @@ class StairStepDecayFilter:
         )
         self._rebrightening_fraction = float(
             rebrightening_fraction
+        )
+
+        # SolutionFilter owns the SolutionConfig instance and passes the
+        # applicable stair-step config values into this constructor. Keep this
+        # filter independent of solution_config.py rather than importing the
+        # global configuration here.
+        self._min_baseline_brightness = float(
+            min_baseline_brightness
         )
 
     # ## Reject the Candidate when a qualifying staircase decay is found.
@@ -168,6 +177,14 @@ class StairStepDecayFilter:
                 ]
             )
         )
+
+        # Stair-step anomalies are a daytime artifact. Do not apply the
+        # stair-step shape test when the pre-trigger scene is too dark.
+        if (
+            baseline_brightness <
+            self._min_baseline_brightness
+        ):
+            return None
 
         # The Candidate trigger and the large rise can differ by a frame or two,
         # so search a very small neighborhood rather than requiring an exact match.
