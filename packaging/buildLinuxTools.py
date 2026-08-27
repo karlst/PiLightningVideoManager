@@ -1,46 +1,45 @@
-# VERIFIED UNIFIED WINDOWS BUILD 2026-08-27
+# VERIFIED UNIFIED LINUX BUILD 2026-08-27
 """
-@file buildWindowsTools.py
+@file buildLinuxTools.py
 
-@brief Build and install the Windows Video Manager executable suite.
+@brief Build and install the Linux Video Manager executable suite.
 
 Builds exactly:
 
-    Vfa.exe
-    Vce.exe
-    filterSolutions.exe
-    runSmokeTests.exe
-    buildCaptureIndex.exe
+    Vfa
+    Vce
+    filterSolutions
+    runSmokeTests
+    buildCaptureIndex
 
-Vfa uses the maintained packaging/Vfa.spec because that is the known-good
-Analyzer packaging path. Vce and the three console utilities are built directly
-from their current Python entry points.
+Vfa uses the maintained packaging/VfaLinux.spec. Vce and the three console
+utilities are built directly from their current Python entry points.
 
 Commands:
 
-    python packaging\buildWindowsTools.py build
-    python packaging\buildWindowsTools.py install
-    python packaging\buildWindowsTools.py clean
-    python packaging\buildWindowsTools.py clean-install
+    python packaging/buildLinuxTools.py build
+    python packaging/buildLinuxTools.py install
+    python packaging/buildLinuxTools.py clean
+    python packaging/buildLinuxTools.py clean-install
 
 Finished build:
 
-    <repository>\\dist\\windows\\VideoManager\\
+    <repository>/dist/linux/VideoManager/
 
 Installed suite:
 
-    %USERPROFILE%\\bin\\VideoManager\\
+    ~/bin/VideoManager/
 
 PyInstaller intermediate output:
 
-    <repository>\\build\\windows\\
+    <repository>/build/linux/
 
 FFmpeg and ffprobe are copied to:
 
-    VideoManager\\tools\\
+    VideoManager/tools/
 
-so frozen desktop applications can resolve them without requiring PATH on the
-target machine.
+so frozen applications can resolve them without requiring PATH on the target
+machine.
 """
 
 from __future__ import annotations
@@ -54,10 +53,10 @@ import sys
 PACKAGING_DIRECTORY = Path(__file__).resolve().parent
 REPOSITORY_ROOT = PACKAGING_DIRECTORY.parent
 
-VFA_SPEC = PACKAGING_DIRECTORY / "Vfa.spec"
+VFA_SPEC = PACKAGING_DIRECTORY / "VfaLinux.spec"
 
-BUILD_ROOT = REPOSITORY_ROOT / "build" / "windows"
-DIST_ROOT = REPOSITORY_ROOT / "dist" / "windows"
+BUILD_ROOT = REPOSITORY_ROOT / "build" / "linux"
+DIST_ROOT = REPOSITORY_ROOT / "dist" / "linux"
 DIST_DIRECTORY = DIST_ROOT / "VideoManager"
 
 INSTALL_DIRECTORY = (
@@ -91,11 +90,11 @@ BUILD_CAPTURE_INDEX_SOURCE = (
 )
 
 EXPECTED_EXECUTABLES = (
-    "Vfa.exe",
-    "Vce.exe",
-    "filterSolutions.exe",
-    "runSmokeTests.exe",
-    "buildCaptureIndex.exe",
+    "Vfa",
+    "Vce",
+    "filterSolutions",
+    "runSmokeTests",
+    "buildCaptureIndex",
 )
 
 
@@ -114,7 +113,7 @@ def require_path_tool(executable_name: str) -> Path:
     if result is None:
         raise RuntimeError(
             f"{executable_name} was not found on PATH. "
-            "Install FFmpeg on the build machine before building."
+            "Install FFmpeg on the Linux build machine before building."
         )
 
     return Path(
@@ -140,11 +139,13 @@ def run_command(command: list[str]) -> None:
 
 def build_vfa() -> None:
     """
-    Build Vfa with the maintained spec, then merge its complete onedir runtime
-    tree into dist/windows/VideoManager.
+    Build Vfa with the maintained Linux spec, then merge its complete onedir
+    runtime tree into dist/linux/VideoManager.
     """
     print()
-    print("Building Vfa.exe using packaging/Vfa.spec...")
+    print(
+        "Building Vfa using packaging/VfaLinux.spec..."
+    )
 
     staging_dist = (
         BUILD_ROOT
@@ -188,12 +189,12 @@ def build_vfa() -> None:
 
     built_executable = (
         built_directory
-        / "Vfa.exe"
+        / "Vfa"
     )
 
     if not built_executable.is_file():
         raise RuntimeError(
-            f"Vfa.exe was not found after build: {built_executable}"
+            f"Vfa was not found after build: {built_executable}"
         )
 
     shutil.copytree(
@@ -210,7 +211,7 @@ def build_direct_executable(
 ) -> None:
     print()
     print(
-        f"Building {executable_name}.exe..."
+        f"Building {executable_name}..."
     )
 
     work_directory = (
@@ -263,22 +264,22 @@ def build_direct_executable(
 
     executable = (
         DIST_DIRECTORY
-        / f"{executable_name}.exe"
+        / executable_name
     )
 
     if not executable.is_file():
         raise RuntimeError(
-            f"{executable_name}.exe was not found after build: {executable}"
+            f"{executable_name} was not found after build: {executable}"
         )
 
 
 def copy_external_tools() -> None:
     ffmpeg_path = require_path_tool(
-        "ffmpeg.exe"
+        "ffmpeg"
     )
 
     ffprobe_path = require_path_tool(
-        "ffprobe.exe"
+        "ffprobe"
     )
 
     tools_directory = (
@@ -293,12 +294,12 @@ def copy_external_tools() -> None:
 
     shutil.copy2(
         ffmpeg_path,
-        tools_directory / "ffmpeg.exe",
+        tools_directory / "ffmpeg",
     )
 
     shutil.copy2(
         ffprobe_path,
-        tools_directory / "ffprobe.exe",
+        tools_directory / "ffprobe",
     )
 
 
@@ -342,9 +343,9 @@ def clean() -> None:
 
 
 def build() -> None:
-    if sys.platform != "win32":
+    if not sys.platform.startswith("linux"):
         raise RuntimeError(
-            "This build script must be run on Windows."
+            "This build script must be run on Linux."
         )
 
     for path in (
@@ -411,7 +412,7 @@ def build() -> None:
     )
 
     print()
-    print("Windows build complete.")
+    print("Linux build complete.")
     print(
         f"Output: {DIST_DIRECTORY}"
     )
@@ -457,16 +458,16 @@ def install() -> None:
 def print_usage() -> None:
     print("Usage:")
     print(
-        r"  python packaging\buildWindowsTools.py build"
+        "  python packaging/buildLinuxTools.py build"
     )
     print(
-        r"  python packaging\buildWindowsTools.py install"
+        "  python packaging/buildLinuxTools.py install"
     )
     print(
-        r"  python packaging\buildWindowsTools.py clean"
+        "  python packaging/buildLinuxTools.py clean"
     )
     print(
-        r"  python packaging\buildWindowsTools.py clean-install"
+        "  python packaging/buildLinuxTools.py clean-install"
     )
 
 
@@ -502,7 +503,7 @@ def main() -> int:
     ) as error:
         print()
         print(
-            f"Windows build failed: {error}"
+            f"Linux tools build failed: {error}"
         )
         return 1
 

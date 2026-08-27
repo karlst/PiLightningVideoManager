@@ -1,10 +1,15 @@
+# VERIFIED LINUX VFA SPEC 2026-08-27
+# Maintained source file: packaging/VfaLinux.spec
+# Resolve application source from the repository root, one level above packaging/.
 # -*- mode: python ; coding: utf-8 -*-
+
 from pathlib import Path
 
-REPOSITORY_ROOT = Path(SPECPATH).resolve().parent
+PACKAGING_DIRECTORY = Path(SPECPATH).resolve()
+REPOSITORY_ROOT = PACKAGING_DIRECTORY.parent
 
 a = Analysis(
-    [str(REPOSITORY_ROOT / 'video_analyzer' / 'analyzer.py')],
+    [str(REPOSITORY_ROOT / "video_analyzer" / "analyzer.py")],
     pathex=[str(REPOSITORY_ROOT)],
     binaries=[],
     datas=[],
@@ -16,6 +21,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -23,7 +29,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='Vfa',
+    name="Vfa",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,6 +41,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
@@ -42,5 +49,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='Vfa',
+    name="Vfa",
 )
