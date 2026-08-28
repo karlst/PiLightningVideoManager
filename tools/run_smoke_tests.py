@@ -733,8 +733,11 @@ def main() -> int:
     parser.add_argument(
         "folder",
         type=Path,
+        nargs="?",
+        default=None,
         help=(
-            "Folder containing smoke-test MP4/JSON pairs"
+            "Folder containing smoke-test MP4/JSON pairs. "
+            "Default: <repository>/testData/smokeTest."
         ),
     )
 
@@ -775,18 +778,28 @@ def main() -> int:
 
     arguments = parser.parse_args()
 
+    folder = (
+        arguments.folder
+        if arguments.folder is not None
+        else (
+            PROJECT_ROOT
+            / "testData"
+            / "smokeTest"
+        )
+    )
+
     manifest_path = (
         arguments.manifest
         if arguments.manifest is not None
         else (
-            arguments.folder /
+            folder /
             "solution_filter_smoke_tests.json"
         )
     )
 
     try:
         return run_tests(
-            arguments.folder,
+            folder,
             manifest_path,
             arguments.sensitivity,
             arguments.verbosity,
