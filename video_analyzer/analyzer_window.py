@@ -28,6 +28,7 @@ import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
+    QComboBox,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -61,7 +62,8 @@ from video_analyzer.solution_settings_panel import SolutionSettingsPanel
 from version import VERSION
 from video_analyzer.video_reader import VideoReader
 from pathlib import Path
-from typing import Any
+import string
+import sys
 
 # ## Format a possibly missing metadata value for display.
 def format_value(
@@ -130,9 +132,10 @@ class AnalyzerWindow(QMainWindow):
     # ## Initialize Analyzer state, video access, widgets, and the first displayed frame.
     def __init__(
         self,
-        capture_data: CaptureData,
-        candidate_result: CandidateReplayResult,
-        solution_result: SolutionResult,
+        capture_data: CaptureData | None = None,
+        candidate_result: CandidateReplayResult | None = None,
+        solution_result: SolutionResult | None = None,
+        initial_directory: Path | None = None,
     ) -> None:
         super().__init__()
 
@@ -146,29 +149,159 @@ class AnalyzerWindow(QMainWindow):
         )
         self.frame_number = 0
         self.updating_slider = False
-        self.open_directory = (
-            capture_data.video_path.parent
-        )
+        self.video_reader: VideoReader | None = None
 
-        self.video_reader = VideoReader(
-            capture_data.video_path
-        )
+        if capture_data is not None:
+            self.open_directory = capture_data.video_path.parent
+            self.video_reader = VideoReader(
+                capture_data.video_path
+            )
+        else:
+            self.open_directory = (
+                initial_directory
+                if initial_directory is not None
+                else Path.cwd()
+            )
 
         self.setWindowTitle(
             f"Video Frame Analyzer — v{VERSION}"
         )
         self.resize(1500, 875)
 
-        self.create_ui()
-        self.connect_controls()
+        if self.capture_data is None:
+            self.create_browser_only_ui()
+        else:
+            self.create_ui()
+            self.connect_controls()
+            self.update_capture_information()
+            self.set_frame(0, force=True)
 
-        self.update_capture_information()
-        self.set_frame(0, force=True)
+    # ## Return available Windows drive roots, or an empty list on non-Windows systems.
+    def available_drive_roots(self) -> list[Path]:
+        if sys.platform != "win32":
+            return []
+
+        drives: list[Path] = []
+
+        for letter in string.ascii_uppercase:
+            root = Path(f"{letter}:\\")
+            if root.exists():
+                drives.append(root)
+
+        return drives
+
+    # ## Create and populate the optional Windows drive selector.
+    def create_drive_selector(self) -> QComboBox | None:
+        if sys.platform != "win32":
+            return None
+
+        selector = QComboBox()
+
+        for drive_root in self.available_drive_roots():
+            selector.addItem(
+                str(drive_root),
+                str(drive_root),
+            )
+
+        current_drive = self.open_directory.drive
+
+        if current_drive:
+            current_root = f"{current_drive}\\"
+
+            index = selector.findData(
+                current_root
+            )
+
+            if index >= 0:
+                selector.setCurrentIndex(
+                    index
+                )
+
+        selector.currentIndexChanged.connect(
+            self.on_drive_changed
+        )
+
+        return selector
+
+    # ## Jump the embedded browser to the selected Windows drive root.
+    def on_drive_changed(
+        self,
+        index: int,
+    ) -> None:
+        if not hasattr(self, "drive_selector"):
+            return
+
+        if self.drive_selector is None:
+            return
+
+        drive_text = self.drive_selector.itemData(
+            index
+        )
+
+        if not drive_text:
+            return
+
+        drive_root = Path(
+            str(drive_text)
+        )
+
+        if not drive_root.is_dir():
+            return
+
+        current_drive = self.open_directory.drive
+
+        if (
+            current_drive
+            and current_drive.lower() ==
+            drive_root.drive.lower()
+        ):
+            return
+
+        self.open_directory = drive_root
+        self.refresh_file_browser()
+
+    # ## Keep the Windows drive selector synchronized with the current folder.
+    def sync_drive_selector(self) -> None:
+        if not hasattr(self, "drive_selector"):
+            return
+
+        if self.drive_selector is None:
+            return
+
+        current_drive = self.open_directory.drive
+
+        if not current_drive:
+            return
+
+        current_root = f"{current_drive}\\"
+
+        index = self.drive_selector.findData(
+            current_root
+        )
+
+        if (
+            index >= 0
+            and index != self.drive_selector.currentIndex()
+        ):
+            previous_state = self.drive_selector.blockSignals(
+                True
+            )
+
+            try:
+                self.drive_selector.setCurrentIndex(
+                    index
+                )
+            finally:
+                self.drive_selector.blockSignals(
+                    previous_state
+                )
 
     # ## Populate the embedded capture browser for the current directory.
     def refresh_file_browser(self) -> None:
         if not hasattr(self, "file_list"):
             return
+
+        self.sync_drive_selector()
 
         self.directory_label.setText(
             str(self.open_directory)
@@ -191,7 +324,11 @@ class AnalyzerWindow(QMainWindow):
             )
             return
 
-        current_path = self.capture_data.video_path.resolve()
+        current_path = (
+            self.capture_data.video_path.resolve()
+            if self.capture_data is not None
+            else None
+        )
         selected_item = None
 
         for path in entries:
@@ -211,7 +348,10 @@ class AnalyzerWindow(QMainWindow):
             self.file_list.addItem(item)
 
             try:
-                if path.resolve() == current_path:
+                if (
+                    current_path is not None
+                    and path.resolve() == current_path
+                ):
                     selected_item = item
             except OSError:
                 pass
@@ -298,7 +438,8 @@ class AnalyzerWindow(QMainWindow):
             )
             return
 
-        self.video_reader.close()
+        if self.video_reader is not None:
+            self.video_reader.close()
 
         self.capture_data = new_capture_data
         self.candidate_result = new_candidate_result
@@ -366,6 +507,86 @@ class AnalyzerWindow(QMainWindow):
         layout.setColumnStretch(1, 1)
 
         return group, value_labels
+
+    # ## Construct the startup browser shown before a capture is loaded.
+    def create_browser_only_ui(self) -> None:
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(6, 6, 6, 6)
+        main_layout.setSpacing(8)
+
+        file_browser_group = QGroupBox("Captures")
+        file_browser_group.setMinimumWidth(260)
+        file_browser_group.setMaximumWidth(360)
+        file_browser_layout = QVBoxLayout(file_browser_group)
+        file_browser_layout.setContentsMargins(6, 5, 6, 6)
+        file_browser_layout.setSpacing(4)
+
+        self.drive_selector = self.create_drive_selector()
+
+        self.drive_selector = self.create_drive_selector()
+
+        self.directory_label = QLabel()
+        self.directory_label.setWordWrap(True)
+        self.directory_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.directory_label.setStyleSheet(
+            "QLabel { color: #555; font-size: 10px; }"
+        )
+
+        self.file_list = QListWidget()
+        self.file_list.setAlternatingRowColors(True)
+
+        browser_buttons = QHBoxLayout()
+        browser_buttons.setContentsMargins(0, 0, 0, 0)
+        browser_buttons.setSpacing(4)
+
+        self.parent_folder_button = QPushButton("Up")
+        self.open_browser_button = QPushButton("Open")
+        browser_buttons.addWidget(self.parent_folder_button)
+        browser_buttons.addWidget(self.open_browser_button)
+
+        if self.drive_selector is not None:
+            file_browser_layout.addWidget(
+                self.drive_selector
+            )
+
+        if self.drive_selector is not None:
+            file_browser_layout.addWidget(
+                self.drive_selector
+            )
+
+        file_browser_layout.addWidget(self.directory_label)
+        file_browser_layout.addWidget(self.file_list, stretch=1)
+        file_browser_layout.addLayout(browser_buttons)
+
+        placeholder = QLabel(
+            "Select an MP4 capture from the navigation panel."
+        )
+        placeholder.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        main_layout.addWidget(file_browser_group)
+        main_layout.addWidget(placeholder, stretch=1)
+
+        self.refresh_file_browser()
+        self.connect_browser_controls()
+
+    # ## Connect only the capture-browser controls used before a capture is loaded.
+    def connect_browser_controls(self) -> None:
+        self.parent_folder_button.clicked.connect(
+            self.browse_parent_directory
+        )
+        self.open_browser_button.clicked.connect(
+            self.open_selected_browser_item
+        )
+        self.file_list.itemDoubleClicked.connect(
+            lambda _item: self.open_selected_browser_item()
+        )
 
     # ## Construct the complete Analyzer window layout and child panels.
     def create_ui(self) -> None:
@@ -1042,6 +1263,9 @@ class AnalyzerWindow(QMainWindow):
         frame_number: int,
         force: bool = False,
     ) -> None:
+        if self.capture_data is None or self.video_reader is None:
+            return
+
         frame_number = max(
             0,
             min(
@@ -1150,6 +1374,9 @@ class AnalyzerWindow(QMainWindow):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
 
+        if self.video_reader is None:
+            return
+
         frame = self.video_reader.read_frame(
             self.frame_number
         )
@@ -1159,5 +1386,7 @@ class AnalyzerWindow(QMainWindow):
 
     # ## Release the OpenCV video resource when the window closes.
     def closeEvent(self, event) -> None:
-        self.video_reader.close()
+        if self.video_reader is not None:
+            self.video_reader.close()
+
         event.accept()

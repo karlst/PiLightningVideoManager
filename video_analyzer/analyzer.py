@@ -27,7 +27,7 @@ from video_analyzer.solution_config import SOLUTION_CONFIG
 from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 
-# ## Parse the requested capture, perform initial analysis, and start the Qt event loop.
+# ## Parse the optional startup path and start the Qt event loop.
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -39,48 +39,60 @@ def main() -> int:
     parser.add_argument(
         "capture",
         type=Path,
+        nargs="?",
+        default=None,
         help=(
-            "Capture basename, MP4 filename, "
-            "or JSON sidecar filename"
+            "Optional MP4/JSON capture or folder. "
+            "If omitted, Vfa opens the capture browser "
+            "in the current directory."
         ),
     )
 
     arguments = parser.parse_args()
 
+    application = QApplication(sys.argv)
+
+    startup_path = (
+        arguments.capture
+        if arguments.capture is not None
+        else Path.cwd()
+    )
+
     try:
-        capture_data = load_capture(
-            arguments.capture
-        )
-
-        candidate_result = replay_candidate_finder(
-            capture_data,
-            CANDIDATE_CONFIG,
-        )
-        # Stage 2 runs only when the replayed CandidateFinder selected a
-        # Candidate under the current Candidate settings.
-        if candidate_result.frame_index is None:
-            solution_result = failed_candidate_result()
+        if startup_path.is_dir():
+            window = AnalyzerWindow(
+                initial_directory=startup_path,
+            )
         else:
-            solution_filter = SolutionFilter(
-                SOLUTION_CONFIG
-            )
-            solution_result = solution_filter.evaluate(
-                capture_data.pi_brightness,
-                capture_data.pi_brightness_delta,
-                candidate_result.frame_index,
-                candidate_result.reason,
+            capture_data = load_capture(
+                startup_path
             )
 
-        application = QApplication(sys.argv)
+            candidate_result = replay_candidate_finder(
+                capture_data,
+                CANDIDATE_CONFIG,
+            )
 
-        window = AnalyzerWindow(
-            capture_data=capture_data,
-            candidate_result=candidate_result,
-            solution_result=solution_result,
-        )
+            if candidate_result.frame_index is None:
+                solution_result = failed_candidate_result()
+            else:
+                solution_filter = SolutionFilter(
+                    SOLUTION_CONFIG
+                )
+                solution_result = solution_filter.evaluate(
+                    capture_data.pi_brightness,
+                    capture_data.pi_brightness_delta,
+                    candidate_result.frame_index,
+                    candidate_result.reason,
+                )
+
+            window = AnalyzerWindow(
+                capture_data=capture_data,
+                candidate_result=candidate_result,
+                solution_result=solution_result,
+            )
 
         window.show()
-
         return application.exec()
 
     except RuntimeError as error:

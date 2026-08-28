@@ -1,6 +1,6 @@
 """Clip Editor: human-curated sidecar metadata editor sharing Analyzer components."""
 from __future__ import annotations
-import copy, json
+import copy, json, os, string, sys
 from pathlib import Path
 from typing import Any
 from PySide6.QtCore import QEvent, Qt
@@ -54,7 +54,15 @@ class ClipEditorWindow(AnalyzerWindow):
         grid.setRowStretch(0,3); grid.setRowStretch(1,2)
 
         browser=QGroupBox("Captures"); browser.setMinimumWidth(220); browser.setMaximumWidth(280)
-        bl=QVBoxLayout(browser); self.directory_label=QLabel(); self.directory_label.setWordWrap(True)
+        bl=QVBoxLayout(browser)
+
+        self.drive_combo=QComboBox()
+        self.drive_combo.setVisible(sys.platform == "win32")
+        if sys.platform == "win32":
+            self.refresh_drive_selector()
+            bl.addWidget(self.drive_combo)
+
+        self.directory_label=QLabel(); self.directory_label.setWordWrap(True)
         self.directory_label.setStyleSheet("QLabel { color: #555; font-size: 10px; }")
         self.file_list=QListWidget(); self.file_list.setAlternatingRowColors(True)
         bb=QHBoxLayout(); self.parent_folder_button=QPushButton("Up"); self.open_browser_button=QPushButton("Open")
@@ -102,6 +110,8 @@ class ClipEditorWindow(AnalyzerWindow):
         controls.addWidget(self.frame_slider,1); controls.addWidget(self.slider_frame_label); controls.addWidget(self.next_button); controls.addWidget(self.last_button); main.addLayout(controls)
 
     def connect_controls(self):
+        if sys.platform == "win32":
+            self.drive_combo.currentTextChanged.connect(self.on_drive_changed)
         self.parent_folder_button.clicked.connect(self.browse_parent_directory); self.open_browser_button.clicked.connect(self.open_selected_browser_item)
         self.file_list.itemDoubleClicked.connect(lambda _i:self.open_selected_browser_item())
         self.first_button.clicked.connect(lambda:self.set_frame(0)); self.previous_button.clicked.connect(lambda:self.set_frame(self.frame_number-1)); self.next_button.clicked.connect(lambda:self.set_frame(self.frame_number+1)); self.last_button.clicked.connect(lambda:self.set_frame(self.capture_data.frame_count-1 if self.capture_data is not None else 0)); self.frame_slider.valueChanged.connect(self.on_slider_changed)
@@ -251,8 +261,53 @@ class ClipEditorWindow(AnalyzerWindow):
         if box.clickedButton() is discard:return True
         return False
 
+    def available_drives(self):
+        if sys.platform != "win32":
+            return []
+        return [
+            f"{letter}:\\"
+            for letter in string.ascii_uppercase
+            if os.path.isdir(f"{letter}:\\")
+        ]
+
+    def refresh_drive_selector(self):
+        if sys.platform != "win32" or not hasattr(self,"drive_combo"):
+            return
+        drives=self.available_drives()
+        try:
+            current_drive=self.open_directory.resolve().drive.upper()
+        except OSError:
+            current_drive=self.open_directory.drive.upper()
+        self.drive_combo.blockSignals(True)
+        try:
+            self.drive_combo.clear()
+            self.drive_combo.addItems(drives)
+            for index,drive in enumerate(drives):
+                if Path(drive).drive.upper()==current_drive:
+                    self.drive_combo.setCurrentIndex(index)
+                    break
+        finally:
+            self.drive_combo.blockSignals(False)
+
+    def on_drive_changed(self,drive):
+        if sys.platform != "win32" or not drive:
+            return
+        target=Path(drive)
+        try:
+            same_drive=self.open_directory.resolve().drive.upper()==target.drive.upper()
+        except OSError:
+            same_drive=self.open_directory.drive.upper()==target.drive.upper()
+        if same_drive:
+            return
+        if not self.confirm_abandon_changes():
+            self.refresh_drive_selector()
+            return
+        self.open_directory=target
+        self.refresh_file_browser()
+
     def refresh_file_browser(self):
         if not hasattr(self,"file_list"): return
+        self.refresh_drive_selector()
         self.directory_label.setText(str(self.open_directory)); self.file_list.clear()
         try: entries=sorted(self.open_directory.iterdir(),key=lambda p:(not p.is_dir(),p.name.lower()))
         except OSError as e: QMessageBox.warning(self,"Unable to read folder",str(e)); return
