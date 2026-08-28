@@ -20,7 +20,7 @@ class SolutionPanel(QGroupBox):
         self,
         result: SolutionResult,
     ) -> None:
-        super().__init__("Solution filter")
+        super().__init__("Solution Filter Result")
 
         self._solution_label = QLabel()
         self._reason_label = QLabel()
@@ -43,6 +43,9 @@ class SolutionPanel(QGroupBox):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.addLayout(form_layout)
+        # Keep Solution/Reason rows together at the top if the result panel
+        # receives extra vertical space from the main-window layout.
+        layout.addStretch(1)
 
         self.set_result(result)
 

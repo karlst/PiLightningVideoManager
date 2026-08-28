@@ -28,6 +28,7 @@ import numpy as np
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QComboBox,
     QGridLayout,
     QGroupBox,
@@ -38,6 +39,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QSlider,
     QVBoxLayout,
     QWidget,
@@ -58,7 +60,7 @@ from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 from video_analyzer.solution_filter import SolutionResult
 from video_analyzer.solution_panel import SolutionPanel
-from video_analyzer.solution_settings_panel import SolutionSettingsPanel
+from video_analyzer.solution_settings_panel import SolutionSettingsDialog
 from version import VERSION
 from video_analyzer.video_reader import VideoReader
 from pathlib import Path
@@ -150,6 +152,7 @@ class AnalyzerWindow(QMainWindow):
         self.frame_number = 0
         self.updating_slider = False
         self.video_reader: VideoReader | None = None
+        self.solution_settings_dialog: SolutionSettingsDialog | None = None
 
         if capture_data is not None:
             self.open_directory = capture_data.video_path.parent
@@ -166,7 +169,7 @@ class AnalyzerWindow(QMainWindow):
         self.setWindowTitle(
             f"Video Frame Analyzer — v{VERSION}"
         )
-        self.resize(1500, 875)
+        self.resize(1500, 760)
 
         if self.capture_data is None:
             self.create_browser_only_ui()
@@ -506,7 +509,22 @@ class AnalyzerWindow(QMainWindow):
         layout.setColumnStretch(0, 0)
         layout.setColumnStretch(1, 1)
 
+        # Keep information rows compact when the group grows. Any spare
+        # vertical room stays below the rows instead of being inserted
+        # between every label/value pair.
+        layout.setRowStretch(len(fields), 1)
+
         return group, value_labels
+
+    # ## Use a pointing-hand cursor consistently for clickable buttons.
+    def apply_button_cursors(
+        self,
+        root: QWidget,
+    ) -> None:
+        for button in root.findChildren(QAbstractButton):
+            button.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
 
     # ## Construct the startup browser shown before a capture is loaded.
     def create_browser_only_ui(self) -> None:
@@ -566,6 +584,7 @@ class AnalyzerWindow(QMainWindow):
         main_layout.addWidget(file_browser_group)
         main_layout.addWidget(placeholder, stretch=1)
 
+        self.apply_button_cursors(central_widget)
         self.refresh_file_browser()
         self.connect_browser_controls()
 
@@ -712,13 +731,23 @@ class AnalyzerWindow(QMainWindow):
             frame_fields,
         )
 
+        capture_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,
+        )
+        frame_group.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,
+        )
+
         information_layout.addWidget(
-            capture_group
+            capture_group,
+            stretch=3,
         )
         information_layout.addWidget(
-            frame_group
+            frame_group,
+            stretch=2,
         )
-        information_layout.addStretch(1)
 
         workspace_layout.addWidget(
             information_widget,
@@ -754,13 +783,6 @@ class AnalyzerWindow(QMainWindow):
             self.solution_result
         )
 
-        self.solution_settings_panel = (
-            SolutionSettingsPanel(
-                self.solution_config,
-                self.apply_solution_settings,
-            )
-        )
-
         self.candidate_settings_panel = (
             CandidateSettingsPanel(
                 self.candidate_config,
@@ -768,15 +790,37 @@ class AnalyzerWindow(QMainWindow):
             )
         )
 
+        self.solution_panel.setTitle(
+            "Solution Filter Result"
+        )
+        self.solution_panel.setMinimumHeight(95)
+        self.solution_panel.setSizePolicy(
+            QSizePolicy.Policy.Preferred,
+            QSizePolicy.Policy.Expanding,
+        )
+
+        self.solution_settings_button = QPushButton(
+            "Solution Filter Settings..."
+        )
+        self.solution_settings_button.setMinimumHeight(42)
+        self.solution_settings_button.setStyleSheet(
+            "QPushButton { font-weight: 600; font-size: 11pt; }"
+        )
+        self.solution_settings_button.clicked.connect(
+            self.show_solution_settings_dialog
+        )
+
+        # Candidate replay is the first-stage control, so show it first.
+        # The result panel expands to consume the remaining right-column height.
         lower_right_layout.addWidget(
-            self.solution_panel
+            self.candidate_settings_panel
         )
         lower_right_layout.addWidget(
-            self.solution_settings_panel
-        )
-        lower_right_layout.addWidget(
-            self.candidate_settings_panel,
+            self.solution_panel,
             stretch=1,
+        )
+        lower_right_layout.addWidget(
+            self.solution_settings_button
         )
 
         workspace_layout.addWidget(
@@ -830,6 +874,10 @@ class AnalyzerWindow(QMainWindow):
             controls_layout
         )
 
+        # Do this last so it includes the bottom frame-navigation buttons as
+        # well as browser, replay, and Solution Filter buttons.
+        self.apply_button_cursors(central_widget)
+
     # ## Connect buttons and slider signals to frame-navigation methods.
     def connect_controls(self) -> None:
         self.parent_folder_button.clicked.connect(
@@ -862,6 +910,19 @@ class AnalyzerWindow(QMainWindow):
         self.frame_slider.valueChanged.connect(
             self.on_slider_changed
         )
+
+    # ## Show or raise the persistent modeless SolutionFilter settings dialog.
+    def show_solution_settings_dialog(self) -> None:
+        if self.solution_settings_dialog is None:
+            self.solution_settings_dialog = SolutionSettingsDialog(
+                self,
+                self.solution_config,
+                self.apply_solution_settings,
+            )
+
+        self.solution_settings_dialog.show()
+        self.solution_settings_dialog.raise_()
+        self.solution_settings_dialog.activateWindow()
 
     # ## Reclassify the loaded Candidate using temporary Solution settings.
     def apply_solution_settings(
@@ -925,12 +986,14 @@ class AnalyzerWindow(QMainWindow):
             self.solution_config,
         )
 
-        # Keep the visible Solution settings panel synchronized with the
-        # effective value that will actually be used for classification.
-        self.solution_settings_panel.set_noise_max_delta_fraction(
-            self.solution_config.
-            brightness_noise_max_delta_fraction
-        )
+        # If the modeless Solution settings dialog is already open, keep its
+        # sensitivity-dependent noise fraction synchronized with the effective
+        # value that will actually be used for classification.
+        if self.solution_settings_dialog is not None:
+            self.solution_settings_dialog.set_noise_max_delta_fraction(
+                self.solution_config.
+                brightness_noise_max_delta_fraction
+            )
 
         # CandidateFinder is Stage 1. Changing Candidate settings must rerun
         # Stage 2 so the Solution result stays consistent with the replay.

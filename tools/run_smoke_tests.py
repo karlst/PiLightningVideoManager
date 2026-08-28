@@ -505,6 +505,8 @@ def run_tests(
 
     results: list[TestResult] = []
 
+    print("Running smoke tests...")
+
     for filename, expected in manifest.items():
         video_path = (
             folder /
@@ -824,6 +826,23 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    exit_code = main()
+
+    # Keep the console window open when run by double-clicking on Windows.
+    # msvcrt.getwch() returns after one keypress; Enter is not required.
+    print()
+    if sys.platform == "win32":
+        import msvcrt
+
+        print("Press any key to exit...", end="", flush=True)
+        msvcrt.getwch()
+    else:
+        try:
+            input("Press Enter to exit...")
+        except EOFError:
+            # stdin may not be available when invoked by another process.
+            pass
+
     sys.exit(
-        main()
+        exit_code
     )

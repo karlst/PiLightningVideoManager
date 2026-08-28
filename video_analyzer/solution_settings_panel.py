@@ -4,13 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
+    QDialog,
     QDoubleSpinBox,
     QFormLayout,
     QGroupBox,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
+    QWidget,
 )
 
 from video_analyzer.solution_config import SolutionConfig
@@ -178,7 +181,11 @@ class SolutionSettingsPanel(QGroupBox):
         steady_state_form.addRow("Minimum steady frames:", self._steady_state_min_frames)
         steady_state_form.addRow("Search frames:", self._steady_state_search_frames)
 
-        self._apply_button = QPushButton("Apply solution settings")
+        self._apply_button = QPushButton("Apply Settings")
+        self._apply_button.setCursor(
+            Qt.CursorShape.PointingHandCursor
+        )
+        self._apply_button.setMinimumHeight(36)
         self._apply_button.clicked.connect(self._apply)
 
         layout = QVBoxLayout(self)
@@ -227,3 +234,37 @@ class SolutionSettingsPanel(QGroupBox):
             steady_state_search_frames=self._steady_state_search_frames.value(),
         )
         self._apply_callback(config)
+
+class SolutionSettingsDialog(QDialog):
+    """Modeless window containing the Analyzer SolutionFilter tuning controls."""
+
+    def __init__(
+        self,
+        parent: QWidget,
+        config: SolutionConfig,
+        apply_callback: Callable[[SolutionConfig], None],
+    ) -> None:
+        super().__init__(parent)
+
+        self.setWindowTitle("Solution Filter Settings")
+        self.setWindowModality(Qt.WindowModality.NonModal)
+
+        self.settings_panel = SolutionSettingsPanel(
+            config,
+            apply_callback,
+        )
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(6, 6, 6, 6)
+        layout.addWidget(self.settings_panel)
+
+    def set_noise_max_delta_fraction(
+        self,
+        value: float,
+    ) -> None:
+        """Keep the visible sensitivity-dependent Solution setting synchronized."""
+
+        self.settings_panel.set_noise_max_delta_fraction(
+            value
+        )
+
