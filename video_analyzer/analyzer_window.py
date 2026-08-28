@@ -526,8 +526,6 @@ class AnalyzerWindow(QMainWindow):
 
         self.drive_selector = self.create_drive_selector()
 
-        self.drive_selector = self.create_drive_selector()
-
         self.directory_label = QLabel()
         self.directory_label.setWordWrap(True)
         self.directory_label.setTextInteractionFlags(
@@ -548,11 +546,6 @@ class AnalyzerWindow(QMainWindow):
         self.open_browser_button = QPushButton("Open")
         browser_buttons.addWidget(self.parent_folder_button)
         browser_buttons.addWidget(self.open_browser_button)
-
-        if self.drive_selector is not None:
-            file_browser_layout.addWidget(
-                self.drive_selector
-            )
 
         if self.drive_selector is not None:
             file_browser_layout.addWidget(
@@ -615,6 +608,8 @@ class AnalyzerWindow(QMainWindow):
         file_browser_layout.setContentsMargins(6, 5, 6, 6)
         file_browser_layout.setSpacing(4)
 
+        self.drive_selector = self.create_drive_selector()
+
         self.directory_label = QLabel()
         self.directory_label.setWordWrap(True)
         self.directory_label.setTextInteractionFlags(
@@ -635,6 +630,11 @@ class AnalyzerWindow(QMainWindow):
         self.open_browser_button = QPushButton("Open")
         browser_buttons.addWidget(self.parent_folder_button)
         browser_buttons.addWidget(self.open_browser_button)
+
+        if self.drive_selector is not None:
+            file_browser_layout.addWidget(
+                self.drive_selector
+            )
 
         file_browser_layout.addWidget(self.directory_label)
         file_browser_layout.addWidget(self.file_list, stretch=1)
