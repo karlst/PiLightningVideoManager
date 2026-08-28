@@ -28,9 +28,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# When a script is run directly from tools/, Python puts tools/ on sys.path,
-# not the repository root. Add the repo root BEFORE importing project modules.
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+# When run from source, the default smoke-test data lives under the repository
+# root. When frozen by PyInstaller, __file__ points into PyInstaller's temporary
+# extraction directory, so use the executable directory instead. The build
+# scripts copy testData/ beside runSmokeTests in the distribution.
+if getattr(sys, "frozen", False):
+    APPLICATION_ROOT = Path(sys.executable).resolve().parent
+    PROJECT_ROOT = APPLICATION_ROOT
+else:
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
+    APPLICATION_ROOT = PROJECT_ROOT
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(
@@ -782,7 +789,7 @@ def main() -> int:
         arguments.folder
         if arguments.folder is not None
         else (
-            PROJECT_ROOT
+            APPLICATION_ROOT
             / "testData"
             / "smokeTest"
         )

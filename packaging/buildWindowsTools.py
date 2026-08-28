@@ -35,6 +35,10 @@ PyInstaller intermediate output:
 
     <repository>\\build\\windows\\
 
+Smoke-test data is copied to:
+
+    VideoManager/testData/
+
 FFmpeg and ffprobe are copied to:
 
     VideoManager\\tools\\
@@ -81,13 +85,18 @@ FILTER_SOLUTIONS_SOURCE = (
 SMOKE_TEST_SOURCE = (
     REPOSITORY_ROOT
     / "tools"
-    / "solution_filter_smoke_test.py"
+    / "run_smoke_tests.py"
 )
 
 BUILD_CAPTURE_INDEX_SOURCE = (
     REPOSITORY_ROOT
     / "tools"
     / "buildCaptureIndex.py"
+)
+
+TEST_DATA_SOURCE = (
+    REPOSITORY_ROOT
+    / "testData"
 )
 
 EXPECTED_EXECUTABLES = (
@@ -302,6 +311,25 @@ def copy_external_tools() -> None:
     )
 
 
+
+def copy_test_data() -> None:
+    if not TEST_DATA_SOURCE.is_dir():
+        raise RuntimeError(
+            f"Required test-data folder not found: {TEST_DATA_SOURCE}"
+        )
+
+    destination = (
+        DIST_DIRECTORY
+        / "testData"
+    )
+
+    shutil.copytree(
+        TEST_DATA_SOURCE,
+        destination,
+        dirs_exist_ok=True,
+    )
+
+
 def verify_suite(directory: Path) -> None:
     missing = [
         executable_name
@@ -405,6 +433,7 @@ def build() -> None:
     )
 
     copy_external_tools()
+    copy_test_data()
 
     verify_suite(
         DIST_DIRECTORY
