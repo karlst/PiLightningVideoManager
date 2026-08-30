@@ -1,8 +1,8 @@
 @import url("./base.css");
-@import url("./layout.css");
+@import url("./layout.css?v=54");
 @import url("./cameraInfoPanel.css");
 @import url("./mediaPanel.css");
-@import url("./controlPanel.css");
+@import url("./controlPanel.css?v=54");
 @import url("./metricsPanel.css");
 @import url("./eventLogPanel.css");
 @import url("./dialogPanel.css");

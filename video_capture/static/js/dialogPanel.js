@@ -77,10 +77,16 @@ export class DialogPanel
             "About",
             `
             <div class="aboutBox">
-                <h3>Pi Camera Capture</h3>
+                <h3>Pi Lightning Camera Control</h3>
 
                 <p>
-                    Pi Camera Capture is a high-speed video capture and event
+                    <strong>Version 0.9</strong><br>
+                    Copyright &copy; 2026 Karl Stock<br>
+                    All rights reserved.
+                </p>
+
+                <p>
+                    Pi Lightning Camera Control is a high-speed video capture and event
                     detection system for lightning strokes, weather events,
                     wildlife activity, and other short-duration events.
                 </p>

@@ -1,0 +1,28 @@
+#!/bin/bash
+set -e
+
+if [ "$#" -eq 2 ]; then
+    PROFILE="$1"
+    SSID="$1"
+    PASSWORD="$2"
+elif [ "$#" -eq 3 ]; then
+    PROFILE="$1"
+    SSID="$2"
+    PASSWORD="$3"
+else
+    echo "Usage:"
+    echo "  addWifi <ssid> <password>"
+    echo "  addWifi <profile-name> <ssid> <password>"
+    exit 1
+fi
+
+sudo nmcli connection add type wifi \
+    con-name "$PROFILE" \
+    ifname wlan0 \
+    ssid "$SSID" \
+    wifi-sec.key-mgmt wpa-psk \
+    wifi-sec.psk "$PASSWORD"
+
+sudo nmcli connection modify "$PROFILE" connection.autoconnect yes
+
+echo "Added WiFi profile: $PROFILE"

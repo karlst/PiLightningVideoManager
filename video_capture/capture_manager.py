@@ -48,11 +48,12 @@ class CaptureManager:
             config.capture_directory
         )
 
-        # Browse Captures shows only clips accepted by Pi SolutionFilter.
-        # BatchSolutionFilter stores those beneath captures/true_flashes.
+        # PI PACKAGE BROWSE FIX 2026-08-29
+        # Pi SolutionFilter keeps accepted flashes in the main captures
+        # directory and renames trigger_* pairs to flash_* pairs in place.
+        # Browse Captures therefore reads from the main captures directory.
         self._browse_directory = (
-            self._capture_directory /
-            "true_flashes"
+            self._capture_directory
         )
 
         self._config.ensure_directories()
@@ -64,7 +65,7 @@ class CaptureManager:
         if self._browse_directory.exists():
             for path in sorted(
                 self._browse_directory.glob(
-                    "*.mp4"
+                    "flash_*.mp4"
                 ),
                 key=lambda item: item.stat().st_mtime,
                 reverse=True

@@ -35,18 +35,23 @@ class SolutionConfig:
     # --------------------------------------------------------------
 
     brightness_noise_window_frames: int = 100
-    brightness_noise_trigger_exclusion_frames: int = 10
+
+    # Keep a small exclusion before the replay trigger, but exclude a larger
+    # interval afterward so a real flash decay is not measured as background
+    # brightness noise.
+    brightness_noise_trigger_exclusion_before_frames: int = 10
+    brightness_noise_trigger_exclusion_after_frames: int = 50
 
     # Absolute floor for a meaningful brightness delta.
-    brightness_noise_min_delta_magnitude: float = 0.5
+    brightness_noise_min_delta_magnitude: float = 0.25
 
     # Relative floor. The effective threshold is the larger of the
     # absolute floor above and this fraction of the largest absolute
     # brightness delta in the clip.
     brightness_noise_max_delta_fraction: float = 0.02
 
-    brightness_noise_min_meaningful_samples: int = 50
-    brightness_noise_min_sign_changes: int = 40
+    brightness_noise_min_meaningful_samples: int = 30
+    brightness_noise_min_sign_changes: int = 30
 
     # --------------------------------------------------------------
     # Stair-step decay filtering
@@ -75,7 +80,7 @@ class SolutionConfig:
 
     steady_state_baseline_frames: int = 10
     steady_state_baseline_tolerance: float = 2.0
-    steady_state_rise_threshold: float = 3.8
+    steady_state_rise_threshold: float = 2.1
     steady_state_neighborhood: float = 2.0
     steady_state_min_frames: int = 100
     steady_state_search_frames: int = 200

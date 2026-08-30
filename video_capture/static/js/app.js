@@ -18,7 +18,7 @@ import
 {
     EventLogPanel
 }
-from "./eventLogPanel.js?v=32";
+from "./eventLogPanel.js?v=33";
 
 import
 {

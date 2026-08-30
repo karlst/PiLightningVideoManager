@@ -1,0 +1,5 @@
+#!/bin/bash
+sudo systemctl restart pcm
+sudo systemctl restart psf
+systemctl status pcm --no-pager
+systemctl status psf --no-pager

@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from version import VERSION
+from common.system_config import load_system_settings
 
 
 CAMERA_CONFIG_PATH = (
@@ -533,6 +534,44 @@ class CamConfig:
     def __post_init__(
         self,
     ) -> None:
+        # PI PACKAGE DATA-ROOT FIX 2026-08-29
+        # The installer writes the machine-specific data_root to
+        # config/system_config.json. Use that as the runtime source of truth
+        # instead of the legacy ~/elpData3709 class defaults.
+        system_settings = load_system_settings()
+
+        data_root = str(
+            system_settings.get(
+                "data_root",
+                ""
+            )
+        ).strip()
+
+        if data_root:
+            self.root_directory = Path(
+                data_root
+            ).expanduser()
+
+            self.capture_directory = (
+                self.root_directory /
+                "captures"
+            )
+
+            self.hls_directory = (
+                self.root_directory /
+                "hls"
+            )
+
+            self.event_log_directory = (
+                self.root_directory /
+                "logs"
+            )
+
+            self.event_log_file = (
+                self.event_log_directory /
+                "event_log.jsonl"
+            )
+
         settings = load_camera_settings()
 
         string_fields = (

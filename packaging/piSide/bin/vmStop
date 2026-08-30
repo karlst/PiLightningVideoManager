@@ -1,0 +1,5 @@
+#!/bin/bash
+sudo systemctl stop psf
+sudo systemctl stop pcm
+systemctl status psf --no-pager || true
+systemctl status pcm --no-pager || true

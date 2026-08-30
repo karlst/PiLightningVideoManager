@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: delWifi <profile-name>"
+    exit 1
+fi
+
+sudo nmcli connection delete "$1"
+echo "Deleted WiFi profile: $1"

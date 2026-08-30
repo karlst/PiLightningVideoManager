@@ -28,7 +28,12 @@ class SolutionFilter:
         self._rejection_filters: list[SolutionRule] = [
             BrightnessNoiseFilter(
                 window_frames=config.brightness_noise_window_frames,
-                trigger_exclusion_frames=config.brightness_noise_trigger_exclusion_frames,
+                trigger_exclusion_before_frames=(
+                    config.brightness_noise_trigger_exclusion_before_frames
+                ),
+                trigger_exclusion_after_frames=(
+                    config.brightness_noise_trigger_exclusion_after_frames
+                ),
                 minimum_delta_magnitude=config.brightness_noise_min_delta_magnitude,
                 max_delta_fraction=config.brightness_noise_max_delta_fraction,
                 minimum_meaningful_samples=config.brightness_noise_min_meaningful_samples,

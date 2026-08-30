@@ -3,6 +3,10 @@
 Brightness noise is repeated positive/negative change of meaningful magnitude
 over a substantial number of frames. The Candidate event itself is excluded.
 
+The exclusion window is asymmetric: only a small number of frames before the
+trigger are excluded, while a larger post-trigger interval is excluded so a
+real flash decay is not mistaken for sustained background noise.
+
 A delta is meaningful only when its absolute magnitude reaches the effective
 noise threshold:
 
@@ -28,14 +32,20 @@ class BrightnessNoiseFilter:
     def __init__(
         self,
         window_frames: int = 100,
-        trigger_exclusion_frames: int = 10,
+        trigger_exclusion_before_frames: int = 10,
+        trigger_exclusion_after_frames: int = 50,
         minimum_delta_magnitude: float = 0.5,
         max_delta_fraction: float = 0.02,
         minimum_meaningful_samples: int = 50,
         minimum_sign_changes: int = 40,
     ) -> None:
         self._window_frames = int(window_frames)
-        self._trigger_exclusion_frames = int(trigger_exclusion_frames)
+        self._trigger_exclusion_before_frames = int(
+            trigger_exclusion_before_frames
+        )
+        self._trigger_exclusion_after_frames = int(
+            trigger_exclusion_after_frames
+        )
         self._minimum_delta_magnitude = float(minimum_delta_magnitude)
         self._max_delta_fraction = float(max_delta_fraction)
         self._minimum_meaningful_samples = int(minimum_meaningful_samples)
@@ -113,11 +123,14 @@ class BrightnessNoiseFilter:
 
         exclusion_start = max(
             0,
-            trigger_frame_index - self._trigger_exclusion_frames,
+            trigger_frame_index -
+            self._trigger_exclusion_before_frames,
         )
         exclusion_end = min(
             frame_count,
-            trigger_frame_index + self._trigger_exclusion_frames + 1,
+            trigger_frame_index +
+            self._trigger_exclusion_after_frames +
+            1,
         )
 
         regions = [

@@ -149,7 +149,7 @@ export class EventLogPanel
 
             const recentEntries =
                 this._entries.slice(
-                    -5
+                    -8
                 ).reverse();
 
             recentEntries.forEach(

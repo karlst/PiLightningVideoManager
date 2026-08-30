@@ -1,7 +1,7 @@
 .controlPanel
 {
     display: grid;
-    gap: 7px;
+    gap: 4px;
 }
 
 .contextGrid
@@ -9,7 +9,7 @@
     display: grid;
     grid-template-columns: max-content 160px;
     column-gap: 16px;
-    row-gap: 3px;
+    row-gap: 2px;
     justify-content: start;
     align-items: baseline;
 
@@ -31,4 +31,13 @@
 .hiddenStatusBlock
 {
     display: none;
+}
+.controlPanel .ccButton
+{
+    padding: 4px 7px;
+}
+
+.contextPanel .contextGrid
+{
+    line-height: 1.15;
 }

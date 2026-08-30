@@ -613,12 +613,14 @@ def run_tests(
         f"{'File':<{filename_width}}  "
         f"{'Expected':<11}  "
         f"{'Calculated':<11}  "
+        f"{'Category':<20}  "
         f"Result"
     )
     print(
         f"{'-' * filename_width}  "
         f"{'-' * 11}  "
         f"{'-' * 11}  "
+        f"{'-' * 20}  "
         f"{'-' * 9}"
     )
 
@@ -637,6 +639,7 @@ def run_tests(
             f"{result.filename:<{filename_width}}  "
             f"{result.expected:<11}  "
             f"{result.calculated:<11}  "
+            f"{result.category:<20}  "
             f"{result_text}"
         )
 
