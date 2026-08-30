@@ -8,12 +8,13 @@ Builds exactly:
 
     Vfa.exe
     Vce.exe
+    Ccm.exe
     filterSolutions.exe
     runSmokeTests.exe
     buildCaptureIndex.exe
 
 Vfa uses the maintained packaging/Vfa.spec because that is the known-good
-Analyzer packaging path. Vce and the three console utilities are built directly
+Analyzer packaging path. Vce, Ccm, and the three console utilities are built directly
 from their current Python entry points.
 
 Commands:
@@ -76,6 +77,12 @@ VCE_SOURCE = (
     / "clip_editor.py"
 )
 
+CCM_SOURCE = (
+    REPOSITORY_ROOT
+    / "camera_capture_manager"
+    / "ccm.py"
+)
+
 FILTER_SOLUTIONS_SOURCE = (
     REPOSITORY_ROOT
     / "tools"
@@ -102,6 +109,7 @@ TEST_DATA_SOURCE = (
 EXPECTED_EXECUTABLES = (
     "Vfa.exe",
     "Vce.exe",
+    "Ccm.exe",
     "filterSolutions.exe",
     "runSmokeTests.exe",
     "buildCaptureIndex.exe",
@@ -113,6 +121,17 @@ def require_file(path: Path) -> None:
         raise RuntimeError(
             f"Required file not found: {path}"
         )
+
+
+
+def require_python_module(module_name: str) -> None:
+    try:
+        __import__(module_name)
+    except ImportError as error:
+        raise RuntimeError(
+            f"Required Python build dependency is missing: {module_name}. "
+            f"Install it in the build environment before building."
+        ) from error
 
 
 def require_path_tool(executable_name: str) -> Path:
@@ -375,9 +394,12 @@ def build() -> None:
             "This build script must be run on Windows."
         )
 
+    require_python_module("paramiko")
+
     for path in (
         VFA_SPEC,
         VCE_SOURCE,
+        CCM_SOURCE,
         FILTER_SOLUTIONS_SOURCE,
         SMOKE_TEST_SOURCE,
         BUILD_CAPTURE_INDEX_SOURCE,
@@ -411,6 +433,12 @@ def build() -> None:
     build_direct_executable(
         VCE_SOURCE,
         "Vce",
+        windowed=True,
+    )
+
+    build_direct_executable(
+        CCM_SOURCE,
+        "Ccm",
         windowed=True,
     )
 

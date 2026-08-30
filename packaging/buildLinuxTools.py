@@ -8,6 +8,7 @@ Builds exactly:
 
     Vfa
     Vce
+    Ccm
     filterSolutions
     runSmokeTests
     buildCaptureIndex
@@ -75,6 +76,12 @@ VCE_SOURCE = (
     / "clip_editor.py"
 )
 
+CCM_SOURCE = (
+    REPOSITORY_ROOT
+    / "camera_capture_manager"
+    / "ccm.py"
+)
+
 FILTER_SOLUTIONS_SOURCE = (
     REPOSITORY_ROOT
     / "tools"
@@ -101,6 +108,7 @@ TEST_DATA_SOURCE = (
 EXPECTED_EXECUTABLES = (
     "Vfa",
     "Vce",
+    "Ccm",
     "filterSolutions",
     "runSmokeTests",
     "buildCaptureIndex",
@@ -112,6 +120,17 @@ def require_file(path: Path) -> None:
         raise RuntimeError(
             f"Required file not found: {path}"
         )
+
+
+
+def require_python_module(module_name: str) -> None:
+    try:
+        __import__(module_name)
+    except ImportError as error:
+        raise RuntimeError(
+            f"Required Python build dependency is missing: {module_name}. "
+            f"Install it in the build environment before building."
+        ) from error
 
 
 def require_path_tool(executable_name: str) -> Path:
@@ -376,9 +395,12 @@ def build() -> None:
             "This build script must be run on Linux."
         )
 
+    require_python_module("paramiko")
+
     for path in (
         VFA_SPEC,
         VCE_SOURCE,
+        CCM_SOURCE,
         FILTER_SOLUTIONS_SOURCE,
         SMOKE_TEST_SOURCE,
         BUILD_CAPTURE_INDEX_SOURCE,
@@ -412,6 +434,12 @@ def build() -> None:
     build_direct_executable(
         VCE_SOURCE,
         "Vce",
+        windowed=True,
+    )
+
+    build_direct_executable(
+        CCM_SOURCE,
+        "Ccm",
         windowed=True,
     )
 

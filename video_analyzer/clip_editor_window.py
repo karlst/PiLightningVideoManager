@@ -39,9 +39,53 @@ class ClipEditorWindow(AnalyzerWindow):
         self.setWindowTitle("Clip Editor"); self.resize(1500,875)
         self.create_ui(); self.connect_controls(); self.set_editor_enabled(False)
 
-    # Analyzer calls these; Clip Editor intentionally has no capture/current-frame text panels.
-    def update_capture_information(self): pass
-    def update_frame_information(self): pass
+    # Reuse Analyzer's capture/current-frame information population now that
+    # Clip Editor creates the same information label dictionaries.
+    def update_capture_information(self):
+        if self.capture_data is None or not hasattr(self, "capture_value_labels"):
+            return
+
+        super().update_capture_information()
+
+        # Capture Sensitivity is the sensitivity that was active when the Pi
+        # created the capture. It comes from the saved sidecar and is deliberately
+        # independent of any current CandidateFinder replay settings.
+        sensitivity = self.capture_sensitivity()
+        self.capture_value_labels["capture_sensitivity"].setText(sensitivity)
+
+    def update_frame_information(self):
+        if self.capture_data is None or not hasattr(self, "frame_value_labels"):
+            return
+
+        super().update_frame_information()
+
+    def capture_sensitivity(self):
+        if self.capture_data is None or not isinstance(self.capture_data.sidecar, dict):
+            return "—"
+
+        sidecar = self.capture_data.sidecar
+        candidate = sidecar.get("candidate")
+
+        if isinstance(candidate, dict):
+            config = candidate.get("config")
+
+            if isinstance(config, dict):
+                sensitivity = config.get("sensitivity")
+
+                if sensitivity not in (None, ""):
+                    return str(sensitivity).capitalize()
+
+            sensitivity = candidate.get("sensitivity")
+
+            if sensitivity not in (None, ""):
+                return str(sensitivity).capitalize()
+
+        sensitivity = sidecar.get("sensitivity")
+
+        if sensitivity not in (None, ""):
+            return str(sensitivity).capitalize()
+
+        return "—"
 
     def spin(self,lo,hi,decimals):
         w=QDoubleSpinBox(); w.setRange(lo,hi); w.setDecimals(decimals); w.setKeyboardTracking(False); return w
@@ -76,12 +120,43 @@ class ClipEditorWindow(AnalyzerWindow):
         else:
             self.graph_panel=None; empty=QLabel("Select a clip to load"); empty.setAlignment(Qt.AlignmentFlag.AlignCenter); grid.addWidget(empty,1,1)
 
-        right=QWidget(); rl=QVBoxLayout(right); rl.setContentsMargins(0,0,0,0); rl.setSpacing(4)
+        right=QWidget(); rl=QVBoxLayout(right); rl.setContentsMargins(0,0,0,0); rl.setSpacing(3)
+
+        capture_fields=[
+            ("video","Video"),
+            ("site_name","Site"),
+            ("capture_start","Capture start UTC"),
+            ("capture_duration","Duration"),
+            ("capture_sensitivity","Capture Sensitivity"),
+            ("trigger","Trigger"),
+            ("trigger_reason","Trigger reason"),
+            ("trigger_frame","Pi trigger frame"),
+            ("replay_trigger_frame","Replay trigger frame"),
+            ("trigger_offset","Trigger offset"),
+            ("mean_frame_gap","Mean frame gap"),
+            ("max_frame_gap","Max frame gap"),
+        ]
+        frame_fields=[
+            ("frame_number","Frame"),
+            ("timestamp_utc","Timestamp UTC"),
+            ("offset","Offset"),
+            ("brightness_change","Brightness, change"),
+        ]
+
+        capture_group,self.capture_value_labels=self.create_information_group(
+            "Capture information",capture_fields
+        )
+        frame_group,self.frame_value_labels=self.create_information_group(
+            "Current frame",frame_fields
+        )
+        rl.addWidget(capture_group)
+        rl.addWidget(frame_group)
+
         edit=QGroupBox("Clip metadata"); el=QGridLayout(edit)
         self.site_edit=QLineEdit(); self.latitude_spin=self.spin(-90,90,7); self.longitude_spin=self.spin(-180,180,7)
         self.bearing_spin=self.spin(0,359.999,3); self.hfov_spin=self.spin(1,120,3); self.vfov_spin=self.spin(1,120,3)
         self.classification_combo=QComboBox(); self.classification_combo.addItems(CLASSIFICATIONS)
-        self.description_edit=QTextEdit(); self.description_edit.setAcceptRichText(False); self.description_edit.setMinimumHeight(120)
+        self.description_edit=QTextEdit(); self.description_edit.setAcceptRichText(False); self.description_edit.setMinimumHeight(60); self.description_edit.setMaximumHeight(90)
         rows=[("Site name",self.site_edit),("Latitude",self.latitude_spin),("Longitude",self.longitude_spin),("Bearing",self.bearing_spin),("Horizontal FOV",self.hfov_spin),("Vertical FOV",self.vfov_spin),("Classification",self.classification_combo)]
         for r,(name,w) in enumerate(rows): el.addWidget(QLabel(name+":"),r,0); el.addWidget(w,r,1)
         r=len(rows); el.addWidget(QLabel("Description:"),r,0,Qt.AlignmentFlag.AlignTop); el.addWidget(self.description_edit,r,1)
@@ -89,8 +164,6 @@ class ClipEditorWindow(AnalyzerWindow):
         self.save_button.setDefault(True); self.save_button.setAutoDefault(True)
         buttons.addWidget(self.restore_button); buttons.addWidget(self.save_button); el.addLayout(buttons,r+1,0,1,2); el.setColumnStretch(1,1)
         rl.addWidget(edit)
-        analysis=QGroupBox("Analysis"); al=QGridLayout(analysis); self.sensitivity_value=QLabel(self.candidate_config.sensitivity.capitalize())
-        al.addWidget(QLabel("Sensitivity:"),0,0); al.addWidget(self.sensitivity_value,0,1); rl.addWidget(analysis)
         if self.solution_result is not None:
             self.solution_panel=SolutionPanel(self.solution_result); rl.addWidget(self.solution_panel)
         else: self.solution_panel=None
@@ -345,7 +418,7 @@ class ClipEditorWindow(AnalyzerWindow):
         except RuntimeError as e: QMessageBox.critical(self,"Unable to open capture",str(e)); return
         if self.video_reader is not None: self.video_reader.close()
         self.capture_data=cd; self.candidate_result=cr; self.solution_result=sr; self.video_reader=vr; self.open_directory=cd.video_path.parent; self.frame_number=0; self.updating_slider=False
-        self.create_ui(); self.connect_controls(); self.load_editor_fields(); self.set_frame(0,force=True); self.focus_description_at_end()
+        self.create_ui(); self.connect_controls(); self.load_editor_fields(); self.update_capture_information(); self.set_frame(0,force=True); self.focus_description_at_end()
 
     def set_frame(self,frame_number,force=False):
         if self.capture_data is None or self.video_reader is None: return

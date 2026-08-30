@@ -40,7 +40,17 @@ class SolutionSettingsPanel(QGroupBox):
 
         self._noise_trigger_exclusion_frames = QSpinBox()
         self._noise_trigger_exclusion_frames.setRange(0, 100)
-        self._noise_trigger_exclusion_frames.setValue(config.brightness_noise_trigger_exclusion_frames)
+        self._noise_trigger_exclusion_frames.setValue(
+            getattr(
+                config,
+                "brightness_noise_trigger_exclusion_after_frames",
+                getattr(
+                    config,
+                    "brightness_noise_trigger_exclusion_frames",
+                    10,
+                ),
+            )
+        )
 
         self._noise_min_delta_magnitude = QDoubleSpinBox()
         self._noise_min_delta_magnitude.setRange(0.0, 100.0)
@@ -207,9 +217,8 @@ class SolutionSettingsPanel(QGroupBox):
         )
 
     def _apply(self) -> None:
-        config = SolutionConfig(
+        config_kwargs = dict(
             brightness_noise_window_frames=self._noise_window_frames.value(),
-            brightness_noise_trigger_exclusion_frames=self._noise_trigger_exclusion_frames.value(),
             brightness_noise_min_delta_magnitude=self._noise_min_delta_magnitude.value(),
             brightness_noise_max_delta_fraction=self._noise_max_delta_fraction.value(),
             brightness_noise_min_meaningful_samples=self._noise_min_meaningful_samples.value(),
@@ -232,6 +241,27 @@ class SolutionSettingsPanel(QGroupBox):
             steady_state_neighborhood=self._steady_state_neighborhood.value(),
             steady_state_min_frames=self._steady_state_min_frames.value(),
             steady_state_search_frames=self._steady_state_search_frames.value(),
+        )
+
+        # The trigger-exclusion setting was renamed in newer SolutionConfig
+        # versions. Use whichever field the installed dataclass actually has.
+        config_fields = getattr(
+            SolutionConfig,
+            "__dataclass_fields__",
+            {},
+        )
+
+        if "brightness_noise_trigger_exclusion_after_frames" in config_fields:
+            config_kwargs[
+                "brightness_noise_trigger_exclusion_after_frames"
+            ] = self._noise_trigger_exclusion_frames.value()
+        else:
+            config_kwargs[
+                "brightness_noise_trigger_exclusion_frames"
+            ] = self._noise_trigger_exclusion_frames.value()
+
+        config = SolutionConfig(
+            **config_kwargs
         )
         self._apply_callback(config)
 
