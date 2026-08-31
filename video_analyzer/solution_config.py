@@ -42,6 +42,15 @@ class SolutionConfig:
     brightness_noise_trigger_exclusion_before_frames: int = 10
     brightness_noise_trigger_exclusion_after_frames: int = 50
 
+    # If enough pre-trigger frames exist, post-trigger brightness-noise
+    # analysis is delayed until the signal has returned to the pre-trigger
+    # baseline for a sustained run. If the trigger is too early to measure
+    # this baseline, the original noise search is used unchanged.
+    brightness_noise_baseline_frames: int = 30
+    brightness_noise_baseline_minimum_tolerance: float = 1.0
+    brightness_noise_baseline_mad_multiplier: float = 4.0
+    brightness_noise_return_to_baseline_frames: int = 25
+
     # Absolute floor for a meaningful brightness delta.
     brightness_noise_min_delta_magnitude: float = 0.25
 

@@ -38,6 +38,16 @@ class SolutionFilter:
                 max_delta_fraction=config.brightness_noise_max_delta_fraction,
                 minimum_meaningful_samples=config.brightness_noise_min_meaningful_samples,
                 minimum_sign_changes=config.brightness_noise_min_sign_changes,
+                baseline_frames=config.brightness_noise_baseline_frames,
+                baseline_minimum_tolerance=(
+                    config.brightness_noise_baseline_minimum_tolerance
+                ),
+                baseline_mad_multiplier=(
+                    config.brightness_noise_baseline_mad_multiplier
+                ),
+                return_to_baseline_frames=(
+                    config.brightness_noise_return_to_baseline_frames
+                ),
             ),
             SteadyStateChangeFilter(
                 baseline_frames=config.steady_state_baseline_frames,

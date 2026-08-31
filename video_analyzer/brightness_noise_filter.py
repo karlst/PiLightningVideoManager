@@ -3,9 +3,11 @@
 Brightness noise is repeated positive/negative change of meaningful magnitude
 over a substantial number of frames. The Candidate event itself is excluded.
 
-The exclusion window is asymmetric: only a small number of frames before the
-trigger are excluded, while a larger post-trigger interval is excluded so a
-real flash decay is not mistaken for sustained background noise.
+The exclusion window is asymmetric. When enough pre-trigger frames exist to
+measure a trustworthy brightness baseline, post-trigger noise analysis is
+deferred until brightness has returned to that baseline for a sustained run.
+If the trigger occurs too early to establish a baseline, the original
+post-trigger noise search is preserved unchanged.
 
 A delta is meaningful only when its absolute magnitude reaches the effective
 noise threshold:
@@ -38,6 +40,10 @@ class BrightnessNoiseFilter:
         max_delta_fraction: float = 0.02,
         minimum_meaningful_samples: int = 50,
         minimum_sign_changes: int = 40,
+        baseline_frames: int = 30,
+        baseline_minimum_tolerance: float = 1.0,
+        baseline_mad_multiplier: float = 4.0,
+        return_to_baseline_frames: int = 25,
     ) -> None:
         self._window_frames = int(window_frames)
         self._trigger_exclusion_before_frames = int(
@@ -50,6 +56,16 @@ class BrightnessNoiseFilter:
         self._max_delta_fraction = float(max_delta_fraction)
         self._minimum_meaningful_samples = int(minimum_meaningful_samples)
         self._minimum_sign_changes = int(minimum_sign_changes)
+        self._baseline_frames = int(baseline_frames)
+        self._baseline_minimum_tolerance = float(
+            baseline_minimum_tolerance
+        )
+        self._baseline_mad_multiplier = float(
+            baseline_mad_multiplier
+        )
+        self._return_to_baseline_frames = int(
+            return_to_baseline_frames
+        )
 
     def evaluate(
         self,
@@ -57,7 +73,6 @@ class BrightnessNoiseFilter:
         brightness_delta: np.ndarray,
         trigger_frame_index: int | None,
     ) -> SolutionResult:
-        _ = brightness
 
         finite_deltas = np.asarray(
             brightness_delta,
@@ -79,6 +94,7 @@ class BrightnessNoiseFilter:
         )
 
         result = self._find_noise_window(
+            np.asarray(brightness, dtype=np.float64),
             brightness_delta,
             trigger_frame_index,
             effective_threshold,
@@ -109,11 +125,15 @@ class BrightnessNoiseFilter:
 
     def _find_noise_window(
         self,
+        brightness: np.ndarray,
         brightness_delta: np.ndarray,
         trigger_frame_index: int | None,
         effective_threshold: float,
     ) -> tuple[int, int, int, int] | None:
-        frame_count = len(brightness_delta)
+        frame_count = min(
+            len(brightness),
+            len(brightness_delta),
+        )
 
         if frame_count == 0 or trigger_frame_index is None:
             return None
@@ -133,20 +153,136 @@ class BrightnessNoiseFilter:
             1,
         )
 
-        regions = [
-            (0, exclusion_start),
-            (exclusion_end, frame_count),
-        ]
+        # Preserve the original pre-trigger search exactly.
+        result = self._search_region(
+            brightness_delta,
+            0,
+            exclusion_start,
+            effective_threshold,
+        )
+        if result is not None:
+            return result
 
-        for region_start, region_end in regions:
-            result = self._search_region(
+        # If there is not enough pre-trigger history to establish a reliable
+        # baseline, preserve the original post-trigger behavior exactly.
+        #
+        # This is important for clips such as nightNoise01/02/03 whose replay
+        # trigger occurs at frames 2-3. Those clips must still be rejected by
+        # the original brightness-noise detector.
+        if exclusion_start < self._baseline_frames:
+            return self._search_region(
                 brightness_delta,
-                region_start,
-                region_end,
+                exclusion_end,
+                frame_count,
                 effective_threshold,
             )
-            if result is not None:
-                return result
+
+        baseline = self._measure_baseline(
+            brightness,
+            exclusion_start,
+        )
+
+        # Defensive fallback: if the baseline cannot be measured for any
+        # reason, do not weaken the existing detector.
+        if baseline is None:
+            return self._search_region(
+                brightness_delta,
+                exclusion_end,
+                frame_count,
+                effective_threshold,
+            )
+
+        baseline_level, baseline_tolerance = baseline
+
+        # With a trustworthy pre-trigger baseline, protect long/multi-pulse
+        # lightning from being called "noise" while the flash is still active.
+        post_trigger_start = self._find_return_to_baseline(
+            brightness,
+            exclusion_end,
+            frame_count,
+            baseline_level,
+            baseline_tolerance,
+        )
+
+        # If the signal never returns to baseline, do not treat the still-active
+        # flash itself as post-trigger background noise.
+        if post_trigger_start is None:
+            return None
+
+        return self._search_region(
+            brightness_delta,
+            post_trigger_start,
+            frame_count,
+            effective_threshold,
+        )
+
+    def _measure_baseline(
+        self,
+        brightness: np.ndarray,
+        baseline_end: int,
+    ) -> tuple[float, float] | None:
+        baseline_start = baseline_end - self._baseline_frames
+
+        if baseline_start < 0:
+            return None
+
+        values = np.asarray(
+            brightness[baseline_start:baseline_end],
+            dtype=np.float64,
+        )
+        values = values[np.isfinite(values)]
+
+        if values.size < self._baseline_frames:
+            return None
+
+        baseline_level = float(np.median(values))
+        mad = float(
+            np.median(
+                np.abs(values - baseline_level)
+            )
+        )
+
+        baseline_tolerance = max(
+            self._baseline_minimum_tolerance,
+            mad * self._baseline_mad_multiplier,
+        )
+
+        return baseline_level, baseline_tolerance
+
+    def _find_return_to_baseline(
+        self,
+        brightness: np.ndarray,
+        search_start: int,
+        search_end: int,
+        baseline_level: float,
+        baseline_tolerance: float,
+    ) -> int | None:
+        required = self._return_to_baseline_frames
+
+        if required <= 0:
+            return search_start
+
+        run_start: int | None = None
+        run_length = 0
+
+        for index in range(search_start, search_end):
+            value = float(brightness[index])
+
+            in_baseline = (
+                np.isfinite(value)
+                and abs(value - baseline_level) <= baseline_tolerance
+            )
+
+            if in_baseline:
+                if run_start is None:
+                    run_start = index
+                run_length += 1
+
+                if run_length >= required:
+                    return run_start
+            else:
+                run_start = None
+                run_length = 0
 
         return None
 
