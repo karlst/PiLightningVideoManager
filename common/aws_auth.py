@@ -82,6 +82,17 @@ class AwsAuthenticator:
         return Path(self._config.credential_file).expanduser()
 
     @property
+    def bucket_name(self) -> str:
+        """Return the configured S3 bucket name."""
+        document = self._load_document()
+        bucket = document.get("bucket")
+        if not isinstance(bucket, str) or not bucket.strip():
+            raise AwsCredentialFileError(
+                f"AWS bucket is missing from credential file: {self.credential_file}"
+            )
+        return bucket.strip()
+
+    @property
     def region(self) -> str:
         if self._config.region:
             return self._config.region

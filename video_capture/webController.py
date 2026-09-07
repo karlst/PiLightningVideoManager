@@ -53,6 +53,7 @@ from common.candidate_config import candidate_config_from_settings
 from common.candidate_config import load_candidate_settings
 from common.system_config import load_system_settings
 from common.system_config import set_save_filtered_false_positives
+from common.system_config import set_upload_to_s3
 
 
 @dataclass
@@ -622,6 +623,14 @@ def register_routes(
                             "save_filtered_false_positives",
                             False
                         )
+                    ),
+
+                "upload_to_s3":
+                    bool(
+                        settings.get(
+                            "upload_to_s3",
+                            False
+                        )
                     )
             }
         )
@@ -636,13 +645,20 @@ def register_routes(
             silent=True
         ) or {}
 
-        value = body.get(
+        save_value = body.get(
             "save_filtered_false_positives"
         )
 
-        if not isinstance(
-            value,
-            bool
+        upload_value = body.get(
+            "upload_to_s3"
+        )
+
+        if (
+            save_value is not None
+            and not isinstance(
+                save_value,
+                bool
+            )
         ):
             return jsonify(
                 {
@@ -652,12 +668,45 @@ def register_routes(
                 }
             ), 400
 
-        try:
-            settings = (
-                set_save_filtered_false_positives(
-                    value
-                )
+        if (
+            upload_value is not None
+            and not isinstance(
+                upload_value,
+                bool
             )
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message":
+                        "upload_to_s3 must be true or false"
+                }
+            ), 400
+
+        if (
+            save_value is None
+            and upload_value is None
+        ):
+            return jsonify(
+                {
+                    "success": False,
+                    "message": "No system setting supplied"
+                }
+            ), 400
+
+        try:
+            settings = load_system_settings()
+
+            if save_value is not None:
+                settings = set_save_filtered_false_positives(
+                    save_value
+                )
+
+            if upload_value is not None:
+                settings = set_upload_to_s3(
+                    upload_value
+                )
+
         except (
             OSError,
             RuntimeError
@@ -670,19 +719,20 @@ def register_routes(
                 }
             ), 500
 
-        enabled = bool(
+        save_enabled = bool(
             settings[
                 "save_filtered_false_positives"
             ]
         )
 
+        upload_enabled = bool(
+            settings[
+                "upload_to_s3"
+            ]
+        )
+
         message = (
-            "Save filtered false positive candidates "
-            + (
-                "enabled"
-                if enabled
-                else "disabled"
-            )
+            "System settings updated"
         )
 
         services.event_log.add(
@@ -696,7 +746,9 @@ def register_routes(
                 "success": True,
                 "message": message,
                 "save_filtered_false_positives":
-                    enabled
+                    save_enabled,
+                "upload_to_s3":
+                    upload_enabled
             }
         )
 

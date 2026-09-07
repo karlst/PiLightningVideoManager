@@ -48,6 +48,9 @@ import numpy as np
 from common.candidate_config import CANDIDATE_CONFIG
 from common.candidate_config import CandidateConfig
 from common.capture_sidecar import SIDECAR_VERSION, apply_capture_brightness_summary
+from common.aws_auth import AwsAuthConfig, AwsAuthenticator
+from common.capture_key import canonical_capture_base_key, pair_keys
+from common.s3_store import S3Store, S3StoreError
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_config import solution_config_for_sensitivity
@@ -356,6 +359,108 @@ def mark_anomaly_verified(
     temporary_path.replace(
         sidecar_path
     )
+
+
+
+# ## Build the Pi-side S3 store using the restricted ingest profile.
+def build_ingest_s3_store() -> S3Store:
+    authenticator = AwsAuthenticator(
+        AwsAuthConfig(
+            profile_name="picam-ingest",
+        )
+    )
+
+    return S3Store(
+        authenticator.bucket_name,
+        authenticator,
+    )
+
+
+# ## Upload one capture pair under its canonical post-filter V7 key.
+def upload_capture_pair_to_s3(
+    store: S3Store,
+    video_path: Path,
+    sidecar_path: Path,
+) -> str:
+    sidecar = read_sidecar(
+        sidecar_path
+    )
+
+    base_key = canonical_capture_base_key(
+        sidecar,
+        fallback_stem=video_path.stem,
+    )
+
+    # Timing-test captures carry an explicit top-level test marker. Keep their
+    # otherwise-canonical keys under one disposable S3 prefix so test data can
+    # be inspected or deleted independently of real captures.
+    test_metadata = sidecar.get(
+        "test"
+    )
+
+    if isinstance(
+        test_metadata,
+        dict,
+    ):
+        test_kind = str(
+            test_metadata.get(
+                "kind",
+                "",
+            ) or ""
+        ).strip()
+
+        test_run_id = str(
+            test_metadata.get(
+                "run_id",
+                "",
+            ) or ""
+        ).strip()
+
+        if (
+            test_kind == "capture_timing"
+            and test_run_id
+        ):
+            safe_run_id = (
+                test_run_id
+                .replace(
+                    "/",
+                    "_",
+                )
+                .replace(
+                    "\\",
+                    "_",
+                )
+            )
+
+            base_key = (
+                f"test/{safe_run_id}/"
+                f"{base_key}"
+            )
+
+    mp4_key, json_key = pair_keys(
+        base_key
+    )
+
+    mp4_exists = store.object_exists(
+        mp4_key
+    )
+    json_exists = store.object_exists(
+        json_key
+    )
+
+    if not mp4_exists:
+        store.upload_file(
+            video_path,
+            mp4_key,
+        )
+
+    if not json_exists:
+        store.upload_file(
+            sidecar_path,
+            json_key,
+        )
+
+    return base_key
 
 
 # ## Build SolutionFilter input arrays from brightness data already saved by the Pi.
@@ -766,6 +871,7 @@ def run_batch_solution_filter(
     delete_rejects: bool = False,
     move_to_subfolders: bool = False,
     find_candidates: bool = False,
+    upload_to_s3: bool = False,
     candidate_config: CandidateConfig = CANDIDATE_CONFIG,
 ) -> int:
     if not input_directory.is_dir():
@@ -788,11 +894,25 @@ def run_batch_solution_filter(
             "--copy and --move-to-subfolders cannot be used together"
         )
 
+    if (
+        upload_to_s3
+        and (
+            copy_only
+            or move_to_subfolders
+        )
+    ):
+        raise RuntimeError(
+            "S3 upload is supported only by the in-place PSF workflow"
+        )
+
     global _psf_start_logged
 
     log_path = (
         psf_log_path(input_directory)
-        if delete_rejects
+        if (
+            delete_rejects
+            or upload_to_s3
+        )
         else None
     )
 
@@ -875,6 +995,70 @@ def run_batch_solution_filter(
         )
 
         try:
+            # Finalize any algorithmically verified anomaly BEFORE deriving the
+            # canonical S3 key. True-flash candidates remain unverified.
+            if category in ANOMALY_CLASSIFICATION_CODES:
+                mark_anomaly_verified(
+                    sidecar_path,
+                    category,
+                )
+
+            if (
+                upload_to_s3
+                and s3_store is not None
+                and category in (
+                    CATEGORY_TRUE_FLASH,
+                    CATEGORY_BRIGHT_NOISE,
+                    CATEGORY_STEADY_STATE_CHANGE,
+                    CATEGORY_STAIR_STEP_DECAY,
+                    CATEGORY_FRAME_DROPOUT,
+                )
+            ):
+                try:
+                    base_key = upload_capture_pair_to_s3(
+                        s3_store,
+                        video_path,
+                        sidecar_path,
+                    )
+
+                    if log_path is not None:
+                        write_psf_log(
+                            log_path,
+                            "S3",
+                            video_path.name,
+                            "UPLOADED",
+                            base_key,
+                        )
+
+                    if verbosity >= 1:
+                        print(
+                            f"{video_path.name} -> S3: {base_key}"
+                        )
+
+                except (
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                    S3StoreError,
+                ) as error:
+                    if log_path is not None:
+                        write_psf_log(
+                            log_path,
+                            "S3_ERROR",
+                            video_path.name,
+                            "KEPT_LOCAL",
+                            str(error),
+                        )
+
+                    print(
+                        f"KEEP  {video_path.name}: "
+                        f"S3 upload failed: {error}"
+                    )
+
+                    # Never delete or move a capture whose requested S3 upload
+                    # failed. Leave the pair in place for the next PSF pass.
+                    continue
+
             if category == CATEGORY_TRUE_FLASH:
                 if copy_only:
                     assert copy_true_flash_directory is not None
@@ -959,12 +1143,6 @@ def run_batch_solution_filter(
                     copy_only=False,
                 )
 
-                if category in ANOMALY_CLASSIFICATION_CODES:
-                    mark_anomaly_verified(
-                        destination_directory / sidecar_path.name,
-                        category,
-                    )
-
                 if verbosity >= 1:
                     print(
                         f"{video_path.name} -> "
@@ -976,11 +1154,6 @@ def run_batch_solution_filter(
                 # where they are. Recognized anomalies are automatically
                 # adjudicated as verified in their existing sidecars.
                 if category in ANOMALY_CLASSIFICATION_CODES:
-                    mark_anomaly_verified(
-                        sidecar_path,
-                        category,
-                    )
-
                     if verbosity >= 1:
                         print(
                             f"{video_path.name} -> "

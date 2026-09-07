@@ -35,6 +35,59 @@ from video_capture.camera_reader import CameraFrame
 from video_capture.sidecar_analysis import analyze_sidecar_frames
 
 
+_SOLUTION_CATEGORY_TO_CODE = {
+    "TRUE_FLASH": "TF",
+    "BRIGHT_NOISE": "NA",
+    "BRIGHT_NOISE_ANOMALY": "NA",
+    "NOISE_ANOMALY": "NA",
+    "STAIR_STEP_DECAY": "STA",
+    "STAIRSTEP_ANOMALY": "STA",
+    "STAIR_STEP_ANOMALY": "STA",
+    "SST": "STA",
+    "STEADY_STATE_CHANGE": "SSA",
+    "STEADY_STATE_ANOMALY": "SSA",
+    "FRAME_DROPOUT": "FDA",
+    "FRAME_DROPOUT_ANOMALY": "FDA",
+    "FAILED_CANDIDATE": "NAC",
+    "NO_CANDIDATE": "NAC",
+    "NOT_A_CANDIDATE": "NAC",
+}
+
+
+def _build_hml_classification(
+    sensitivity_results: dict,
+) -> str:
+    codes: list[str] = []
+
+    for sensitivity in (
+        "high",
+        "medium",
+        "low",
+    ):
+        result = sensitivity_results.get(
+            sensitivity,
+            {},
+        )
+
+        category = str(
+            result.get(
+                "solution_category",
+                "",
+            ) or ""
+        ).strip().upper()
+
+        codes.append(
+            _SOLUTION_CATEGORY_TO_CODE.get(
+                category,
+                "UNK",
+            )
+        )
+
+    return "-".join(
+        codes
+    )
+
+
 class SidecarWriter:
 
     def write_sidecar(
@@ -118,9 +171,49 @@ class SidecarWriter:
         result["sensitivity_results"] = sensitivity_results
         result["frame_records"] = frame_records
 
+        capture = result.get(
+            "capture"
+        )
+
+        if not isinstance(
+            capture,
+            dict,
+        ):
+            raise RuntimeError(
+                "Sidecar metadata is missing capture"
+            )
+
+        capture = dict(
+            capture
+        )
+
+        capture[
+            "verified"
+        ] = False
+        capture[
+            "classification"
+        ] = _build_hml_classification(
+            sensitivity_results
+        )
+        capture[
+            "type"
+        ] = "UK"
+        capture[
+            "description"
+        ] = str(
+            capture.get(
+                "description",
+                "",
+            ) or ""
+        )
+
+        result[
+            "capture"
+        ] = capture
+
         reserved = {
             "sidecar_version", "application", "capture", "camera", "candidate",
-            "sensitivity_results", "frame_records",
+            "sensitivity_results", "frame_records", "search_bounding_box",
         }
         for key, value in metadata.items():
             if key not in reserved:

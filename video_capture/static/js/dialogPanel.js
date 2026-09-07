@@ -381,6 +381,48 @@ export class DialogPanel
                 saveFalsePositiveLabel
             );
 
+            const uploadToS3Label =
+                document.createElement(
+                    "label"
+                );
+
+            uploadToS3Label.className =
+                "triggerSaveFalsePositives";
+
+            const uploadToS3Input =
+                document.createElement(
+                    "input"
+                );
+
+            uploadToS3Input.type =
+                "checkbox";
+
+            uploadToS3Input.checked =
+                Boolean(
+                    systemSettings.
+                        upload_to_s3
+                );
+
+            const uploadToS3Text =
+                document.createElement(
+                    "span"
+                );
+
+            uploadToS3Text.textContent =
+                "Upload captures to S3";
+
+            uploadToS3Label.appendChild(
+                uploadToS3Input
+            );
+
+            uploadToS3Label.appendChild(
+                uploadToS3Text
+            );
+
+            container.appendChild(
+                uploadToS3Label
+            );
+
             const buttonRow =
                 document.createElement(
                     "div"
@@ -514,7 +556,10 @@ export class DialogPanel
                                             JSON.stringify(
                                                 {
                                                     save_filtered_false_positives:
-                                                        saveFalsePositiveInput.checked
+                                                        saveFalsePositiveInput.checked,
+
+                                                    upload_to_s3:
+                                                        uploadToS3Input.checked
                                                 }
                                             )
                                     }
@@ -572,6 +617,9 @@ export class DialogPanel
                             saveFalsePositiveInput.checked =
                                 false;
 
+                            uploadToS3Input.checked =
+                                false;
+
                             const systemResponse =
                                 await fetch(
                                     "/system_settings",
@@ -588,6 +636,9 @@ export class DialogPanel
                                             JSON.stringify(
                                                 {
                                                     save_filtered_false_positives:
+                                                        false,
+
+                                                    upload_to_s3:
                                                         false
                                                 }
                                             )

@@ -28,6 +28,7 @@ DEFAULT_SETTINGS = {
     "data_root": "/home/karlst/elpData3709",
     "psf_interval_seconds": 60,
     "save_filtered_false_positives": False,
+    "upload_to_s3": False,
 }
 
 
@@ -72,6 +73,15 @@ def load_system_settings() -> dict[str, Any]:
         )
     )
 
+    settings[
+        "upload_to_s3"
+    ] = bool(
+        settings.get(
+            "upload_to_s3",
+            False,
+        )
+    )
+
     return settings
 
 
@@ -92,6 +102,15 @@ def save_system_settings(
     ] = bool(
         validated.get(
             "save_filtered_false_positives",
+            False,
+        )
+    )
+
+    validated[
+        "upload_to_s3"
+    ] = bool(
+        validated.get(
+            "upload_to_s3",
             False,
         )
     )
@@ -130,6 +149,25 @@ def set_save_filtered_false_positives(
 
     settings[
         "save_filtered_false_positives"
+    ] = bool(
+        enabled
+    )
+
+    return save_system_settings(
+        settings
+    )
+
+
+# ## Persist whether PSF uploads processed captures to S3.
+def set_upload_to_s3(
+    enabled: bool,
+) -> dict[str, Any]:
+    settings = (
+        load_system_settings()
+    )
+
+    settings[
+        "upload_to_s3"
     ] = bool(
         enabled
     )

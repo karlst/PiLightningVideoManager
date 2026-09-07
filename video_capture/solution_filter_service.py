@@ -98,12 +98,20 @@ def main() -> int:
                 )
             )
 
+            upload_to_s3 = bool(
+                system_settings.get(
+                    "upload_to_s3",
+                    False,
+                )
+            )
+
             run_batch_solution_filter(
                 arguments.folder,
                 verbosity=arguments.verbosity,
                 delete_rejects=(
                     not save_false_positives
                 ),
+                upload_to_s3=upload_to_s3,
             )
         except Exception as error:
             print(
