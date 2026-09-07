@@ -350,6 +350,98 @@ class TimingBufferManager(BufferManager):
 
         return captured_pending_trigger
 
+    def _write_capture_frames(
+        self,
+        *args,
+        **kwargs,
+    ):
+        """Use production writing, then rename timing-test pairs to capture_*.
+
+        Production ClipWriter currently writes trigger_*.mp4.  PSF intentionally
+        scans only capture_*.mp4, so the timing harness renames its completed
+        MP4/JSON pair immediately after the normal production write finishes.
+        Production BufferManager and ClipWriter remain untouched.
+        """
+        success, message, capture_status = (
+            super()._write_capture_frames(
+                *args,
+                **kwargs,
+            )
+        )
+
+        if not success:
+            return (
+                success,
+                message,
+                capture_status,
+            )
+
+        output_file = capture_status.get(
+            "output_file"
+        )
+
+        if not output_file:
+            return (
+                success,
+                message,
+                capture_status,
+            )
+
+        video_path = Path(
+            output_file
+        )
+
+        if not video_path.name.startswith(
+            "trigger_"
+        ):
+            return (
+                success,
+                message,
+                capture_status,
+            )
+
+        renamed_video_path = (
+            video_path.with_name(
+                "capture_" +
+                video_path.name[
+                    len("trigger_"):
+                ]
+            )
+        )
+
+        sidecar_path = (
+            video_path.with_suffix(
+                ".json"
+            )
+        )
+
+        renamed_sidecar_path = (
+            renamed_video_path.with_suffix(
+                ".json"
+            )
+        )
+
+        video_path.replace(
+            renamed_video_path
+        )
+
+        if sidecar_path.exists():
+            sidecar_path.replace(
+                renamed_sidecar_path
+            )
+
+        capture_status[
+            "output_file"
+        ] = str(
+            renamed_video_path
+        )
+
+        return (
+            success,
+            message,
+            capture_status,
+        )
+
     def _create_sidecar_metadata(
         self,
         *args,
