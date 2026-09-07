@@ -417,52 +417,6 @@ def upload_capture_pair_to_s3(
         fallback_stem=video_path.stem,
     )
 
-    # Timing-test captures carry an explicit top-level test marker. Keep their
-    # otherwise-canonical keys under one disposable S3 prefix so test data can
-    # be inspected or deleted independently of real captures.
-    test_metadata = sidecar.get(
-        "test"
-    )
-
-    if isinstance(
-        test_metadata,
-        dict,
-    ):
-        test_kind = str(
-            test_metadata.get(
-                "kind",
-                "",
-            ) or ""
-        ).strip()
-
-        test_run_id = str(
-            test_metadata.get(
-                "run_id",
-                "",
-            ) or ""
-        ).strip()
-
-        if (
-            test_kind == "capture_timing"
-            and test_run_id
-        ):
-            safe_run_id = (
-                test_run_id
-                .replace(
-                    "/",
-                    "_",
-                )
-                .replace(
-                    "\\",
-                    "_",
-                )
-            )
-
-            base_key = (
-                f"test/{safe_run_id}/"
-                f"{base_key}"
-            )
-
     mp4_key, json_key = pair_keys(
         base_key
     )
