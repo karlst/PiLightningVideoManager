@@ -28,13 +28,12 @@ from video_capture.event_log import EventLog
 from video_capture.trigger_manager import TriggerManager
 
 
-DEFAULT_TRIGGER_SECONDS = (
+DEFAULT_TRIGGER_GAPS = (
     5.0,
     10.0,
-    20.0,
+    12.0,
     30.0,
-    50.0,
-    80.0,
+    11.0,
 )
 
 
@@ -47,20 +46,34 @@ class TimingBufferManager(BufferManager):
         trigger_manager: TriggerManager,
         event_log: EventLog,
         capture_manager: CaptureManager,
-        trigger_seconds: tuple[float, ...],
+        trigger_gaps: tuple[float, ...],
         run_id: str,
     ) -> None:
         self._timing_run_id = str(
             run_id
         )
 
-        self._timing_trigger_seconds = tuple(
-            sorted(
-                float(value)
-                for value in trigger_seconds
-            )
+        self._timing_trigger_gaps = tuple(
+            float(value)
+            for value in trigger_gaps
         )
-        self._timing_next_trigger = 0
+
+        if (
+            not self._timing_trigger_gaps
+            or any(
+                value <= 0.0
+                for value in self._timing_trigger_gaps
+            )
+        ):
+            raise ValueError(
+                "trigger_gaps must contain positive values"
+            )
+
+        self._timing_trigger_count = 0
+        self._timing_trigger_gap_index = 0
+        self._timing_next_trigger_seconds = (
+            self._timing_trigger_gaps[0]
+        )
         self._timing_first_frame_monotonic: float | None = None
         self._timing_previous_frame_monotonic: float | None = None
         self._timing_rows: list[dict] = []
@@ -101,20 +114,12 @@ class TimingBufferManager(BufferManager):
         forced_trigger = False
 
         if (
-            self._timing_next_trigger
-            < len(
-                self._timing_trigger_seconds
-            )
-            and self._capture_state == "IDLE"
+            self._capture_state == "IDLE"
             and elapsed_seconds
-            >= self._timing_trigger_seconds[
-                self._timing_next_trigger
-            ]
+            >= self._timing_next_trigger_seconds
         ):
             scheduled_seconds = (
-                self._timing_trigger_seconds[
-                    self._timing_next_trigger
-                ]
+                self._timing_next_trigger_seconds
             )
 
             self._arm_pending_trigger(
@@ -125,8 +130,20 @@ class TimingBufferManager(BufferManager):
                 trigger_frame=camera_frame,
             )
 
-            self._timing_next_trigger += 1
+            self._timing_trigger_count += 1
             forced_trigger = True
+
+            self._timing_trigger_gap_index = (
+                self._timing_trigger_gap_index + 1
+            ) % len(
+                self._timing_trigger_gaps
+            )
+
+            self._timing_next_trigger_seconds += (
+                self._timing_trigger_gaps[
+                    self._timing_trigger_gap_index
+                ]
+            )
 
         self._timing_pending_metrics = None
 
@@ -426,7 +443,7 @@ class TimingBufferManager(BufferManager):
             f"Frames: {len(self._timing_rows)}"
         )
         print(
-            f"Forced captures: {self._timing_next_trigger}"
+            f"Forced captures: {self._timing_trigger_count}"
         )
 
         if gaps:
@@ -614,7 +631,7 @@ def main() -> int:
         trigger_manager,
         event_log,
         capture_manager,
-        DEFAULT_TRIGGER_SECONDS,
+        DEFAULT_TRIGGER_GAPS,
         run_id,
     )
 
@@ -629,12 +646,15 @@ def main() -> int:
         f"Timing test running for {arguments.seconds:.1f} seconds."
     )
     print(
-        "Forced captures at: "
+        "Forced-trigger gaps cycle: "
         + ", ".join(
             f"{value:g}s"
-            for value in DEFAULT_TRIGGER_SECONDS
-            if value < arguments.seconds
+            for value in DEFAULT_TRIGGER_GAPS
         )
+    )
+    print(
+        "First trigger occurs after the first gap; "
+        "the gap sequence then repeats for the full test duration."
     )
     print(
         "Leave psf.service running. pcm.service must be stopped."
