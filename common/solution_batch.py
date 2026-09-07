@@ -467,24 +467,15 @@ def upload_capture_pair_to_s3(
         base_key
     )
 
-    mp4_exists = store.object_exists(
-        mp4_key
-    )
-    json_exists = store.object_exists(
-        json_key
+    store.upload_file(
+        video_path,
+        mp4_key,
     )
 
-    if not mp4_exists:
-        store.upload_file(
-            video_path,
-            mp4_key,
-        )
-
-    if not json_exists:
-        store.upload_file(
-            sidecar_path,
-            json_key,
-        )
+    store.upload_file(
+        sidecar_path,
+        json_key,
+    )
 
     return base_key
 
