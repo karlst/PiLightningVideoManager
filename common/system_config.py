@@ -29,6 +29,7 @@ DEFAULT_SETTINGS = {
     "psf_interval_seconds": 60,
     "save_filtered_false_positives": False,
     "upload_to_s3": False,
+    "saved_to_s3_max_pairs": 100,
 }
 
 
@@ -82,6 +83,30 @@ def load_system_settings() -> dict[str, Any]:
         )
     )
 
+    try:
+        saved_to_s3_max_pairs = int(
+            settings.get(
+                "saved_to_s3_max_pairs",
+                100,
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ) as error:
+        raise RuntimeError(
+            "saved_to_s3_max_pairs must be a non-negative integer"
+        ) from error
+
+    if saved_to_s3_max_pairs < 0:
+        raise RuntimeError(
+            "saved_to_s3_max_pairs must be a non-negative integer"
+        )
+
+    settings[
+        "saved_to_s3_max_pairs"
+    ] = saved_to_s3_max_pairs
+
     return settings
 
 
@@ -114,6 +139,30 @@ def save_system_settings(
             False,
         )
     )
+
+    try:
+        saved_to_s3_max_pairs = int(
+            validated.get(
+                "saved_to_s3_max_pairs",
+                100,
+            )
+        )
+    except (
+        TypeError,
+        ValueError,
+    ) as error:
+        raise RuntimeError(
+            "saved_to_s3_max_pairs must be a non-negative integer"
+        ) from error
+
+    if saved_to_s3_max_pairs < 0:
+        raise RuntimeError(
+            "saved_to_s3_max_pairs must be a non-negative integer"
+        )
+
+    validated[
+        "saved_to_s3_max_pairs"
+    ] = saved_to_s3_max_pairs
 
     CONFIG_PATH.parent.mkdir(
         parents=True,

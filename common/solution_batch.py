@@ -51,6 +51,7 @@ from common.capture_sidecar import SIDECAR_VERSION, apply_capture_brightness_sum
 from common.aws_auth import AwsAuthConfig, AwsAuthenticator
 from common.capture_key import canonical_capture_base_key, pair_keys
 from common.s3_store import S3Store, S3StoreError
+from common.system_config import load_system_settings
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_config import solution_config_for_sensitivity
@@ -607,6 +608,82 @@ def delete_capture_pair(
     )
 
 
+# ## Return the local holding folder for capture pairs already saved to S3.
+def saved_to_s3_directory(
+    input_directory: Path,
+) -> Path:
+    return (
+        input_directory /
+        "SavedToS3"
+    )
+
+
+# ## Trim the local SavedToS3 cache to the configured number of complete pairs.
+def trim_saved_to_s3(
+    directory: Path,
+    max_pairs: int,
+) -> int:
+    if max_pairs < 0:
+        raise RuntimeError(
+            "saved_to_s3_max_pairs must be non-negative"
+        )
+
+    if not directory.is_dir():
+        return 0
+
+    pairs: list[
+        tuple[float, Path, Path]
+    ] = []
+
+    for video_path in directory.glob(
+        "*.mp4"
+    ):
+        sidecar_path = (
+            video_path.with_suffix(
+                ".json"
+            )
+        )
+
+        if not sidecar_path.is_file():
+            continue
+
+        try:
+            modified_time = (
+                video_path.stat().st_mtime
+            )
+        except OSError:
+            continue
+
+        pairs.append(
+            (
+                modified_time,
+                video_path,
+                sidecar_path,
+            )
+        )
+
+    pairs.sort(
+        key=lambda item: item[0]
+    )
+
+    remove_count = max(
+        0,
+        len(pairs) - max_pairs,
+    )
+
+    for (
+        _modified_time,
+        video_path,
+        sidecar_path,
+    ) in pairs[:remove_count]:
+        delete_capture_pair(
+            video_path,
+            sidecar_path,
+        )
+
+    return remove_count
+
+
 # ## Move an MP4 and matching sidecar together, rolling back if the second move fails.
 def move_capture_pair(
     video_path: Path,
@@ -931,9 +1008,38 @@ def run_batch_solution_filter(
     counts: Counter[str] = Counter()
 
     s3_store: S3Store | None = None
+    saved_directory: Path | None = None
+    saved_max_pairs = 100
 
     if upload_to_s3:
+        system_settings = (
+            load_system_settings()
+        )
+
+        saved_max_pairs = int(
+            system_settings.get(
+                "saved_to_s3_max_pairs",
+                100,
+            )
+        )
+
+        if saved_max_pairs < 0:
+            raise RuntimeError(
+                "saved_to_s3_max_pairs must be non-negative"
+            )
+
         s3_store = build_ingest_s3_store()
+
+        saved_directory = (
+            saved_to_s3_directory(
+                input_directory
+            )
+        )
+
+        saved_directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
 
     # Only pending capture_* files are batch-filtered. Verified flash_* files
     # are owned by the human-review workflow and are not reprocessed here.
@@ -969,6 +1075,8 @@ def run_batch_solution_filter(
             find_candidates=find_candidates,
             verbosity=verbosity,
         )
+
+        archived_to_s3 = False
 
         try:
             # Finalize any algorithmically verified anomaly BEFORE deriving the
@@ -1011,6 +1119,41 @@ def run_batch_solution_filter(
                             f"{video_path.name} -> S3: {base_key}"
                         )
 
+                    assert saved_directory is not None
+
+                    move_capture_pair(
+                        video_path,
+                        sidecar_path,
+                        saved_directory,
+                        copy_only=False,
+                    )
+
+                    archived_to_s3 = True
+
+                    trimmed_count = trim_saved_to_s3(
+                        saved_directory,
+                        saved_max_pairs,
+                    )
+
+                    if log_path is not None:
+                        write_psf_log(
+                            log_path,
+                            "LOCAL",
+                            video_path.name,
+                            "MOVED_TO_SAVED_TO_S3",
+                            (
+                                f"max_pairs={saved_max_pairs}; "
+                                f"trimmed={trimmed_count}"
+                            ),
+                        )
+
+                    if verbosity >= 1:
+                        print(
+                            f"{video_path.name} -> "
+                            f"{saved_directory.name}; "
+                            f"trimmed={trimmed_count}"
+                        )
+
                 except (
                     OSError,
                     RuntimeError,
@@ -1035,7 +1178,13 @@ def run_batch_solution_filter(
                     # failed. Leave the pair in place for the next PSF pass.
                     continue
 
-            if category == CATEGORY_TRUE_FLASH:
+            if archived_to_s3:
+                # Successfully uploaded captures are now owned locally by the
+                # bounded SavedToS3 cache. Do not delete, move, or reprocess
+                # them under the category-specific local rules below.
+                pass
+
+            elif category == CATEGORY_TRUE_FLASH:
                 if copy_only:
                     assert copy_true_flash_directory is not None
 
