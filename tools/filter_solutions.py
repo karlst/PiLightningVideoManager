@@ -1,11 +1,15 @@
-# VERIFIED FLASH-REFILTER VERSION 2026-08-26
 """
 @file filter_solutions.py
 
 @brief Command-line entry point for batch SolutionFilter classification.
 
 The reusable classification engine lives in common.solution_batch so the same
-logic can be called by this tool and by the Pi SolutionFilter service.
+logic can be called by this tool and by the Pi SolutionFilter service. Current
+V7 sidecars are required; run migrate_capture_files.py first for older data.
+The batch filter does not migrate or rename captures to flash_*. Recognized
+anomalies are automatically marked verified; true-flash candidates remain
+unverified for human review. Retained captures are updated in place by default.
+Use --move-to-subfolders for the older category-folder organization.
 """
 
 from __future__ import annotations
@@ -112,8 +116,17 @@ def main() -> int:
         "--copy",
         action="store_true",
         help=(
-            "Copy classified MP4/JSON pairs instead of moving or renaming "
-            "them. Useful for repeated experimental runs."
+            "Copy classified MP4/JSON pairs into category subfolders while "
+            "leaving source pairs untouched. Useful for experimental runs."
+        ),
+    )
+
+    parser.add_argument(
+        "--move-to-subfolders",
+        action="store_true",
+        help=(
+            "Move rejected/classified capture pairs into category subfolders. "
+            "Without this option, retained captures are updated in place."
         ),
     )
 
@@ -121,8 +134,8 @@ def main() -> int:
         "--delete-rejects",
         action="store_true",
         help=(
-            "Pi production mode: rename TRUE_FLASH pairs in place from "
-            "trigger_* to flash_* and delete all rejected pairs."
+            "Pi production mode: leave TRUE_FLASH capture_* pairs in place "
+            "and delete all rejected pairs."
         ),
     )
 
@@ -170,9 +183,9 @@ def main() -> int:
             verbosity=arguments.verbosity,
             copy_only=arguments.copy,
             delete_rejects=arguments.delete_rejects,
+            move_to_subfolders=arguments.move_to_subfolders,
             find_candidates=arguments.findCandidates,
             candidate_config=candidate_config,
-            include_flashes=True,
         )
 
     except (

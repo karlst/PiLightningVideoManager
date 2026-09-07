@@ -1,4 +1,3 @@
-# VERIFIED FLASH-REFILTER VERSION 2026-08-26
 """
 @file solution_batch.py
 
@@ -26,9 +25,11 @@ and is therefore much slower.
 
 This module contains the reusable classification and capture-file management
 engine shared by the command-line tool and the Pi SolutionFilter service.
-True flashes remain in the captures folder and are renamed from trigger_* to
-flash_*. Rejected Candidates are either moved into category subfolders or
-deleted, according to the caller's requested mode.
+SolutionFilter does not migrate sidecars or rename a capture to flash_*.
+Current V7 sidecars are required. Recognized anomalies retained by the caller
+are automatically marked verified with a final anomaly classification. True
+flash candidates remain unverified for human review. Rejected Candidates are
+either moved into category subfolders or deleted, according to the caller's mode.
 """
 
 from __future__ import annotations
@@ -46,6 +47,7 @@ import numpy as np
 
 from common.candidate_config import CANDIDATE_CONFIG
 from common.candidate_config import CandidateConfig
+from common.capture_sidecar import SIDECAR_VERSION, apply_capture_brightness_summary
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.capture_data import load_capture
 from video_analyzer.solution_config import solution_config_for_sensitivity
@@ -66,6 +68,16 @@ DESTINATION_FOLDERS = {
     CATEGORY_STAIR_STEP_DECAY: "stair_step_decay_anomalies",
     CATEGORY_FAILED_CANDIDATE: "not_candidates",
     "UNCLASSIFIED": "unclassified",
+}
+
+# Recognized SolutionFilter anomalies are algorithmically adjudicated and do
+# not require human verification. Failed candidates/unclassified results are
+# intentionally excluded.
+ANOMALY_CLASSIFICATION_CODES = {
+    CATEGORY_BRIGHT_NOISE: "NA",
+    CATEGORY_STEADY_STATE_CHANGE: "SSA",
+    CATEGORY_STAIR_STEP_DECAY: "STA",
+    CATEGORY_FRAME_DROPOUT: "FDA",
 }
 
 # Maximum size of the current PSF activity log before rotation.
@@ -178,7 +190,7 @@ def write_psf_log(
         )
 
 
-# ## Read and validate one JSON sidecar.
+# ## Read and validate one current V7 JSON sidecar.
 def read_sidecar(
     sidecar_path: Path,
 ) -> dict[str, Any]:
@@ -186,14 +198,164 @@ def read_sidecar(
         "r",
         encoding="utf-8",
     ) as file:
-        sidecar = json.load(file)
+        sidecar = json.load(
+            file
+        )
 
-    if not isinstance(sidecar, dict):
+    if not isinstance(
+        sidecar,
+        dict,
+    ):
         raise RuntimeError(
             "Sidecar root must be a JSON object"
         )
 
+    version = sidecar.get(
+        "sidecar_version"
+    )
+
+    if version != SIDECAR_VERSION:
+        raise RuntimeError(
+            f"Sidecar version {version!r} is not supported; "
+            "run migrate_capture_files.py first"
+        )
+
+    capture = sidecar.get(
+        "capture"
+    )
+
+    if not isinstance(
+        capture,
+        dict,
+    ):
+        raise RuntimeError(
+            "V7 sidecar is missing capture metadata; "
+            "run migrate_capture_files.py first"
+        )
+
     return sidecar
+
+
+# ## Atomically persist current capture-level brightness summaries.
+def update_capture_brightness_summary(
+    sidecar_path: Path,
+) -> None:
+    sidecar = read_sidecar(
+        sidecar_path
+    )
+
+    changed = apply_capture_brightness_summary(
+        sidecar
+    )
+
+    if not changed:
+        return
+
+    temporary_path = sidecar_path.with_suffix(
+        ".json.tmp"
+    )
+
+    temporary_path.write_text(
+        json.dumps(
+            sidecar,
+            indent=4,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    with temporary_path.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+        staged = json.load(
+            file
+        )
+
+    if not isinstance(
+        staged,
+        dict,
+    ):
+        temporary_path.unlink(
+            missing_ok=True
+        )
+        raise RuntimeError(
+            "Temporary sidecar root is not a JSON object"
+        )
+
+    temporary_path.replace(
+        sidecar_path
+    )
+
+
+# ## Atomically mark one retained recognized anomaly as verified.
+def mark_anomaly_verified(
+    sidecar_path: Path,
+    category: str,
+) -> None:
+    classification = ANOMALY_CLASSIFICATION_CODES.get(
+        category
+    )
+
+    if classification is None:
+        return
+
+    sidecar = read_sidecar(
+        sidecar_path
+    )
+
+    capture = sidecar[
+        "capture"
+    ]
+
+    capture[
+        "verified"
+    ] = True
+    capture[
+        "classification"
+    ] = classification
+    capture[
+        "type"
+    ] = "UK"
+
+    apply_capture_brightness_summary(
+        sidecar
+    )
+
+    temporary_path = sidecar_path.with_suffix(
+        ".json.tmp"
+    )
+
+    temporary_path.write_text(
+        json.dumps(
+            sidecar,
+            indent=4,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    # Verify the staged JSON before replacing the live sidecar.
+    with temporary_path.open(
+        "r",
+        encoding="utf-8",
+    ) as file:
+        staged = json.load(
+            file
+        )
+
+    if not isinstance(
+        staged,
+        dict,
+    ):
+        temporary_path.unlink(
+            missing_ok=True
+        )
+        raise RuntimeError(
+            "Temporary sidecar root is not a JSON object"
+        )
+
+    temporary_path.replace(
+        sidecar_path
+    )
 
 
 # ## Build SolutionFilter input arrays from brightness data already saved by the Pi.
@@ -353,53 +515,6 @@ def move_file(
 
 
 
-
-# ## Rename a true-flash MP4/JSON pair in place from trigger_* to flash_*.
-def rename_true_flash_pair(
-    video_path: Path,
-    sidecar_path: Path,
-) -> tuple[Path, Path]:
-    if not video_path.name.startswith("trigger_"):
-        raise RuntimeError(
-            f"Expected trigger_* video name: {video_path.name}"
-        )
-
-    flash_video_path = video_path.with_name(
-        "flash_" + video_path.name[len("trigger_"):]
-    )
-    flash_sidecar_path = sidecar_path.with_name(
-        "flash_" + sidecar_path.name[len("trigger_"):]
-    )
-
-    if flash_video_path.exists():
-        raise RuntimeError(
-            f"Destination already exists: {flash_video_path}"
-        )
-
-    if sidecar_path.exists() and flash_sidecar_path.exists():
-        raise RuntimeError(
-            f"Destination already exists: {flash_sidecar_path}"
-        )
-
-    video_path.rename(
-        flash_video_path
-    )
-
-    if sidecar_path.exists():
-        try:
-            sidecar_path.rename(
-                flash_sidecar_path
-            )
-        except Exception:
-            flash_video_path.rename(
-                video_path
-            )
-            raise
-
-    return (
-        flash_video_path,
-        flash_sidecar_path,
-    )
 
 
 # ## Delete an MP4 and its matching sidecar without touching unrelated files.
@@ -643,15 +758,15 @@ def move_orphan_sidecars(
     return moved_count
 
 
-# ## Classify every pending trigger_* Candidate in one captures folder.
+# ## Classify every pending capture_* Candidate in one captures folder.
 def run_batch_solution_filter(
     input_directory: Path,
     verbosity: int = 0,
     copy_only: bool = False,
     delete_rejects: bool = False,
+    move_to_subfolders: bool = False,
     find_candidates: bool = False,
     candidate_config: CandidateConfig = CANDIDATE_CONFIG,
-    include_flashes: bool = False,
 ) -> int:
     if not input_directory.is_dir():
         raise RuntimeError(
@@ -661,6 +776,16 @@ def run_batch_solution_filter(
     if copy_only and delete_rejects:
         raise RuntimeError(
             "--copy and --delete-rejects cannot be used together"
+        )
+
+    if move_to_subfolders and delete_rejects:
+        raise RuntimeError(
+            "--move-to-subfolders and --delete-rejects cannot be used together"
+        )
+
+    if copy_only and move_to_subfolders:
+        raise RuntimeError(
+            "--copy and --move-to-subfolders cannot be used together"
         )
 
     global _psf_start_logged
@@ -686,11 +811,14 @@ def run_batch_solution_filter(
         _psf_start_logged = True
 
     destinations = (
-        {}
-        if delete_rejects
-        else ensure_destination_folders(
+        ensure_destination_folders(
             input_directory
         )
+        if (
+            copy_only
+            or move_to_subfolders
+        )
+        else {}
     )
 
     copy_true_flash_directory = None
@@ -711,23 +839,32 @@ def run_batch_solution_filter(
     )
     counts: Counter[str] = Counter()
 
-    # Pi PSF uses the default include_flashes=False. The manual
-    # FilterSolutions tool sets it True so copied flash_* files are re-evaluated.
-    video_files = list(
-        input_directory.glob("trigger_*.mp4")
-    )
-
-    if include_flashes:
-        video_files.extend(
-            input_directory.glob("flash_*.mp4")
+    # Only pending capture_* files are batch-filtered. Verified flash_* files
+    # are owned by the human-review workflow and are not reprocessed here.
+    video_files = sorted(
+        input_directory.glob(
+            "capture_*.mp4"
         )
-
-    video_files = sorted(video_files)
+    )
 
     for video_path in video_files:
         sidecar_path = video_path.with_suffix(
             ".json"
         )
+
+        try:
+            update_capture_brightness_summary(
+                sidecar_path
+            )
+        except (
+            OSError,
+            json.JSONDecodeError,
+            RuntimeError,
+        ) as error:
+            print(
+                f"SKIP  {video_path.name}: {error}"
+            )
+            continue
 
         category, reason = classify_capture(
             video_path,
@@ -756,36 +893,13 @@ def run_batch_solution_filter(
                             f"(copied): {reason}"
                         )
                 else:
-                    if video_path.name.startswith("flash_"):
-                        # A previously accepted flash that still passes remains
-                        # in place; there is nothing to rename.
-                        flash_video_path = video_path
-
-                        if verbosity >= 1:
-                            print(
-                                f"{video_path.name} -> "
-                                f"UNCHANGED: {reason}"
-                            )
-                    else:
-                        flash_video_path, _ = rename_true_flash_pair(
-                            video_path,
-                            sidecar_path,
+                    # True-flash candidates require human review. SolutionFilter
+                    # does not verify or rename them.
+                    if verbosity >= 1:
+                        print(
+                            f"{video_path.name} -> "
+                            f"UNCHANGED: {reason}"
                         )
-
-                        if log_path is not None:
-                            write_psf_log(
-                                log_path,
-                                CATEGORY_TRUE_FLASH,
-                                video_path.name,
-                                "RENAMED",
-                                flash_video_path.name,
-                            )
-
-                        if verbosity >= 1:
-                            print(
-                                f"{video_path.name} -> "
-                                f"{flash_video_path.name}: {reason}"
-                            )
 
             elif delete_rejects:
                 delete_capture_pair(
@@ -806,7 +920,7 @@ def run_batch_solution_filter(
                         f"{video_path.name} -> DELETED: {reason}"
                     )
 
-            else:
+            elif copy_only:
                 destination_directory = destinations[
                     category
                 ]
@@ -815,19 +929,67 @@ def run_batch_solution_filter(
                     video_path,
                     sidecar_path,
                     destination_directory,
-                    copy_only=copy_only,
+                    copy_only=True,
                 )
 
-                if verbosity >= 1:
-                    copy_text = (
-                        " (copied)"
-                        if copy_only
-                        else ""
+                # Mark only the retained destination copy. The source remains
+                # untouched, preserving copy semantics.
+                if category in ANOMALY_CLASSIFICATION_CODES:
+                    mark_anomaly_verified(
+                        destination_directory / sidecar_path.name,
+                        category,
                     )
+
+                if verbosity >= 1:
                     print(
                         f"{video_path.name} -> "
-                        f"{destination_directory.name}"
-                        f"{copy_text}: {reason}"
+                        f"{destination_directory.name} "
+                        f"(copied): {reason}"
+                    )
+
+            elif move_to_subfolders:
+                destination_directory = destinations[
+                    category
+                ]
+
+                move_capture_pair(
+                    video_path,
+                    sidecar_path,
+                    destination_directory,
+                    copy_only=False,
+                )
+
+                if category in ANOMALY_CLASSIFICATION_CODES:
+                    mark_anomaly_verified(
+                        destination_directory / sidecar_path.name,
+                        category,
+                    )
+
+                if verbosity >= 1:
+                    print(
+                        f"{video_path.name} -> "
+                        f"{destination_directory.name}: {reason}"
+                    )
+
+            else:
+                # Default production behavior: keep retained captures exactly
+                # where they are. Recognized anomalies are automatically
+                # adjudicated as verified in their existing sidecars.
+                if category in ANOMALY_CLASSIFICATION_CODES:
+                    mark_anomaly_verified(
+                        sidecar_path,
+                        category,
+                    )
+
+                    if verbosity >= 1:
+                        print(
+                            f"{video_path.name} -> "
+                            f"VERIFIED IN PLACE: {reason}"
+                        )
+                elif verbosity >= 1:
+                    print(
+                        f"{video_path.name} -> "
+                        f"UNCHANGED: {reason}"
                     )
 
         except RuntimeError as error:
@@ -849,7 +1011,7 @@ def run_batch_solution_filter(
 
     orphan_count = 0
 
-    if not copy_only and not delete_rejects:
+    if move_to_subfolders:
         orphan_count = move_orphan_sidecars(
             input_directory,
             destinations["UNCLASSIFIED"],

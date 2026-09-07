@@ -23,8 +23,8 @@ For each MP4:
 
 The current schema stores High, Medium, and Low CandidateFinder/SolutionFilter
 results so the P Site and static G Site can switch sensitivity without running
-analysis in the browser. Version 5 also adds user-editable classification and
-description fields.
+analysis in the browser. Version 6 separates workflow verification, SolutionFilter classification,
+lightning type, and description fields.
 
 The MP4 is never modified.
 
@@ -67,6 +67,7 @@ import cv2
 import numpy as np
 
 from common.candidate_config import get_sensitivity_config
+from common.capture_sidecar import normalize_sidecar
 from common.candidate_finder import CandidateFinder
 from video_analyzer.capture_data import analyze_clip
 from video_analyzer.capture_data import build_bright_pixel_fraction
@@ -76,7 +77,7 @@ from video_analyzer.solution_filter import SolutionFilter
 from video_analyzer.solution_filter import failed_candidate_result
 
 
-CURRENT_SIDECAR_VERSION = 5
+CURRENT_SIDECAR_VERSION = 6
 TOOL_NAME = "RebuildSidecars"
 DEFAULT_SITE_NAME = "Flagstaff"
 DEFAULT_MINIMUM_RANGE_MILES = 1.0
@@ -802,7 +803,9 @@ def is_current_complete_sidecar(
         return False
 
     if (
+        "verified" not in sidecar or
         "classification" not in sidecar or
+        "type" not in sidecar or
         "description" not in sidecar
     ):
         return False
@@ -1602,8 +1605,29 @@ def build_current_sidecar(
                 default,
             )
 
-    # Build a clean canonical v4 sidecar. Legacy analysis-era top-level fields
-    # are migration inputs only and are deliberately not copied into v5.
+    # Build the version-6 workflow metadata. Version 5 used classification
+    # for lightning type (CG/IC/LCC); normalize_sidecar preserves that value
+    # by moving it to type and making the candidate an unverified TF.
+    if old_sidecar is not None:
+        normalized_old, _changed = normalize_sidecar(
+            old_sidecar
+        )
+        verified = bool(
+            normalized_old.get("verified", False)
+        )
+        classification = str(
+            normalized_old.get("classification", "TF") or "TF"
+        ).upper()
+        lightning_type = str(
+            normalized_old.get("type", "UK") or "UK"
+        ).upper()
+    else:
+        verified = False
+        classification = "TF"
+        lightning_type = "UK"
+
+    # Build a clean canonical v6 sidecar. Legacy analysis-era top-level fields
+    # are migration inputs only and are deliberately not copied forward.
     result: dict[
         str,
         Any
@@ -1611,15 +1635,14 @@ def build_current_sidecar(
         "sidecar_version":
             CURRENT_SIDECAR_VERSION,
 
+        "verified":
+            verified,
+
         "classification":
-            (
-                old_sidecar.get(
-                    "classification",
-                    ""
-                )
-                if old_sidecar is not None
-                else ""
-            ),
+            classification,
+
+        "type":
+            lightning_type,
 
         "description":
             (
@@ -1716,11 +1739,13 @@ def validate_built_sidecar(
         )
 
     if (
+        "verified" not in sidecar or
         "classification" not in sidecar or
+        "type" not in sidecar or
         "description" not in sidecar
     ):
         raise RuntimeError(
-            "Built sidecar is missing v5 annotation fields"
+            "Built sidecar is missing v6 workflow metadata fields"
         )
 
     records = sidecar.get(
