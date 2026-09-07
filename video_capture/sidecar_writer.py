@@ -30,6 +30,7 @@ knew about the capture when it was recorded.
 from pathlib import Path
 import json
 
+from common.capture_sidecar import SIDECAR_VERSION, apply_capture_brightness_summary
 from video_capture.camera_reader import CameraFrame
 from video_capture.sidecar_analysis import analyze_sidecar_frames
 
@@ -68,28 +69,62 @@ class SidecarWriter:
         frames: list[CameraFrame],
         metadata: dict | None = None
     ) -> dict:
-        (
-            frame_records,
-            sensitivity_results,
-        ) = analyze_sidecar_frames(
-            frames
-        )
+        frame_records, sensitivity_results = analyze_sidecar_frames(frames)
 
-        result = {
-            "sidecar_version": 4
+        metadata = dict(metadata or {})
+        result: dict = {"sidecar_version": SIDECAR_VERSION}
+
+        for name in ("application", "capture", "camera", "candidate"):
+            if name in metadata:
+                result[name] = metadata[name]
+
+        camera = result.get("camera")
+        if isinstance(camera, dict):
+            camera = dict(camera)
+            box = camera.get("search_bounding_box")
+            if isinstance(box, dict):
+                if all(k in box for k in ("range", "lat", "lon")):
+                    camera["search_bounding_box"] = {
+                        "range": list(box["range"]),
+                        "lat": list(box["lat"]),
+                        "lon": list(box["lon"]),
+                    }
+                else:
+                    required = (
+                        "minimum_range_miles",
+                        "maximum_range_miles",
+                        "min_latitude_degrees",
+                        "max_latitude_degrees",
+                        "min_longitude_degrees",
+                        "max_longitude_degrees",
+                    )
+                    if all(k in box for k in required):
+                        camera["search_bounding_box"] = {
+                            "range": [
+                                box["minimum_range_miles"],
+                                box["maximum_range_miles"],
+                            ],
+                            "lat": [
+                                box["min_latitude_degrees"],
+                                box["max_latitude_degrees"],
+                            ],
+                            "lon": [
+                                box["min_longitude_degrees"],
+                                box["max_longitude_degrees"],
+                            ],
+                        }
+            result["camera"] = camera
+
+        result["sensitivity_results"] = sensitivity_results
+        result["frame_records"] = frame_records
+
+        reserved = {
+            "sidecar_version", "application", "capture", "camera", "candidate",
+            "sensitivity_results", "frame_records",
         }
+        for key, value in metadata.items():
+            if key not in reserved:
+                result[key] = value
 
-        if metadata is not None:
-            result.update(
-                metadata
-            )
-
-        result[
-            "sensitivity_results"
-        ] = sensitivity_results
-
-        result[
-            "frame_records"
-        ] = frame_records
-
+        apply_capture_brightness_summary(result)
         return result

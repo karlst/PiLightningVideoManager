@@ -219,9 +219,6 @@ def analyze_sidecar_frames(
                 "frame_index":
                     frame_index,
 
-                "sequence_number":
-                    camera_frame.sequence_number,
-
                 "timestamp_utc":
                     camera_frame.timestamp_utc,
 
