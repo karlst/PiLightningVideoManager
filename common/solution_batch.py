@@ -370,8 +370,34 @@ def build_ingest_s3_store() -> S3Store:
         )
     )
 
+    try:
+        credential_document = json.loads(
+            authenticator.credential_file.read_text(
+                encoding="utf-8",
+            )
+        )
+    except (
+        OSError,
+        json.JSONDecodeError,
+    ) as error:
+        raise RuntimeError(
+            f"Unable to read AWS bucket configuration: {error}"
+        ) from error
+
+    bucket_name = str(
+        credential_document.get(
+            "bucket",
+            "",
+        ) or ""
+    ).strip()
+
+    if not bucket_name:
+        raise RuntimeError(
+            "AWS credential file is missing bucket name"
+        )
+
     return S3Store(
-        authenticator.bucket_name,
+        bucket_name,
         authenticator,
     )
 
@@ -958,6 +984,11 @@ def run_batch_solution_filter(
         )
     )
     counts: Counter[str] = Counter()
+
+    s3_store: S3Store | None = None
+
+    if upload_to_s3:
+        s3_store = build_ingest_s3_store()
 
     # Only pending capture_* files are batch-filtered. Verified flash_* files
     # are owned by the human-review workflow and are not reprocessed here.
