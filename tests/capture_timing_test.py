@@ -65,6 +65,10 @@ class TimingBufferManager(BufferManager):
         self._timing_previous_frame_monotonic: float | None = None
         self._timing_rows: list[dict] = []
 
+        # Filled by the overridden _capture_pending_trigger_if_ready() on the
+        # exact CameraReader callback where post-trigger acquisition completes.
+        self._timing_pending_metrics: dict[str, float] | None = None
+
         super().__init__(
             config,
             trigger_manager,
@@ -124,6 +128,8 @@ class TimingBufferManager(BufferManager):
             self._timing_next_trigger += 1
             forced_trigger = True
 
+        self._timing_pending_metrics = None
+
         callback_start = time.perf_counter()
 
         super()._on_frame(
@@ -134,6 +140,11 @@ class TimingBufferManager(BufferManager):
             time.perf_counter()
             - callback_start
         ) * 1000.0
+
+        pending_metrics = (
+            self._timing_pending_metrics
+            or {}
+        )
 
         self._timing_rows.append(
             {
@@ -160,6 +171,51 @@ class TimingBufferManager(BufferManager):
                         callback_ms,
                         6,
                     ),
+                "pending_total_ms":
+                    (
+                        ""
+                        if "pending_total_ms" not in pending_metrics
+                        else round(
+                            pending_metrics["pending_total_ms"],
+                            6,
+                        )
+                    ),
+                "snapshot_ms":
+                    (
+                        ""
+                        if "snapshot_ms" not in pending_metrics
+                        else round(
+                            pending_metrics["snapshot_ms"],
+                            6,
+                        )
+                    ),
+                "job_build_ms":
+                    (
+                        ""
+                        if "job_build_ms" not in pending_metrics
+                        else round(
+                            pending_metrics["job_build_ms"],
+                            6,
+                        )
+                    ),
+                "queue_ms":
+                    (
+                        ""
+                        if "queue_ms" not in pending_metrics
+                        else round(
+                            pending_metrics["queue_ms"],
+                            6,
+                        )
+                    ),
+                "reset_ms":
+                    (
+                        ""
+                        if "reset_ms" not in pending_metrics
+                        else round(
+                            pending_metrics["reset_ms"],
+                            6,
+                        )
+                    ),
                 "forced_trigger":
                     int(
                         forced_trigger
@@ -170,6 +226,112 @@ class TimingBufferManager(BufferManager):
         self._timing_previous_frame_monotonic = (
             camera_frame.timestamp_monotonic
         )
+
+    def _capture_pending_trigger_if_ready(
+        self,
+        camera_frame: CameraFrame,
+    ) -> bool:
+        """Instrument the production post-trigger handoff without changing it."""
+        captured_pending_trigger = False
+
+        if (
+            self._capture_state == "WAITING_FOR_POST"
+            and self._pending_trigger is not None
+        ):
+            trigger_time_monotonic = float(
+                self._pending_trigger["trigger_time_monotonic"]
+            )
+
+            elapsed_seconds = (
+                camera_frame.timestamp_monotonic
+                - trigger_time_monotonic
+            )
+
+            if elapsed_seconds >= self._config.post_trigger_seconds:
+                total_start = time.perf_counter()
+
+                pending_trigger = dict(
+                    self._pending_trigger
+                )
+
+                snapshot_start = time.perf_counter()
+
+                frames = (
+                    self._ring_buffer.snapshot()
+                )
+
+                snapshot_ms = (
+                    time.perf_counter()
+                    - snapshot_start
+                ) * 1000.0
+
+                job_build_start = time.perf_counter()
+
+                capture_job = {
+                    "frames": frames,
+                    "trigger_type": pending_trigger["trigger_type"],
+                    "trigger_display": pending_trigger["trigger_display"],
+                    "trigger_reason": pending_trigger["trigger_reason"],
+                    "trigger_sequence_number": pending_trigger[
+                        "trigger_sequence_number"
+                    ],
+                    "trigger_timestamp_utc": pending_trigger[
+                        "trigger_timestamp_utc"
+                    ],
+                    "trigger_time_monotonic": pending_trigger[
+                        "trigger_time_monotonic"
+                    ],
+                    "candidate_config": pending_trigger[
+                        "candidate_config"
+                    ],
+                }
+
+                self._pending_trigger = None
+                self._capture_state = "IDLE"
+                captured_pending_trigger = True
+
+                job_build_ms = (
+                    time.perf_counter()
+                    - job_build_start
+                ) * 1000.0
+
+                queue_start = time.perf_counter()
+
+                self._capture_queue.put_nowait(
+                    capture_job
+                )
+
+                queue_ms = (
+                    time.perf_counter()
+                    - queue_start
+                ) * 1000.0
+
+                reset_start = time.perf_counter()
+
+                self._reset_live_analysis_state()
+                self._last_metric_time_monotonic = (
+                    camera_frame.timestamp_monotonic
+                )
+
+                reset_ms = (
+                    time.perf_counter()
+                    - reset_start
+                ) * 1000.0
+
+                pending_total_ms = (
+                    time.perf_counter()
+                    - total_start
+                ) * 1000.0
+
+                self._timing_pending_metrics = {
+                    "pending_total_ms": pending_total_ms,
+                    "snapshot_ms": snapshot_ms,
+                    "job_build_ms": job_build_ms,
+                    "queue_ms": queue_ms,
+                    "reset_ms": reset_ms,
+                }
+
+        return captured_pending_trigger
 
     def _create_sidecar_metadata(
         self,
@@ -219,6 +381,11 @@ class TimingBufferManager(BufferManager):
                     "elapsed_seconds",
                     "frame_gap_ms",
                     "callback_ms",
+                    "pending_total_ms",
+                    "snapshot_ms",
+                    "job_build_ms",
+                    "queue_ms",
+                    "reset_ms",
                     "forced_trigger",
                 ),
             )
@@ -294,6 +461,28 @@ class TimingBufferManager(BufferManager):
             print(
                 f"Maximum callback: {max(callbacks):.3f} ms"
             )
+
+        pending_rows = [
+            row
+            for row in self._timing_rows
+            if row["pending_total_ms"] != ""
+        ]
+
+        if pending_rows:
+            print()
+            print("Post-trigger handoff timing")
+            print("---------------------------")
+
+            for row in pending_rows:
+                print(
+                    f"t={float(row['elapsed_seconds']):8.3f}s  "
+                    f"seq={int(row['sequence_number']):7d}  "
+                    f"total={float(row['pending_total_ms']):7.3f} ms  "
+                    f"snapshot={float(row['snapshot_ms']):7.3f}  "
+                    f"job={float(row['job_build_ms']):7.3f}  "
+                    f"queue={float(row['queue_ms']):7.3f}  "
+                    f"reset={float(row['reset_ms']):7.3f}"
+                )
 
         worst_rows = sorted(
             (
