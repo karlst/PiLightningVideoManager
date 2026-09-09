@@ -525,7 +525,15 @@ class CamConfig:
     capture_write_delay_seconds: float = 2.0
 
     # Minimum time between automatic trigger events.
-    trigger_cooldown_seconds: float = 1.0
+    trigger_cooldown_seconds: float = 2.0
+
+    # Trigger-storm management. If this many actual fired candidates occur
+    # inside storm_window_seconds, temporarily use storm_cooldown_seconds
+    # for storm_duration_seconds.
+    storm_candidate_count: int = 4
+    storm_window_seconds: float = 15.0
+    storm_cooldown_seconds: float = 10.0
+    storm_duration_seconds: float = 60.0
 
     capture_max_files: int = 100
     capture_protect_recent_seconds: float = 60.0

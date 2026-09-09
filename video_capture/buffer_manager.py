@@ -39,6 +39,7 @@ off CameraReader, delaying it until the captured event is safely buffered, and
 constraining FFmpeg CPU use greatly reduced capture-correlated frame gaps.
 """
 
+from collections import deque
 from pathlib import Path
 from queue import Queue
 from threading import Lock
@@ -170,6 +171,10 @@ class BufferManager:
         # by the slower metric-history sampling interval.
         self._previous_trigger_mean_brightness: float | None = None
 
+        # Times of actual fired candidates, not raw threshold crossings
+        # suppressed by cooldown. Used only for storm-rate detection.
+        self._candidate_trigger_times = deque()
+
     # ## Start the camera reader and clear existing runtime buffers.
     def start(self) -> tuple[bool, str]:
         success = False
@@ -180,6 +185,7 @@ class BufferManager:
             self._metric_history.clear()
             self._clear_pending_trigger()
             self._reset_live_analysis_state()
+            self._reset_storm_state()
 
             success, message = (
                 self._camera_reader.start()
@@ -219,6 +225,7 @@ class BufferManager:
             self._metric_history.clear()
             self._clear_pending_trigger()
             self._reset_live_analysis_state()
+            self._reset_storm_state()
 
             success = True
             message = "Buffer cleared"
@@ -753,7 +760,18 @@ class BufferManager:
             "last_trigger_reason": trigger_status["last_trigger_reason"],
             "last_trigger_time_monotonic": trigger_status["last_trigger_time_monotonic"],
             "capture_state": self._capture_state,
-            "pending_trigger": self._pending_trigger is not None
+            "pending_trigger": self._pending_trigger is not None,
+            "storm_active": trigger_status.get(
+                "storm_active",
+                False
+            ),
+            "storm_until_monotonic": trigger_status.get(
+                "storm_until_monotonic"
+            ),
+            "effective_cooldown_seconds": trigger_status.get(
+                "effective_cooldown_seconds",
+                self._config.trigger_cooldown_seconds
+            )
         }
 
         return status
@@ -827,6 +845,10 @@ class BufferManager:
             camera_frame
         )
 
+        self._update_storm_state(
+            camera_frame.timestamp_monotonic
+        )
+
         if (
             self._capture_state == "IDLE" and
             not captured_pending_trigger
@@ -839,6 +861,10 @@ class BufferManager:
             )
 
             if should_fire:
+                self._record_candidate_trigger(
+                    camera_frame.timestamp_monotonic
+                )
+
                 self._arm_pending_trigger(
                     trigger_reason=trigger_reason,
                     trigger_frame=camera_frame
@@ -947,6 +973,93 @@ class BufferManager:
         }
 
         return metric
+
+    # ## Record one actual fired candidate and detect a candidate storm.
+    def _record_candidate_trigger(
+        self,
+        timestamp_monotonic: float
+    ) -> None:
+        self._candidate_trigger_times.append(
+            timestamp_monotonic
+        )
+
+        window_start = (
+            timestamp_monotonic -
+            self._config.storm_window_seconds
+        )
+
+        while (
+            self._candidate_trigger_times and
+            self._candidate_trigger_times[0] < window_start
+        ):
+            self._candidate_trigger_times.popleft()
+
+        if (
+            len(
+                self._candidate_trigger_times
+            ) >=
+            self._config.storm_candidate_count
+        ):
+            transition = (
+                self._trigger_manager.activate_storm(
+                    timestamp_monotonic
+                )
+            )
+
+            if transition == "entered":
+                self._event_log.add(
+                    (
+                        f"Trigger storm detected: "
+                        f"{self._config.storm_candidate_count} candidates "
+                        f"in {self._config.storm_window_seconds:.1f} sec; "
+                        f"cooldown "
+                        f"{self._config.storm_cooldown_seconds:.1f} sec "
+                        f"for {self._config.storm_duration_seconds:.1f} sec"
+                    ),
+                    event_type="trigger",
+                    summary="Trigger storm detected"
+                )
+
+            else:
+                self._event_log.add(
+                    (
+                        f"Trigger storm extended: "
+                        f"cooldown "
+                        f"{self._config.storm_cooldown_seconds:.1f} sec "
+                        f"for another "
+                        f"{self._config.storm_duration_seconds:.1f} sec"
+                    ),
+                    event_type="trigger",
+                    summary="Trigger storm extended"
+                )
+
+    # ## Expire storm mode and log the return to normal cooldown.
+    def _update_storm_state(
+        self,
+        timestamp_monotonic: float
+    ) -> None:
+        ended = (
+            self._trigger_manager.update_storm(
+                timestamp_monotonic
+            )
+        )
+
+        if ended:
+            self._event_log.add(
+                (
+                    f"Trigger storm ended: cooldown restored to "
+                    f"{self._config.trigger_cooldown_seconds:.1f} sec"
+                ),
+                event_type="trigger",
+                summary="Trigger storm ended"
+            )
+
+    # ## Clear candidate-rate history and any active storm override.
+    def _reset_storm_state(
+        self
+    ) -> None:
+        self._candidate_trigger_times.clear()
+        self._trigger_manager.clear_storm()
 
     # ## Remember an auto-trigger and wait for post-trigger frames.
     def _arm_pending_trigger(

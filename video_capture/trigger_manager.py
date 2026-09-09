@@ -36,6 +36,11 @@ class TriggerManager:
         self._last_trigger_time_monotonic: float | None = None
         self._last_trigger_reason: str = ""
 
+        # Storm mode changes only the cooldown. Candidate thresholds are
+        # unchanged. BufferManager decides when a storm is detected from
+        # the rate of actual fired candidates.
+        self._storm_until_monotonic: float | None = None
+
     def enable(self) -> tuple[bool, str]:
         self._enabled = True
         return True, "Trigger enabled"
@@ -293,8 +298,79 @@ class TriggerManager:
             "last_trigger_reason":
                 self._last_trigger_reason,
             "last_trigger_time_monotonic":
-                self._last_trigger_time_monotonic
+                self._last_trigger_time_monotonic,
+            "storm_active":
+                self._storm_until_monotonic is not None,
+            "storm_until_monotonic":
+                self._storm_until_monotonic,
+            "effective_cooldown_seconds":
+                (
+                    self._config.storm_cooldown_seconds
+                    if self._storm_until_monotonic is not None
+                    else self._config.trigger_cooldown_seconds
+                )
         }
+
+    # ## Enter storm mode or extend an existing storm interval.
+    def activate_storm(
+        self,
+        timestamp_monotonic: float
+    ) -> str:
+        was_active = (
+            self._storm_until_monotonic is not None and
+            timestamp_monotonic < self._storm_until_monotonic
+        )
+
+        self._storm_until_monotonic = (
+            timestamp_monotonic +
+            self._config.storm_duration_seconds
+        )
+
+        return (
+            "extended"
+            if was_active
+            else "entered"
+        )
+
+    # ## Expire storm mode when its interval has elapsed.
+    def update_storm(
+        self,
+        timestamp_monotonic: float
+    ) -> bool:
+        ended = False
+
+        if (
+            self._storm_until_monotonic is not None and
+            timestamp_monotonic >= self._storm_until_monotonic
+        ):
+            self._storm_until_monotonic = None
+            ended = True
+
+        return ended
+
+    # ## Clear storm state when capture runtime state is reset.
+    def clear_storm(
+        self
+    ) -> None:
+        self._storm_until_monotonic = None
+
+    # ## Return the cooldown currently applied to automatic candidates.
+    def get_effective_cooldown_seconds(
+        self,
+        timestamp_monotonic: float
+    ) -> float:
+        self.update_storm(
+            timestamp_monotonic
+        )
+
+        if self._storm_until_monotonic is not None:
+            return float(
+                self._config.storm_cooldown_seconds
+            )
+
+        return float(
+            self._config.trigger_cooldown_seconds
+        )
 
     def _cooldown_elapsed(
         self,
@@ -303,10 +379,16 @@ class TriggerManager:
         if self._last_trigger_time_monotonic is None:
             return True
 
+        cooldown_seconds = (
+            self.get_effective_cooldown_seconds(
+                timestamp_monotonic
+            )
+        )
+
         return (
             (
                 timestamp_monotonic -
                 self._last_trigger_time_monotonic
             ) >=
-            self._config.trigger_cooldown_seconds
+            cooldown_seconds
         )

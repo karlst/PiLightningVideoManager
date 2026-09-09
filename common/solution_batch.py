@@ -422,15 +422,47 @@ def upload_capture_pair_to_s3(
         base_key
     )
 
-    store.upload_file(
-        video_path,
-        mp4_key,
-    )
+    try:
+        store.upload_file(
+            video_path,
+            mp4_key,
+        )
+    except (
+        OSError,
+        S3StoreError,
+    ) as error:
+        raise S3StoreError(
+            f"MP4 upload failed: {error}"
+        ) from error
 
-    store.upload_file(
-        sidecar_path,
-        json_key,
-    )
+    try:
+        store.upload_file(
+            sidecar_path,
+            json_key,
+        )
+    except (
+        OSError,
+        S3StoreError,
+    ) as error:
+        rollback_error = ""
+
+        # A capture is one MP4+JSON pair. If the JSON upload fails after the
+        # MP4 succeeded, remove the remote MP4 so S3 is not left with a
+        # half-capture. Keep the complete local pair for the next PSF pass.
+        try:
+            store.delete_object(
+                mp4_key
+            )
+        except Exception as cleanup_error:
+            rollback_error = (
+                f"; rollback failed for {mp4_key}: "
+                f"{cleanup_error}"
+            )
+
+        raise S3StoreError(
+            f"JSON upload failed: {error}"
+            f"{rollback_error}"
+        ) from error
 
     return base_key
 
@@ -1007,6 +1039,10 @@ def run_batch_solution_filter(
     )
     counts: Counter[str] = Counter()
 
+    # S3 counts are capture pairs, not individual objects.
+    s3_uploaded_capture_count = 0
+    s3_failed_capture_count = 0
+
     s3_store: S3Store | None = None
     saved_directory: Path | None = None
     saved_max_pairs = 100
@@ -1105,6 +1141,8 @@ def run_batch_solution_filter(
                         sidecar_path,
                     )
 
+                    s3_uploaded_capture_count += 1
+
                     if log_path is not None:
                         write_psf_log(
                             log_path,
@@ -1160,6 +1198,8 @@ def run_batch_solution_filter(
                     ValueError,
                     S3StoreError,
                 ) as error:
+                    s3_failed_capture_count += 1
+
                     if log_path is not None:
                         write_psf_log(
                             log_path,
@@ -1306,6 +1346,36 @@ def run_batch_solution_filter(
             continue
 
         counts[category] += 1
+
+    if (
+        upload_to_s3
+        and log_path is not None
+    ):
+        if s3_uploaded_capture_count > 0:
+            write_psf_log(
+                log_path,
+                "S3",
+                action="UPLOAD_SUMMARY",
+                detail=(
+                    f"{s3_uploaded_capture_count} "
+                    f"capture"
+                    f"{'' if s3_uploaded_capture_count == 1 else 's'} "
+                    f"uploaded"
+                ),
+            )
+
+        if s3_failed_capture_count > 0:
+            write_psf_log(
+                log_path,
+                "S3_ERROR",
+                action="UPLOAD_SUMMARY",
+                detail=(
+                    f"{s3_failed_capture_count} "
+                    f"capture"
+                    f"{'' if s3_failed_capture_count == 1 else 's'} "
+                    f"failed"
+                ),
+            )
 
     orphan_count = 0
 
