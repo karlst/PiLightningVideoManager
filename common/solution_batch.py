@@ -1046,6 +1046,7 @@ def run_batch_solution_filter(
     s3_store: S3Store | None = None
     saved_directory: Path | None = None
     saved_max_pairs = 100
+    save_filtered_false_positives = False
 
     if upload_to_s3:
         system_settings = (
@@ -1056,6 +1057,13 @@ def run_batch_solution_filter(
             system_settings.get(
                 "saved_to_s3_max_pairs",
                 100,
+            )
+        )
+
+        save_filtered_false_positives = bool(
+            system_settings.get(
+                "save_filtered_false_positives",
+                False,
             )
         )
 
@@ -1126,12 +1134,17 @@ def run_batch_solution_filter(
             if (
                 upload_to_s3
                 and s3_store is not None
-                and category in (
-                    CATEGORY_TRUE_FLASH,
-                    CATEGORY_BRIGHT_NOISE,
-                    CATEGORY_STEADY_STATE_CHANGE,
-                    CATEGORY_STAIR_STEP_DECAY,
-                    CATEGORY_FRAME_DROPOUT,
+                and (
+                    category == CATEGORY_TRUE_FLASH
+                    or (
+                        save_filtered_false_positives
+                        and category in (
+                            CATEGORY_BRIGHT_NOISE,
+                            CATEGORY_STEADY_STATE_CHANGE,
+                            CATEGORY_STAIR_STEP_DECAY,
+                            CATEGORY_FRAME_DROPOUT,
+                        )
+                    )
                 )
             ):
                 try:
