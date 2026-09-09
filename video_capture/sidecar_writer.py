@@ -6,8 +6,8 @@
 A "sidecar" is a separate metadata file that accompanies another file. In this
 application, every saved video clip can have two files with the same base name:
 
-    trigger_20260809T120000Z.mp4
-    trigger_20260809T120000Z.json
+    capture_20260809T120000Z.mp4
+    capture_20260809T120000Z.json
 
 The MP4 contains the actual video images. The JSON sidecar contains information
 about that video that either does not belong in the MP4 or is much easier for
@@ -29,6 +29,7 @@ knew about the capture when it was recorded.
 
 from pathlib import Path
 import json
+import os
 
 from common.capture_sidecar import SIDECAR_VERSION, apply_capture_brightness_summary
 from video_capture.camera_reader import CameraFrame
@@ -88,6 +89,27 @@ def _build_hml_classification(
     )
 
 
+class SidecarWriteError(RuntimeError):
+    """Raised when a specific stage of sidecar creation fails."""
+
+    def __init__(
+        self,
+        stage: str,
+        sidecar_path: Path,
+        error: Exception
+    ) -> None:
+        self.stage = stage
+        self.sidecar_path = sidecar_path
+        self.temp_path = sidecar_path.with_suffix(
+            sidecar_path.suffix + ".tmp"
+        )
+        self.original_error = error
+
+        super().__init__(
+            f"{stage} failed for {sidecar_path.name}: {error}"
+        )
+
+
 class SidecarWriter:
 
     def write_sidecar(
@@ -96,24 +118,92 @@ class SidecarWriter:
         output_file: str | Path,
         metadata: dict | None = None
     ) -> dict:
-        sidecar_data = self._build_sidecar(
-            frames,
-            metadata
-        )
-
         sidecar_path = Path(
             output_file
         ).with_suffix(
             ".json"
         )
 
-        sidecar_path.write_text(
-            json.dumps(
-                sidecar_data,
-                indent=4
-            ) + "\n",
-            encoding="utf-8"
+        temp_path = sidecar_path.with_suffix(
+            sidecar_path.suffix + ".tmp"
         )
+
+        try:
+            sidecar_data = self._build_sidecar(
+                frames,
+                metadata
+            )
+
+        except Exception as error:
+            raise SidecarWriteError(
+                "build",
+                sidecar_path,
+                error
+            ) from error
+
+        try:
+            sidecar_text = (
+                json.dumps(
+                    sidecar_data,
+                    indent=4
+                ) +
+                "\n"
+            )
+
+            with temp_path.open(
+                "w",
+                encoding="utf-8"
+            ) as file:
+                file.write(
+                    sidecar_text
+                )
+                file.flush()
+                os.fsync(
+                    file.fileno()
+                )
+
+        except Exception as error:
+            raise SidecarWriteError(
+                "write",
+                sidecar_path,
+                error
+            ) from error
+
+        try:
+            with temp_path.open(
+                "r",
+                encoding="utf-8"
+            ) as file:
+                validated_sidecar = json.load(
+                    file
+                )
+
+            if not isinstance(
+                validated_sidecar,
+                dict
+            ):
+                raise RuntimeError(
+                    "sidecar root is not a JSON object"
+                )
+
+        except Exception as error:
+            raise SidecarWriteError(
+                "validation",
+                sidecar_path,
+                error
+            ) from error
+
+        try:
+            temp_path.replace(
+                sidecar_path
+            )
+
+        except Exception as error:
+            raise SidecarWriteError(
+                "commit",
+                sidecar_path,
+                error
+            ) from error
 
         return sidecar_data
 

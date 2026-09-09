@@ -39,6 +39,7 @@ off CameraReader, delaying it until the captured event is safely buffered, and
 constraining FFmpeg CPU use greatly reduced capture-correlated frame gaps.
 """
 
+from pathlib import Path
 from queue import Queue
 from threading import Lock
 from threading import Thread
@@ -59,6 +60,7 @@ from video_capture.motion_plugin import MotionPlugin
 from video_capture.ring_buffer import RingBuffer
 from video_capture.trigger_manager import TriggerManager
 from video_capture.capture_manager import CaptureManager
+from video_capture.sidecar_writer import SidecarWriteError
 from video_capture.sidecar_writer import SidecarWriter
 from common.candidate_config import CANDIDATE_CONFIG
 
@@ -275,25 +277,50 @@ class BufferManager:
         trigger_time_monotonic: float | None,
         candidate_config: dict
     ) -> tuple[bool, str, dict]:
-        # === DOC UPDATE 2026-08-26 BEGIN ===
         # File output is serialized. Automatic jobs normally arrive here from
         # CaptureWriter; manual capture() can arrive synchronously from another
         # thread. Never allow two FFmpeg/sidecar write sequences to overlap.
-        # === DOC UPDATE 2026-08-26 END ===
         with self._capture_write_lock:
             success, message, writer_status = (
                 self._clip_writer.write_frames(
                     frames
                 )
             )
-           
-            sidecar_data = None
 
-            if success:
-                output_file = writer_status.get(
-                    "output_file"
+            sidecar_data = None
+            output_file = str(
+                writer_status.get(
+                    "output_file",
+                    ""
+                ) or ""
+            )
+
+            if not success:
+                self._log_mp4_write_failure(
+                    writer_status,
+                    message
                 )
 
+                if output_file:
+                    self._cleanup_incomplete_capture(
+                        output_file
+                    )
+
+            elif not output_file:
+                success = False
+                message = (
+                    "Capture incomplete: ClipWriter reported success "
+                    "without an output filename"
+                )
+
+                self._event_log.add(
+                    message,
+                    "error",
+                    event_type="error",
+                    summary="Capture MP4 output missing"
+                )
+
+            else:
                 sidecar_metadata = self._create_sidecar_metadata(
                     frames=frames,
                     writer_status=writer_status,
@@ -306,26 +333,72 @@ class BufferManager:
                     candidate_config=candidate_config
                 )
 
-                # Analyze the raw captured frames directly and write the JSON
-                # sidecar next to the MP4. This now runs on the capture writer
-                # thread for automatic captures, not on CameraReader.
-                if output_file:
-                    try:
-                        sidecar_data = (
-                            self._sidecar_writer.write_sidecar(
-                                frames,
-                                output_file,
-                                sidecar_metadata
-                            )
+                try:
+                    sidecar_data = (
+                        self._sidecar_writer.write_sidecar(
+                            frames,
+                            output_file,
+                            sidecar_metadata
                         )
+                    )
 
-                    except Exception as error:
-                        self._event_log.add(
-                            f"Sidecar analysis failed: {error}",
-                            "error",
-                            event_type="error",
-                            summary="Sidecar analysis failed"
-                        )
+                except SidecarWriteError as error:
+                    success = False
+                    message = (
+                        f"Capture incomplete: "
+                        f"sidecar {error.stage} failed"
+                    )
+
+                    self._log_sidecar_write_failure(
+                        error
+                    )
+
+                    self._cleanup_incomplete_capture(
+                        output_file
+                    )
+
+                    self._event_log.add(
+                        (
+                            f"Capture incomplete: "
+                            f"{Path(output_file).name}; "
+                            f"MP4 succeeded but sidecar "
+                            f"{error.stage} failed"
+                        ),
+                        "error",
+                        event_type="error",
+                        summary="Capture incomplete"
+                    )
+
+                except Exception as error:
+                    success = False
+                    message = (
+                        "Capture incomplete: unexpected sidecar failure"
+                    )
+
+                    self._event_log.add(
+                        (
+                            f"Capture sidecar unexpected failure for "
+                            f"{Path(output_file).name}: {error}"
+                        ),
+                        "error",
+                        event_type="error",
+                        summary="Capture sidecar unexpected failure"
+                    )
+
+                    self._cleanup_incomplete_capture(
+                        output_file
+                    )
+
+                    self._event_log.add(
+                        (
+                            f"Capture incomplete: "
+                            f"{Path(output_file).name}; "
+                            f"MP4 succeeded but sidecar failed"
+                        ),
+                        "error",
+                        event_type="error",
+                        summary="Capture incomplete"
+                    )
 
             capture_status = {
                 "buffer_count": len(
@@ -362,6 +435,131 @@ class BufferManager:
                 )
 
         return success, message, capture_status
+
+    # ## Log a failed MP4 write with FFmpeg/frame details.
+    def _log_mp4_write_failure(
+        self,
+        writer_status: dict,
+        message: str
+    ) -> None:
+        output_file = str(
+            writer_status.get(
+                "output_file",
+                ""
+            ) or ""
+        )
+
+        filename = (
+            Path(output_file).name
+            if output_file
+            else "<no output file>"
+        )
+
+        frames_written = writer_status.get(
+            "frames_written",
+            0
+        )
+
+        frames_requested = writer_status.get(
+            "frames_requested",
+            0
+        )
+
+        return_code = writer_status.get(
+            "ffmpeg_return_code"
+        )
+
+        ffmpeg_error = str(
+            writer_status.get(
+                "ffmpeg_error",
+                ""
+            ) or ""
+        ).strip()
+
+        detail = (
+            f"Capture MP4 failed: {filename}; "
+            f"frames={frames_written}/{frames_requested}, "
+            f"ffmpeg_rc={return_code}; "
+            f"{message}"
+        )
+
+        if ffmpeg_error:
+            detail += (
+                f"; ffmpeg={ffmpeg_error}"
+            )
+
+        self._event_log.add(
+            detail,
+            "error",
+            event_type="error",
+            summary="Capture MP4 failed"
+        )
+
+    # ## Log the exact SidecarWriter stage that failed.
+    def _log_sidecar_write_failure(
+        self,
+        error: SidecarWriteError
+    ) -> None:
+        stage_summary = {
+            "build": "Capture sidecar build failed",
+            "write": "Capture sidecar write failed",
+            "validation": "Capture sidecar validation failed",
+            "commit": "Capture sidecar commit failed",
+        }
+
+        summary = stage_summary.get(
+            error.stage,
+            "Capture sidecar failed"
+        )
+
+        self._event_log.add(
+            (
+                f"{summary}: "
+                f"{error.sidecar_path.name}; "
+                f"{error.original_error}"
+            ),
+            "error",
+            event_type="error",
+            summary=summary
+        )
+
+    # ## Remove files belonging to a capture that did not complete.
+    def _cleanup_incomplete_capture(
+        self,
+        output_file: str | Path
+    ) -> None:
+        mp4_path = Path(
+            output_file
+        )
+
+        sidecar_path = mp4_path.with_suffix(
+            ".json"
+        )
+
+        temp_path = sidecar_path.with_suffix(
+            sidecar_path.suffix + ".tmp"
+        )
+
+        for path in (
+            temp_path,
+            sidecar_path,
+            mp4_path,
+        ):
+            try:
+                path.unlink(
+                    missing_ok=True
+                )
+
+            except Exception as error:
+                self._event_log.add(
+                    (
+                        f"Capture cleanup failed: "
+                        f"{path.name}; {error}"
+                    ),
+                    "error",
+                    event_type="error",
+                    summary="Capture cleanup failed"
+                )
 
     # ## Consume automatic capture jobs on the dedicated CaptureWriter thread.
     #

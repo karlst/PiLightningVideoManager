@@ -29,7 +29,7 @@ These choices came from capture-timing tests: unconstrained FFmpeg created
 capture-correlated frame starvation. The present settings, combined with
 BufferManager's deferred writer, substantially reduced those gaps.
 
-ClipWriter writes video pixels only. Capture timing, trigger provenance, and
+ClipWriter writes video pixels only. Capture timing, capture provenance, and
 per-frame measurements belong in the JSON sidecar.
 """
 
@@ -278,7 +278,7 @@ class ClipWriter:
         )
 
         filename = filename_time.strftime(
-            "trigger_%Y%m%dT%H%M%SZ.mp4"
+            "capture_%Y%m%dT%H%M%SZ.mp4"
         )
 
         return filename
