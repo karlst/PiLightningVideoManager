@@ -651,13 +651,36 @@ class CaptureEditorWindow(ClipEditorWindow):
             capture.get("classification", "") or ""
         ).strip().upper()
 
-        # Unverified V6 captures carry an H-M-L signature.  For adjudication
-        # the editor presents True Flash as the default choice; the signature
-        # is preserved unless the reviewer marks the capture verified.
+        # Unverified captures can carry an H-M-L classification signature.
+        # Present a useful adjudication default without modifying the stored
+        # signature:
+        #
+        #   same result at H/M/L -> that classification
+        #   mixed with at least two TF results -> True Flash
+        #   any other mixed signature -> UFA
+        #
+        # The original H-M-L signature remains preserved until the reviewer
+        # marks the capture verified.
         if raw_classification in CLASSIFICATION_CODE_TO_NAME:
             classification_code = raw_classification
         else:
-            classification_code = "TF"
+            signature = raw_classification.split("-")
+
+            if (
+                len(signature) == 3
+                and len(set(signature)) == 1
+                and signature[0] in CLASSIFICATION_CODE_TO_NAME
+            ):
+                classification_code = signature[0]
+
+            elif (
+                len(signature) == 3
+                and signature.count("TF") >= 2
+            ):
+                classification_code = "TF"
+
+            else:
+                classification_code = "UFA"
 
         lightning_type = str(
             capture.get("type", "UK") or "UK"

@@ -135,6 +135,63 @@ class GraphPanel(QWidget):
             delta_values,
         )
 
+        # Scale the brightness-change Y axis from the actual finite delta
+        # values only. Reference lines such as the Candidate threshold must
+        # not force the graph to a much larger range and flatten the data.
+        finite_delta_values = delta_values[
+            np.isfinite(
+                delta_values
+            )
+        ]
+
+        if finite_delta_values.size > 0:
+            delta_min = float(
+                np.min(
+                    finite_delta_values
+                )
+            )
+
+            delta_max = float(
+                np.max(
+                    finite_delta_values
+                )
+            )
+
+            delta_span = (
+                delta_max -
+                delta_min
+            )
+
+            if delta_span > 0.0:
+                # Leave enough headroom for pyqtgraph to draw the outer
+                # major tick labels cleanly. Five percent was too tight for
+                # clips whose extrema landed just inside a round tick such
+                # as +50, causing that label to be clipped at the plot edge.
+                padding = (
+                    delta_span *
+                    0.10
+                )
+            else:
+                # Keep a useful visible range for a perfectly flat clip.
+                padding = max(
+                    abs(
+                        delta_min
+                    ) *
+                    0.10,
+                    0.01,
+                )
+
+            self._delta_graph.setYRange(
+                delta_min - padding,
+                delta_max + padding,
+                padding=0.0,
+            )
+
+            self._delta_graph.enableAutoRange(
+                axis="y",
+                enable=False,
+            )
+
         self._threshold_line = pg.InfiniteLine(
             pos=(
                 self._candidate_config.
