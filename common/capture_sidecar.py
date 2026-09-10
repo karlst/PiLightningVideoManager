@@ -1,4 +1,4 @@
-"""Current Pi Camera sidecar schema helpers."""
+"""Current Pi Camera V8 sidecar schema helpers."""
 
 from __future__ import annotations
 
@@ -6,16 +6,16 @@ import copy
 import math
 from typing import Any
 
-SIDECAR_VERSION = 7
+SIDECAR_VERSION = 8
+
+CLASSIFICATION_PENDING = "PENDING"
+CLASSIFICATION_FLASH = "FLASH"
+CLASSIFICATION_ANOMALY = "ANOMALY"
 
 CLASSIFICATION_CODE_TO_NAME = {
-    "TF": "True Flash",
-    "NA": "Noise Anomaly",
-    "STA": "Stair-step Anomaly",
-    "SSA": "Steady-state Anomaly",
-    "FDA": "Frame Dropout Anomaly",
-    "NAC": "Not a Candidate",
-    "UFA": "Unidentified Flying Anomaly",
+    CLASSIFICATION_PENDING: "Pending",
+    CLASSIFICATION_FLASH: "Flash",
+    CLASSIFICATION_ANOMALY: "Anomaly",
 }
 
 CLASSIFICATION_NAME_TO_CODE = {
@@ -23,9 +23,7 @@ CLASSIFICATION_NAME_TO_CODE = {
     for code, name in CLASSIFICATION_CODE_TO_NAME.items()
 }
 
-CLASSIFICATION_CODES = tuple(
-    CLASSIFICATION_CODE_TO_NAME
-)
+CLASSIFICATION_CODES = tuple(CLASSIFICATION_CODE_TO_NAME)
 
 LIGHTNING_TYPES = (
     "UK",
@@ -34,102 +32,19 @@ LIGHTNING_TYPES = (
     "LCC",
 )
 
-# Aliases accepted when normalizing current-schema metadata. These are
-# terminology aliases only; this module does not migrate old sidecar schemas.
-_CLASSIFICATION_ALIASES = {
-    "TRUE_FLASH": "TF",
 
-    "BRIGHT_NOISE": "NA",
-    "BRIGHT_NOISE_ANOMALY": "NA",
-    "NOISE_ANOMALY": "NA",
-
-    "STAIR_STEP_DECAY": "STA",
-    "STAIRSTEP_ANOMALY": "STA",
-    "STAIR_STEP_ANOMALY": "STA",
-    "SST": "STA",
-
-    "STEADY_STATE_CHANGE": "SSA",
-    "STEADY_STATE_ANOMALY": "SSA",
-
-    "FRAME_DROPOUT": "FDA",
-    "FRAME_DROPOUT_ANOMALY": "FDA",
-
-    "FAILED_CANDIDATE": "NAC",
-    "NO_CANDIDATE": "NAC",
-    "NOT_A_CANDIDATE": "NAC",
-
-    "UNIDENTIFIED_FLYING_ANOMALY": "UFA",
-}
-
-
-def _canonical_classification_token(
-    value: Any,
-) -> str:
-    text = str(
-        value or ""
-    ).strip()
-
+def normalize_classification(value: Any) -> str:
+    """Normalize one V8 classification token."""
+    text = str(value or "").strip()
     upper = text.upper()
 
     if upper in CLASSIFICATION_CODES:
         return upper
 
     if text in CLASSIFICATION_NAME_TO_CODE:
-        return CLASSIFICATION_NAME_TO_CODE[
-            text
-        ]
+        return CLASSIFICATION_NAME_TO_CODE[text]
 
-    if upper in _CLASSIFICATION_ALIASES:
-        return _CLASSIFICATION_ALIASES[
-            upper
-        ]
-
-    raise RuntimeError(
-        f"Unknown classification: {text or '<blank>'}"
-    )
-
-
-def normalize_classification(
-    value: Any,
-) -> str:
-    """Normalize one final code or an H-M-L classification signature."""
-    text = str(
-        value or ""
-    ).strip()
-
-    parts = text.split(
-        "-"
-    )
-
-    if len(parts) == 1:
-        return _canonical_classification_token(
-            parts[0]
-        )
-
-    if len(parts) == 3:
-        normalized_parts: list[str] = []
-
-        for part in parts:
-            if str(
-                part or ""
-            ).strip().upper() == "UNK":
-                normalized_parts.append(
-                    "UNK"
-                )
-            else:
-                normalized_parts.append(
-                    _canonical_classification_token(
-                        part
-                    )
-                )
-
-        return "-".join(
-            normalized_parts
-        )
-
-    raise RuntimeError(
-        "Classification must be one code or an H-M-L three-code signature"
-    )
+    raise RuntimeError(f"Unknown V8 classification: {text or '<blank>'}")
 
 
 def capture_brightness_summary(
@@ -169,9 +84,7 @@ def capture_brightness_summary(
     return round(max_positive_delta, 1), round(mean_brightness, 1)
 
 
-def apply_capture_brightness_summary(
-    sidecar: dict[str, Any],
-) -> bool:
+def apply_capture_brightness_summary(sidecar: dict[str, Any]) -> bool:
     capture = sidecar.get("capture")
     if not isinstance(capture, dict):
         raise RuntimeError("Sidecar is missing capture metadata")
@@ -186,94 +99,112 @@ def apply_capture_brightness_summary(
     return changed
 
 
-
 def normalize_sidecar(
     sidecar: dict[str, Any],
 ) -> tuple[dict[str, Any], bool]:
-    """Normalize a current V7 sidecar without migrating older schemas.
+    """Normalize a current V8 sidecar without migrating older schemas.
 
-    V7 workflow fields live inside ``capture``:
+    V8 workflow fields live inside ``capture``:
 
         capture.verified
-        capture.classification
-        capture.type
+        capture.classification       current authoritative PENDING / FLASH / ANOMALY
+        capture.initial_classification original model FLASH / ANOMALY, or null pre-PSF
+        capture.type                 UK / CG / IC / LCC
+        capture.initial_confidence   confidence of initial_classification, or null pre-PSF
+        capture.classification_model model identifier, or blank pre-PSF
         capture.description
 
-    Older sidecars must be converted first with migrate_capture_files.py.
+    Older sidecars must be converted before use with the V8 production path.
     """
-    if not isinstance(
-        sidecar,
-        dict,
-    ):
-        raise TypeError(
-            "sidecar must be a dictionary"
-        )
+    if not isinstance(sidecar, dict):
+        raise TypeError("sidecar must be a dictionary")
 
-    version = sidecar.get(
-        "sidecar_version"
-    )
-
+    version = sidecar.get("sidecar_version")
     if version != SIDECAR_VERSION:
         raise RuntimeError(
             f"Sidecar version {version!r} is not supported; "
-            "run migrate_capture_files.py first"
+            "convert the capture to V8 first"
         )
 
-    capture = sidecar.get(
-        "capture"
-    )
+    capture = sidecar.get("capture")
+    if not isinstance(capture, dict):
+        raise RuntimeError("V8 sidecar is missing capture metadata")
 
-    if not isinstance(
-        capture,
-        dict,
-    ):
-        raise RuntimeError(
-            "V7 sidecar is missing capture metadata"
-        )
+    normalized = copy.deepcopy(sidecar)
 
-    normalized = copy.deepcopy(
-        sidecar
-    )
-    normalized_capture = normalized[
-        "capture"
-    ]
+    # V8 has one authoritative frame count: capture.frame_count.
+    # Remove the legacy duplicate if an early V8 file contains it.
+    normalized.pop("frame_count", None)
 
-    verified = normalized_capture.get(
-        "verified"
-    )
+    normalized_capture = normalized["capture"]
 
-    if not isinstance(
-        verified,
-        bool,
-    ):
-        raise RuntimeError(
-            "capture.verified must be boolean"
-        )
+    verified = normalized_capture.get("verified")
+    if not isinstance(verified, bool):
+        raise RuntimeError("capture.verified must be boolean")
 
     classification = normalize_classification(
-        normalized_capture.get(
-            "classification"
-        )
+        normalized_capture.get("classification")
     )
+
+    initial_value = normalized_capture.get("initial_classification")
+    initial_classification: str | None
+    if initial_value in (None, ""):
+        initial_classification = None
+    else:
+        initial_classification = normalize_classification(initial_value)
+        if initial_classification == CLASSIFICATION_PENDING:
+            raise RuntimeError("capture.initial_classification cannot be PENDING")
 
     lightning_type = str(
-        normalized_capture.get(
-            "type",
-            "UK",
-        ) or "UK"
+        normalized_capture.get("type", "UK") or "UK"
     ).strip().upper()
-
     if lightning_type not in LIGHTNING_TYPES:
-        raise RuntimeError(
-            f"Unknown lightning type: {lightning_type}"
-        )
+        raise RuntimeError(f"Unknown lightning type: {lightning_type}")
 
-    description = str(
-        normalized_capture.get(
-            "description",
-            "",
-        ) or ""
-    )
+    initial_confidence_value = normalized_capture.get("initial_confidence")
+    initial_confidence: float | None
+    if initial_confidence_value is None:
+        initial_confidence = None
+    else:
+        try:
+            initial_confidence = float(initial_confidence_value)
+        except (TypeError, ValueError) as error:
+            raise RuntimeError("capture.initial_confidence must be numeric or null") from error
+        if not math.isfinite(initial_confidence) or not 0.0 <= initial_confidence <= 1.0:
+            raise RuntimeError("capture.initial_confidence must be between 0 and 1")
+
+    classification_model = str(
+        normalized_capture.get("classification_model", "") or ""
+    ).strip()
+
+    if classification == CLASSIFICATION_PENDING:
+        if verified:
+            raise RuntimeError("PENDING capture cannot be verified")
+        if initial_classification is not None:
+            raise RuntimeError("PENDING capture must have null initial_classification")
+        if initial_confidence is not None:
+            raise RuntimeError("PENDING capture must have null initial_confidence")
+        if classification_model:
+            raise RuntimeError("PENDING capture must not name a classification model")
+    else:
+        # Model provenance is an all-or-nothing triplet. Historical/manual V8
+        # records may omit all three, but when present they stay immutable even
+        # if a human later changes capture.classification.
+        model_fields_present = (
+            initial_classification is not None,
+            initial_confidence is not None,
+            bool(classification_model),
+        )
+        if any(model_fields_present) and not all(model_fields_present):
+            raise RuntimeError(
+                "capture.initial_classification, capture.initial_confidence and "
+                "capture.classification_model must all be present or all be absent"
+            )
+
+    if classification == CLASSIFICATION_ANOMALY and not verified:
+        raise RuntimeError("ANOMALY capture must be verified")
+
+    description = str(normalized_capture.get("description", "") or "")
 
     try:
         max_brightness_delta = round(
@@ -286,85 +217,49 @@ def normalize_sidecar(
         )
     except (KeyError, TypeError, ValueError) as error:
         raise RuntimeError(
-            "V7 capture must contain numeric max_brightness_delta "
-            "and mean_brightness"
+            "V8 capture must contain numeric max_brightness_delta and mean_brightness"
         ) from error
 
     if not (
         math.isfinite(max_brightness_delta)
         and math.isfinite(mean_brightness)
     ):
-        raise RuntimeError("V7 capture brightness summary values must be finite")
+        raise RuntimeError("V8 capture brightness summary values must be finite")
 
     if max_brightness_delta < 0.0:
         raise RuntimeError("capture.max_brightness_delta must be non-negative")
 
-    normalized_capture[
-        "verified"
-    ] = verified
-    normalized_capture[
-        "classification"
-    ] = classification
-    normalized_capture[
-        "type"
-    ] = lightning_type
-    normalized_capture[
-        "description"
-    ] = description
-    normalized_capture[
-        "max_brightness_delta"
-    ] = max_brightness_delta
-    normalized_capture[
-        "mean_brightness"
-    ] = mean_brightness
+    normalized_capture["verified"] = verified
+    normalized_capture["classification"] = classification
+    normalized_capture["initial_classification"] = initial_classification
+    normalized_capture["type"] = lightning_type
+    normalized_capture["initial_confidence"] = initial_confidence
+    normalized_capture["classification_model"] = classification_model
+    normalized_capture["description"] = description
+    normalized_capture["max_brightness_delta"] = max_brightness_delta
+    normalized_capture["mean_brightness"] = mean_brightness
 
-    return (
-        normalized,
-        normalized != sidecar,
-    )
+    return normalized, normalized != sidecar
 
 
-def metadata_for_filter(
-    sidecar: dict[str, Any],
-) -> dict[str, Any]:
-    """Return current V7 fields used by the Capture Editor browser."""
-    normalized, _changed = normalize_sidecar(
-        sidecar
-    )
-
-    capture = normalized[
-        "capture"
-    ]
-
-    camera = normalized.get(
-        "camera",
-        {},
-    )
+def metadata_for_filter(sidecar: dict[str, Any]) -> dict[str, Any]:
+    """Return current V8 fields used by capture browsers."""
+    normalized, _changed = normalize_sidecar(sidecar)
+    capture = normalized["capture"]
+    camera = normalized.get("camera", {})
 
     site = ""
-
-    if isinstance(
-        camera,
-        dict,
-    ):
-        site = str(
-            camera.get(
-                "site_name",
-                "",
-            ) or ""
-        ).strip()
+    if isinstance(camera, dict):
+        site = str(camera.get("site_name", "") or "").strip()
 
     return {
-        "verified":
-            capture["verified"],
-        "classification":
-            capture["classification"],
-        "type":
-            capture["type"],
-        "site":
-            site,
-        "max_brightness_delta":
-            capture["max_brightness_delta"],
-        "mean_brightness":
-            capture["mean_brightness"],
+        "verified": capture["verified"],
+        "classification": capture["classification"],
+        "initial_classification": capture["initial_classification"],
+        "type": capture["type"],
+        "initial_confidence": capture["initial_confidence"],
+        "classification_model": capture["classification_model"],
+        "site": site,
+        "max_brightness_delta": capture["max_brightness_delta"],
+        "mean_brightness": capture["mean_brightness"],
     }

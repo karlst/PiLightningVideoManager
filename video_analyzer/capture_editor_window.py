@@ -1,4 +1,10 @@
-"""Vce Capture Editor with Local Storage and S3 backends."""
+"""Vce Capture Editor for local and S3 Pi Camera captures.
+
+The editor displays the production classifier's original FLASH/ANOMALY result
+and initial confidence from the V8 sidecar, supports human verification/editing, and
+displays the recorded geographic search bounding box. Legacy SolutionFilter
+results are intentionally not computed or displayed.
+"""
 from __future__ import annotations
 
 import copy
@@ -39,15 +45,16 @@ from video_analyzer.capture_data import load_capture
 from video_analyzer.candidate_replay import replay_candidate_finder
 from video_analyzer.clip_editor_window import ClipEditorWindow, nested
 from video_analyzer.graph_panel import GraphPanel
-from video_analyzer.solution_config import SOLUTION_CONFIG, solution_config_for_sensitivity
-from video_analyzer.solution_filter import SolutionFilter, failed_candidate_result
-from video_analyzer.solution_panel import SolutionPanel
 from video_analyzer.video_reader import VideoReader
 
 
 VERIFIED_VALUES = ("No", "Yes")
 
-CLASSIFICATION_VALUES = tuple(CLASSIFICATION_CODE_TO_NAME.values())
+CLASSIFICATION_VALUES = tuple(
+    name
+    for code, name in CLASSIFICATION_CODE_TO_NAME.items()
+    if code != "PENDING"
+)
 
 TYPE_VALUES = ("UK", "CG", "IC", "LCC")
 
@@ -280,6 +287,17 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         cgl.addWidget(QLabel("Frame gaps ms mean / max:"), row, 0)
         cgl.addWidget(self.frame_gaps_label, row, 1)
+        row += 1
+
+        self.initial_classification_label = QLabel("—")
+        self.classification_confidence_label = QLabel("—")
+
+        cgl.addWidget(QLabel("Initial classification:"), row, 0)
+        cgl.addWidget(self.initial_classification_label, row, 1)
+        row += 1
+
+        cgl.addWidget(QLabel("Initial confidence:"), row, 0)
+        cgl.addWidget(self.classification_confidence_label, row, 1)
         cgl.setColumnStretch(1, 1)
 
         frame_fields = [
@@ -296,23 +314,27 @@ class CaptureEditorWindow(ClipEditorWindow):
         rl.addWidget(capture_group)
         rl.addWidget(frame_group)
 
-        # Solution Filter Result is always present in the right column and
-        # always sits immediately above the editable metadata.  When no clip is
-        # loaded yet, show a placeholder rather than omitting the panel.
-        if self.solution_result is not None:
-            self.solution_panel = SolutionPanel(self.solution_result)
-            self.solution_panel.setMinimumHeight(120)
-        else:
-            self.solution_panel = QGroupBox("Solution Filter Result")
-            self.solution_panel.setMinimumHeight(120)
-            solution_placeholder_layout = QVBoxLayout(self.solution_panel)
-            solution_placeholder_layout.setContentsMargins(8, 8, 8, 8)
-            solution_placeholder_layout.setSpacing(2)
-            solution_placeholder = QLabel("Select a clip to load")
-            solution_placeholder.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            solution_placeholder_layout.addWidget(solution_placeholder)
+        # Spatial search bounds recorded by the capture pipeline.  Capture
+        # Editor displays these values directly from the sidecar; it does not
+        # recompute them.
+        search_group = QGroupBox("Search bounding box")
+        sgl = QGridLayout(search_group)
+        sgl.setHorizontalSpacing(5)
+        sgl.setVerticalSpacing(2)
 
-        rl.addWidget(self.solution_panel)
+        self.search_range_label = QLabel("—")
+        self.search_latitude_label = QLabel("—")
+        self.search_longitude_label = QLabel("—")
+
+        sgl.addWidget(QLabel("Range miles:"), 0, 0)
+        sgl.addWidget(self.search_range_label, 0, 1)
+        sgl.addWidget(QLabel("Latitude:"), 1, 0)
+        sgl.addWidget(self.search_latitude_label, 1, 1)
+        sgl.addWidget(QLabel("Longitude:"), 2, 0)
+        sgl.addWidget(self.search_longitude_label, 2, 1)
+        sgl.setColumnStretch(1, 1)
+
+        rl.addWidget(search_group)
 
         # Editable Clip Metadata
         edit = QGroupBox("Clip metadata")
@@ -516,10 +538,6 @@ class CaptureEditorWindow(ClipEditorWindow):
     # ------------------------------------------------------------------
     # Source UI
     # ------------------------------------------------------------------
-    def on_source_changed(self, _source):
-        self._set_source_ui()
-        self.refresh_file_browser()
-
     def _set_source_ui(self):
         # source_mode is authoritative.  An S3 clip is downloaded to a local
         # temporary cache for decoding, but that cache must never make the UI
@@ -624,6 +642,79 @@ class CaptureEditorWindow(ClipEditorWindow):
         # "(259-260)" suffix can be wired when the underlying value is available.
         self.frame_gaps_label.setText(f"{mean_gap} / {max_gap}")
 
+        sidecar = (
+            self.capture_data.sidecar
+            if isinstance(self.capture_data.sidecar, dict)
+            else {}
+        )
+        capture = sidecar.get("capture")
+        if not isinstance(capture, dict):
+            capture = {}
+
+        classification_code = str(
+            capture.get("initial_classification", "") or ""
+        ).strip().upper()
+        # V8 model provenance. For transitional historical V8 files without
+        # initial_classification, show the current classification rather than a
+        # misleading blank value. New PSF output always stores the initial value.
+        if not classification_code:
+            classification_code = str(
+                capture.get("classification", "") or ""
+            ).strip().upper()
+        self.initial_classification_label.setText(
+            CLASSIFICATION_CODE_TO_NAME.get(
+                classification_code,
+                classification_code or "—",
+            )
+        )
+
+        initial_confidence = capture.get("initial_confidence")
+        if initial_confidence is None:
+            self.classification_confidence_label.setText("—")
+        else:
+            try:
+                self.classification_confidence_label.setText(
+                    f"{float(initial_confidence) * 100.0:.1f}%"
+                )
+            except (TypeError, ValueError):
+                self.classification_confidence_label.setText("—")
+
+        self._update_search_bounding_box()
+
+    def _update_search_bounding_box(self):
+        if self.capture_data is None:
+            return
+
+        sidecar = (
+            self.capture_data.sidecar
+            if isinstance(self.capture_data.sidecar, dict)
+            else {}
+        )
+        camera = sidecar.get("camera")
+        if not isinstance(camera, dict):
+            camera = {}
+
+        box = camera.get("search_bounding_box")
+        if not isinstance(box, dict):
+            box = sidecar.get("search_bounding_box")
+        if not isinstance(box, dict):
+            box = {}
+
+        def pair_text(name, digits):
+            values = box.get(name)
+            if not isinstance(values, (list, tuple)) or len(values) != 2:
+                return "—"
+            try:
+                low = float(values[0])
+                high = float(values[1])
+            except (TypeError, ValueError):
+                return "—"
+            return f"{low:.{digits}f} – {high:.{digits}f}"
+
+        self.search_range_label.setText(pair_text("range", 1))
+        self.search_latitude_label.setText(pair_text("lat", 6))
+        self.search_longitude_label.setText(pair_text("lon", 6))
+
     # ------------------------------------------------------------------
     # New metadata model
     # ------------------------------------------------------------------
@@ -651,36 +742,15 @@ class CaptureEditorWindow(ClipEditorWindow):
             capture.get("classification", "") or ""
         ).strip().upper()
 
-        # Unverified captures can carry an H-M-L classification signature.
-        # Present a useful adjudication default without modifying the stored
-        # signature:
-        #
-        #   same result at H/M/L -> that classification
-        #   mixed with at least two TF results -> True Flash
-        #   any other mixed signature -> UFA
-        #
-        # The original H-M-L signature remains preserved until the reviewer
-        # marks the capture verified.
-        if raw_classification in CLASSIFICATION_CODE_TO_NAME:
+        # PENDING exists only between capture creation and the PSF pass. If a
+        # PENDING sidecar is opened manually, present FLASH as the adjudication
+        # default without changing the stored sidecar until Save.
+        if raw_classification == "PENDING":
+            classification_code = "FLASH"
+        elif raw_classification in CLASSIFICATION_CODE_TO_NAME:
             classification_code = raw_classification
         else:
-            signature = raw_classification.split("-")
-
-            if (
-                len(signature) == 3
-                and len(set(signature)) == 1
-                and signature[0] in CLASSIFICATION_CODE_TO_NAME
-            ):
-                classification_code = signature[0]
-
-            elif (
-                len(signature) == 3
-                and signature.count("TF") >= 2
-            ):
-                classification_code = "TF"
-
-            else:
-                classification_code = "UFA"
+            classification_code = "ANOMALY"
 
         lightning_type = str(
             capture.get("type", "UK") or "UK"
@@ -689,7 +759,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         if lightning_type not in TYPE_VALUES:
             lightning_type = "UK"
 
-        if classification_code != "TF":
+        if classification_code != "FLASH":
             lightning_type = "UK"
 
         return dict(
@@ -738,7 +808,7 @@ class CaptureEditorWindow(ClipEditorWindow):
 
     def on_classification_changed(self, classification):
         is_true_flash = (
-            CLASSIFICATION_NAME_TO_CODE.get(classification) == "TF"
+            CLASSIFICATION_NAME_TO_CODE.get(classification) == "FLASH"
         )
         self.type_combo.setEnabled(is_true_flash)
         if not is_true_flash:
@@ -1146,7 +1216,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         super().__init__(
             capture_data,
             candidate_result,
-            solution_result,
+            None,
             open_directory=open_directory,
         )
 
@@ -1370,20 +1440,6 @@ class CaptureEditorWindow(ClipEditorWindow):
                     self._write_local_sidecar_atomic(cd.sidecar_path, upgraded)
 
             cr = replay_candidate_finder(cd, self.candidate_config)
-            sc = solution_config_for_sensitivity(
-                self.candidate_config.sensitivity,
-                SOLUTION_CONFIG,
-            )
-            sr = (
-                failed_candidate_result()
-                if cr.frame_index is None
-                else SolutionFilter(sc).evaluate(
-                    cd.pi_brightness,
-                    cd.pi_brightness_delta,
-                    cr.frame_index,
-                    cr.reason,
-                )
-            )
             vr = VideoReader(cd.video_path)
 
         except (RuntimeError, OSError, ValueError, TypeError) as exc:
@@ -1395,7 +1451,7 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         self.capture_data = cd
         self.candidate_result = cr
-        self.solution_result = sr
+        self.solution_result = None
         self.video_reader = vr
 
         if source_mode == "Local Storage":
@@ -1456,36 +1512,24 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
 
         capture = sidecar.setdefault("capture", {})
-        original_verified = capture.get("verified") is True
-        original_classification = str(
-            capture.get("classification", "") or ""
-        ).strip().upper()
-
         classification_code = CLASSIFICATION_NAME_TO_CODE[
             values["classification"]
         ]
 
-        capture["verified"] = values["verified"]
-
-        if values["verified"]:
-            capture["classification"] = classification_code
+        # ANOMALY is a final algorithm/human adjudication and is always
+        # verified. FLASH may remain unverified until human review.
+        if classification_code == "ANOMALY":
+            capture["verified"] = True
+            capture["classification"] = "ANOMALY"
+            capture["type"] = "UK"
+        else:
+            capture["verified"] = values["verified"]
+            capture["classification"] = "FLASH"
             capture["type"] = (
                 values["type"]
-                if classification_code == "TF"
+                if values["verified"]
                 else "UK"
             )
-        else:
-            # Preserve an existing unverified H-M-L signature when the reviewer
-            # edits another field without completing adjudication.
-            if (
-                not original_verified
-                and original_classification.count("-") == 2
-            ):
-                capture["classification"] = original_classification
-            else:
-                capture["classification"] = classification_code
-
-            capture["type"] = "UK"
 
         capture["description"] = values["description"]
 

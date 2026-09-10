@@ -1,59 +1,27 @@
-"""
+r"""
 @file migrate_capture_files.py
 
-@brief Strict migration of complete Pi Camera Capture sidecars to V7.
+@brief Strict migration of complete Pi Camera Capture sidecars to V8.
 
-This tool is deliberately conservative.  It migrates metadata only and never
-decodes MP4 files or reconstructs missing metadata.
+This tool migrates complete historical capture sidecars to the V8 production
+schema without decoding MP4 files.  It uses the frozen logistic classifier on
+the saved frame brightness data to populate V8 initial classifier confidence and
+model identity.  Existing verified human/workflow adjudication is preserved.
 
-A source sidecar is accepted only when it is a complete Pi Camera Capture
-sidecar.  Analysis-era/reconstructed JSON files and incomplete sidecars are
-REJECTED rather than being stamped as V7.
+V8 production vocabulary:
+    FLASH
+    ANOMALY
 
-Required source sections:
-    application
-    camera
-    capture
-    candidate
-    sensitivity_results
-    frame_records
+Legacy anomaly subclasses (NA/SSA/FDA/STA/NAC/UFA) are preserved only as
+migration provenance; V8 production classification collapses them to ANOMALY.
+Legacy H-M-L signatures and sensitivity_results are not carried into V8.
 
-For V5 and earlier complete sidecars:
-* Historical CG/IC/LCC classification means human-confirmed True Flash:
-      capture.verified = True
-      capture.classification = "TF"
-      capture.type = CG/IC/LCC
-      filename prefix = flash_
-
-* Existing historical category folders created by filter_solutions are
-  authoritative workflow metadata:
-      bright_noise_anomalies      -> verified NA
-      steady_state_anomalies      -> verified SSA
-      stair_step_decay_anomalies  -> verified STA
-      frame_dropout_anomalies     -> verified FDA
-      not_candidates              -> verified NAC
-
-* A capture not in one of those folders is not auto-verified from its H-M-L
-  replay signature.  The signature is preserved and the capture remains
-  unverified unless it was already human-classified CG/IC/LCC.
-
-For an already-current V7 sidecar:
-* The complete V7 structure is validated.
-* Existing verified final adjudication is preserved.
-* An unverified recognized anomaly may be repaired to verified using the
-  stored active-sensitivity SolutionFilter result.
-* Camera/application/candidate/sensitivity/frame metadata is preserved.
-
-The migration NEVER invents camera/site/location metadata.
-
-With -cf/--copy-files OUTPUT_FOLDER:
-* originals are untouched;
-* migrated MP4/JSON pairs are written flat into OUTPUT_FOLDER;
-* existing destination filenames are treated as duplicates and skipped.
+With -cf/--copy-files OUTPUT_FOLDER, originals are untouched and migrated
+MP4/JSON pairs are written flat into OUTPUT_FOLDER.
 
 Examples:
-    python tools/migrate_capture_files.py C:\\Lightning --recursive --dry-run
-    python tools/migrate_capture_files.py C:\\Lightning --recursive -cf C:\\capturesV7
+    python tools/migrate_capture_files.py C:\Lightning --recursive --dry-run
+    python tools/migrate_capture_files.py C:\Lightning --recursive -cf C:\capturesV8
 """
 
 
@@ -68,7 +36,19 @@ import sys
 from typing import Any
 
 
-CURRENT_SIDECAR_VERSION = 7
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+import numpy as np
+
+from common.classification_model import CLASSIFICATION_ANOMALY
+from common.classification_model import CLASSIFICATION_FLASH
+from common.classification_model import CLASSIFICATION_MODEL_NAME
+from common.classification_model import classify_arrays
+
+
+CURRENT_SIDECAR_VERSION = 8
 TOOL_NAME = "MigrateCaptures"
 
 SENSITIVITY_NAMES = (
@@ -85,13 +65,8 @@ LIGHTNING_TYPES = (
 )
 
 FINAL_CLASSIFICATION_CODES = (
-    "TF",
-    "NA",
-    "STA",
-    "SSA",
-    "FDA",
-    "NAC",
-    "UFA",
+    "FLASH",
+    "ANOMALY",
 )
 
 # UNK is deliberately not a final verified classification. It is only a token
@@ -398,11 +373,11 @@ def require_dict_section(
 def validate_source_sidecar(
     sidecar: dict[str, Any],
 ) -> int:
-    """Reject incomplete/analysis-era JSON before any V7 metadata is built."""
+    """Reject incomplete/analysis-era JSON before any V8 metadata is built."""
     if "analysis_version" in sidecar:
         raise RuntimeError(
             "Source JSON is an analysis-era/incomplete sidecar; "
-            "refusing to manufacture V7 metadata from it"
+            "refusing to manufacture V8 metadata from it"
         )
 
     version = optional_int(
@@ -591,245 +566,179 @@ def classification_from_source_path(
 
 
 
+def classifier_inputs(sidecar: dict[str, Any]) -> tuple[np.ndarray, np.ndarray, int]:
+    records = sidecar.get("frame_records")
+    if not isinstance(records, list) or not records:
+        raise RuntimeError("Source sidecar contains no frame_records")
+
+    brightness: list[float] = []
+    delta: list[float] = []
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise RuntimeError(f"Invalid frame record at index {index}")
+        try:
+            brightness.append(float(record["mean_brightness"]))
+            delta.append(float(record["brightness_delta_adjacent"]))
+        except (KeyError, TypeError, ValueError) as error:
+            raise RuntimeError(
+                f"Frame record {index} is missing valid brightness metrics"
+            ) from error
+
+    candidate = sidecar.get("candidate")
+    trigger_index: int | None = None
+    if isinstance(candidate, dict):
+        if candidate.get("trigger_frame_index") is not None:
+            trigger_index = optional_int(candidate.get("trigger_frame_index"))
+        elif candidate.get("trigger_frame_number") is not None:
+            frame_number = optional_int(candidate.get("trigger_frame_number"))
+            if frame_number is not None:
+                trigger_index = frame_number - 1
+
+    if trigger_index is None:
+        trigger_index = optional_int(sidecar.get("trigger_frame_index"))
+    if trigger_index is None:
+        frame_number = optional_int(sidecar.get("trigger_frame_number"))
+        if frame_number is not None:
+            trigger_index = frame_number - 1
+
+    if trigger_index is None or not 0 <= trigger_index < len(brightness):
+        raise RuntimeError("Source sidecar has no valid trigger frame index")
+
+    return (
+        np.asarray(brightness, dtype=np.float64),
+        np.asarray(delta, dtype=np.float64),
+        trigger_index,
+    )
+
+
+def legacy_adjudication(
+    old_sidecar: dict[str, Any],
+    old_version: int,
+    source_classification: str | None,
+) -> tuple[bool | None, str | None, str, str | None]:
+    """Return verified/final-class/type/legacy-subclass from historical truth."""
+    old_capture = old_sidecar["capture"]
+
+    if source_classification is not None:
+        return True, CLASSIFICATION_ANOMALY, "UK", source_classification
+
+    old_top_classification = str(
+        old_sidecar.get("classification", "") or ""
+    ).strip().upper()
+
+    if old_version <= 5 and old_top_classification in LIGHTNING_TYPES[1:]:
+        return True, CLASSIFICATION_FLASH, old_top_classification, "TF"
+
+    if old_version >= 6:
+        verified = old_capture.get("verified")
+        if not isinstance(verified, bool):
+            raise RuntimeError("Source capture.verified must be boolean")
+
+        raw_classification = str(
+            old_capture.get("classification", "") or ""
+        ).strip().upper()
+        raw_type = str(old_capture.get("type", "UK") or "UK").strip().upper()
+        if raw_type not in LIGHTNING_TYPES:
+            raise RuntimeError(f"Source capture.type is invalid: {raw_type or '<blank>'}")
+
+        if verified:
+            if raw_classification in {"TF", "FLASH"}:
+                return True, CLASSIFICATION_FLASH, raw_type, "TF"
+            if raw_classification in {"NA", "STA", "SSA", "FDA", "NAC", "UFA", "ANOMALY"}:
+                return True, CLASSIFICATION_ANOMALY, "UK", raw_classification
+            raise RuntimeError(
+                "Verified source sidecar has invalid final classification: "
+                f"{raw_classification or '<blank>'}"
+            )
+
+    # Unverified historical captures are adjudicated by the frozen V8 model.
+    return None, None, "UK", None
+
+
 def migrate_sidecar(
     old_sidecar: dict[str, Any],
     source_classification: str | None = None,
 ) -> dict[str, Any]:
-    """Return a strict V7 copy without modifying the input dictionary."""
-    old_version = validate_source_sidecar(
-        old_sidecar
+    """Return a strict V8 copy without modifying the input dictionary."""
+    old_version = validate_source_sidecar(old_sidecar)
+
+    brightness, brightness_delta, trigger_index = classifier_inputs(old_sidecar)
+    model_result = classify_arrays(brightness, brightness_delta, trigger_index)
+
+    verified, final_classification, lightning_type, legacy_classification = (
+        legacy_adjudication(old_sidecar, old_version, source_classification)
     )
 
-    old_capture = old_sidecar[
-        "capture"
-    ]
-
-    # V5 annotation lived at the top level.  V7 adjudication lives in capture.
-    old_classification = str(
-        old_sidecar.get(
-            "classification",
-            "",
-        ) or ""
-    ).strip().upper()
-
-    if source_classification is not None:
-        # Historical filter_solutions already adjudicated this capture by
-        # placing it in a category folder.  That decision is authoritative.
-        verified = True
-        classification = source_classification
+    if final_classification is None:
+        final_classification = model_result.classification
+        verified = final_classification == CLASSIFICATION_ANOMALY
         lightning_type = "UK"
 
-    elif (
-        old_version <= 5
-        and old_classification in LIGHTNING_TYPES[1:]
-    ):
-        verified = True
-        classification = "TF"
-        lightning_type = old_classification
+    assert verified is not None
 
-    elif old_version <= 5:
-        # Not previously sorted into an anomaly/reject folder and not a
-        # human-classified flash: keep it pending for human review.
-        verified = False
-        classification = build_hml_classification(
-            old_sidecar
-        )
-        lightning_type = "UK"
-
-    else:
-        if source_classification is not None:
-            verified = True
-            classification = source_classification
-            lightning_type = "UK"
-        else:
-            verified = old_capture.get(
-                "verified"
-            )
-
-            if not isinstance(
-                verified,
-                bool,
-            ):
-                raise RuntimeError(
-                    "V7 capture.verified must be boolean"
-                )
-
-            raw_classification = str(
-                old_capture.get(
-                    "classification",
-                    "",
-                ) or ""
-            ).strip().upper()
-
-            raw_type = str(
-                old_capture.get(
-                    "type",
-                    "UK",
-                ) or "UK"
-            ).strip().upper()
-
-            if raw_type not in LIGHTNING_TYPES:
-                raise RuntimeError(
-                    f"V7 capture.type is invalid: {raw_type or '<blank>'}"
-                )
-
-            lightning_type = raw_type
-
-            if verified:
-                if raw_classification not in FINAL_CLASSIFICATION_CODES:
-                    raise RuntimeError(
-                        "Verified V7 sidecar has invalid final classification: "
-                        f"{raw_classification or '<blank>'}"
-                    )
-                classification = raw_classification
-            else:
-                if not valid_hml_signature(
-                    raw_classification
-                ):
-                    raise RuntimeError(
-                        "Unverified V7 capture.classification must be an "
-                        "H-M-L three-code signature"
-                    )
-
-                classification = raw_classification
-                lightning_type = "UK"
-
+    old_capture = old_sidecar["capture"]
     description = str(
-        old_capture.get(
-            "description",
-            old_sidecar.get(
-                "description",
-                "",
-            ),
-        ) or ""
+        old_capture.get("description", old_sidecar.get("description", "")) or ""
     )
 
-    # Preserve complete source sections exactly.  Only the V7 workflow fields,
-    # application version, obsolete top-level annotation fields, and migration
-    # bookkeeping are changed.
-    migrated: dict[str, Any] = {}
+    migrated: dict[str, Any] = {"sidecar_version": CURRENT_SIDECAR_VERSION}
 
-    migrated[
-        "sidecar_version"
-    ] = CURRENT_SIDECAR_VERSION
+    application = dict(old_sidecar["application"])
+    application["version"] = "1.0.0"
+    migrated["application"] = application
 
-    application = dict(
-        old_sidecar[
-            "application"
-        ]
+    capture = dict(old_capture)
+    capture["verified"] = bool(verified)
+    # Keep the frozen model's original decision as immutable provenance. The
+    # migrated historical adjudication remains the current authoritative
+    # classification, so disagreements become valuable future training data.
+    capture["initial_classification"] = model_result.classification
+    capture["classification"] = final_classification
+    capture["type"] = lightning_type if final_classification == CLASSIFICATION_FLASH else "UK"
+    capture.pop("confidence", None)
+    capture["initial_confidence"] = float(
+        model_result.flash_probability
+        if model_result.classification == CLASSIFICATION_FLASH
+        else 1.0 - model_result.flash_probability
     )
-    application[
-        "version"
-    ] = "0.92"
-    migrated[
-        "application"
-    ] = application
+    capture["classification_model"] = CLASSIFICATION_MODEL_NAME
+    capture["description"] = description
 
-    migrated[
-        "capture"
-    ] = dict(
-        old_capture
-    )
-    migrated[
-        "capture"
-    ][
-        "verified"
-    ] = verified
-    migrated[
-        "capture"
-    ][
-        "classification"
-    ] = classification
-    migrated[
-        "capture"
-    ][
-        "type"
-    ] = lightning_type
-    migrated[
-        "capture"
-    ][
-        "description"
-    ] = description
-
-    (
-        max_brightness_delta,
-        mean_brightness,
-    ) = capture_brightness_summary(
+    max_brightness_delta, mean_brightness = capture_brightness_summary(
         old_sidecar["frame_records"]
     )
+    capture["max_brightness_delta"] = max_brightness_delta
+    capture["mean_brightness"] = mean_brightness
+    migrated["capture"] = capture
 
-    migrated["capture"]["max_brightness_delta"] = (
-        max_brightness_delta
-    )
-    migrated["capture"]["mean_brightness"] = (
-        mean_brightness
-    )
+    migrated["camera"] = compact_search_bounding_box(old_sidecar["camera"])
+    migrated["candidate"] = old_sidecar["candidate"]
+    migrated["frame_records"] = compact_frame_records(old_sidecar["frame_records"])
 
-    migrated["camera"] = compact_search_bounding_box(
-        old_sidecar["camera"]
-    )
-
-    # Canonical V7 section order.  Keep Candidate and sensitivity replay
-    # results adjacent to the camera metadata and immediately before the
-    # per-frame records.  Re-running this tool on an existing V7 sidecar
-    # rewrites the JSON into this order without changing sidecar_version.
-    migrated["candidate"] = old_sidecar[
-        "candidate"
-    ]
-    migrated["sensitivity_results"] = old_sidecar[
-        "sensitivity_results"
-    ]
-
-    migrated["frame_records"] = compact_frame_records(
-        old_sidecar["frame_records"]
-    )
-
+    # Preserve non-schema historical metadata, but deliberately drop the
+    # obsolete H-M-L sensitivity_results block from V8 production sidecars.
     for key, value in old_sidecar.items():
         if key in {
-            "sidecar_version",
-            "application",
-            "capture",
-            "camera",
-            "candidate",
-            "sensitivity_results",
-            "frame_records",
-            "verified",
-            "classification",
-            "type",
-            "description",
-            "search_bounding_box",
-            "migration",
+            "sidecar_version", "application", "capture", "camera", "candidate",
+            "sensitivity_results", "frame_records", "frame_count",
+            "verified", "classification", "initial_classification",
+            "type", "description", "search_bounding_box", "migration",
         }:
             continue
+        migrated[key] = value
 
-        migrated[
-            key
-        ] = value
-
-    migration = old_sidecar.get(
-        "migration"
-    )
-    if not isinstance(
-        migration,
-        dict,
-    ):
-        migration = {}
-
-    migration = dict(
-        migration
-    )
-    migration[
-        "source_sidecar_version"
-    ] = old_version
-    migration[
-        "tool"
-    ] = TOOL_NAME
-
-    migrated[
-        "migration"
-    ] = migration
+    # Keep only durable migration provenance.  Do not copy an older migration
+    # block because it may contain obsolete process metadata such as tool,
+    # migrated_utc, backup_sidecar, or model_classification.
+    migration = {
+        "source_sidecar_version": old_version,
+    }
+    if legacy_classification:
+        migration["legacy_classification"] = legacy_classification
+    migrated["migration"] = migration
 
     return migrated
+
 
 def is_verified_true_flash(
     sidecar: dict[str, Any],
@@ -853,7 +762,7 @@ def is_verified_true_flash(
                 "classification",
                 "",
             ) or ""
-        ).strip().upper() == "TF"
+        ).strip().upper() == "FLASH"
     )
 
 
@@ -901,191 +810,90 @@ def validate_migrated_sidecar(
     sidecar: dict[str, Any],
     source_sidecar: dict[str, Any] | None = None,
 ) -> None:
-    if optional_int(
-        sidecar.get(
-            "sidecar_version"
-        )
-    ) != CURRENT_SIDECAR_VERSION:
-        raise RuntimeError(
-            "Migrated sidecar has wrong version"
-        )
-
-    if "analysis_version" in sidecar:
-        raise RuntimeError(
-            "Migrated V7 sidecar must not contain analysis_version"
-        )
-
-    top_level_keys = list(
-        sidecar.keys()
-    )
+    if optional_int(sidecar.get("sidecar_version")) != CURRENT_SIDECAR_VERSION:
+        raise RuntimeError("Migrated sidecar has wrong version")
 
     required_order = (
-        "sidecar_version",
-        "application",
-        "capture",
-        "camera",
-        "candidate",
-        "sensitivity_results",
-        "frame_records",
+        "sidecar_version", "application", "capture", "camera",
+        "candidate", "frame_records",
     )
+    keys = list(sidecar.keys())
+    try:
+        positions = [keys.index(key) for key in required_order]
+    except ValueError as error:
+        raise RuntimeError("Migrated V8 sidecar is missing a required top-level section") from error
+    if positions != sorted(positions):
+        raise RuntimeError("Migrated V8 top-level sections are not in canonical order")
+
+    if "sensitivity_results" in sidecar:
+        raise RuntimeError("Migrated V8 sidecar must not contain sensitivity_results")
+    if "frame_count" in sidecar:
+        raise RuntimeError(
+            "Migrated V8 sidecar must keep frame_count only under capture"
+        )
+
+    capture = sidecar.get("capture")
+    if not isinstance(capture, dict):
+        raise RuntimeError("Migrated V8 sidecar is missing capture metadata")
+    if not isinstance(capture.get("verified"), bool):
+        raise RuntimeError("Migrated capture.verified is not boolean")
+
+    classification = str(capture.get("classification", "") or "").strip().upper()
+    if classification not in FINAL_CLASSIFICATION_CODES:
+        raise RuntimeError(f"Migrated V8 classification is invalid: {classification}")
+    initial_classification = str(
+        capture.get("initial_classification", "") or ""
+    ).strip().upper()
+    if initial_classification not in FINAL_CLASSIFICATION_CODES:
+        raise RuntimeError(
+            "Migrated V8 initial_classification is invalid: "
+            f"{initial_classification or '<blank>'}"
+        )
+    if classification == CLASSIFICATION_ANOMALY and capture["verified"] is not True:
+        raise RuntimeError("Migrated ANOMALY must be verified")
+
+    lightning_type = str(capture.get("type", "") or "").strip().upper()
+    if lightning_type not in LIGHTNING_TYPES:
+        raise RuntimeError(f"Migrated capture has invalid type: {lightning_type}")
+    if classification == CLASSIFICATION_ANOMALY and lightning_type != "UK":
+        raise RuntimeError("Migrated ANOMALY type must be UK")
 
     try:
-        positions = [
-            top_level_keys.index(
-                key
-            )
-            for key in required_order
-        ]
-    except ValueError as error:
-        raise RuntimeError(
-            "Migrated V7 sidecar is missing a required top-level section"
-        ) from error
+        initial_confidence = float(capture["initial_confidence"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise RuntimeError("Migrated capture.initial_confidence must be numeric") from error
+    if not math.isfinite(initial_confidence) or not 0.0 <= initial_confidence <= 1.0:
+        raise RuntimeError("Migrated capture.initial_confidence must be between 0 and 1")
+    if str(capture.get("classification_model", "") or "").strip() != CLASSIFICATION_MODEL_NAME:
+        raise RuntimeError("Migrated capture.classification_model is incorrect")
 
-    if positions != sorted(
-        positions
-    ):
-        raise RuntimeError(
-            "Migrated V7 top-level sections are not in canonical order"
-        )
+    records = sidecar.get("frame_records")
+    if not isinstance(records, list) or not records:
+        raise RuntimeError("Migrated sidecar has no frame_records")
+    for index, record in enumerate(records):
+        if not isinstance(record, dict) or tuple(record.keys()) != V7_FRAME_RECORD_FIELDS:
+            raise RuntimeError(f"Migrated frame record {index} has unexpected fields")
 
-    for section_name in REQUIRED_SOURCE_SECTIONS:
-        if section_name == "frame_records":
-            records = sidecar.get(
-                section_name
-            )
-            if not isinstance(
-                records,
-                list,
-            ) or not records:
-                raise RuntimeError(
-                    "Migrated sidecar has no frame_records"
-                )
-            continue
-
-        if not isinstance(
-            sidecar.get(
-                section_name
-            ),
-            dict,
-        ):
-            raise RuntimeError(
-                f"Migrated sidecar is missing {section_name}"
-            )
-
-    capture = sidecar[
-        "capture"
-    ]
-
-    for index, record in enumerate(sidecar["frame_records"]):
-        if not isinstance(record, dict):
-            raise RuntimeError(
-                f"Migrated frame record {index} is not an object"
-            )
-
-        if tuple(record.keys()) != V7_FRAME_RECORD_FIELDS:
-            raise RuntimeError(
-                f"Migrated frame record {index} has unexpected fields"
-            )
-
-    camera = sidecar["camera"]
+    camera = sidecar.get("camera")
+    if not isinstance(camera, dict):
+        raise RuntimeError("Migrated sidecar is missing camera metadata")
     box = camera.get("search_bounding_box")
+    if isinstance(box, dict) and set(box) != {"range", "lat", "lon"}:
+        raise RuntimeError("Migrated camera.search_bounding_box is not compact form")
 
-    if isinstance(box, dict):
-        if set(box) != {"range", "lat", "lon"}:
-            raise RuntimeError(
-                "Migrated camera.search_bounding_box is not V7 compact form"
-            )
-
-    if not isinstance(
-        capture.get(
-            "verified"
-        ),
-        bool,
-    ):
-        raise RuntimeError(
-            "Migrated capture.verified is not boolean"
-        )
-
-    lightning_type = str(
-        capture.get(
-            "type",
-            "",
-        ) or ""
-    ).strip().upper()
-
-    if lightning_type not in LIGHTNING_TYPES:
-        raise RuntimeError(
-            f"Migrated capture has invalid type: {lightning_type}"
-        )
-
-    classification = str(
-        capture.get(
-            "classification",
-            "",
-        ) or ""
-    ).strip().upper()
-
-    if capture[
-        "verified"
-    ]:
-        if classification not in FINAL_CLASSIFICATION_CODES:
-            raise RuntimeError(
-                "Verified capture must have one final classification"
-            )
-    elif not valid_hml_signature(
-        classification
-    ):
-        raise RuntimeError(
-            "Unverified capture classification must be an "
-            "H-M-L three-code signature"
-        )
-
-    # Prove that migration changed only the deliberate V7 compact fields.
-    if source_sidecar is not None:
-        expected_camera = compact_search_bounding_box(
-            source_sidecar["camera"]
-        )
-
-        if sidecar["camera"] != expected_camera:
-            raise RuntimeError(
-                "Migration changed camera metadata outside "
-                "search_bounding_box compaction"
-            )
-
-        for section_name in (
-            "candidate",
-            "sensitivity_results",
-        ):
-            if sidecar[section_name] != source_sidecar[section_name]:
-                raise RuntimeError(
-                    f"Migration changed preserved section: {section_name}"
-                )
-
-        expected_records = compact_frame_records(
-            source_sidecar["frame_records"]
-        )
-
-        if sidecar["frame_records"] != expected_records:
-            raise RuntimeError(
-                "Migration produced incorrect V7 frame_records"
-            )
-
-    expected_max_delta, expected_mean_brightness = (
-        capture_brightness_summary(
-            sidecar["frame_records"]
-        )
-    )
-
+    expected_max_delta, expected_mean = capture_brightness_summary(records)
     if capture.get("max_brightness_delta") != expected_max_delta:
-        raise RuntimeError(
-            "Migrated capture.max_brightness_delta is incorrect"
-        )
+        raise RuntimeError("Migrated capture.max_brightness_delta is incorrect")
+    if capture.get("mean_brightness") != expected_mean:
+        raise RuntimeError("Migrated capture.mean_brightness is incorrect")
 
-    if capture.get("mean_brightness") != expected_mean_brightness:
-        raise RuntimeError(
-            "Migrated capture.mean_brightness is incorrect"
-        )
-
+    if source_sidecar is not None:
+        if sidecar["camera"] != compact_search_bounding_box(source_sidecar["camera"]):
+            raise RuntimeError("Migration changed camera metadata outside bounding-box compaction")
+        if sidecar["candidate"] != source_sidecar["candidate"]:
+            raise RuntimeError("Migration changed preserved candidate metadata")
+        if sidecar["frame_records"] != compact_frame_records(source_sidecar["frame_records"]):
+            raise RuntimeError("Migration produced incorrect V8 frame_records")
 
 
 def write_sidecar_temp(
@@ -1387,8 +1195,10 @@ def process_capture(
     print(
         "        "
         f"verified={migrated_sidecar['capture']['verified']}  "
+        f"initial={migrated_sidecar['capture']['initial_classification']}  "
         f"classification={migrated_sidecar['capture']['classification']}  "
-        f"type={migrated_sidecar['capture']['type']}"
+        f"type={migrated_sidecar['capture']['type']}  "
+        f"initial_confidence={migrated_sidecar['capture']['initial_confidence']:.4f}"
         f"{provenance}"
     )
 
@@ -1484,8 +1294,8 @@ def collect_video_files(
 def build_argument_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Migrate Pi Camera Capture MP4/JSON pairs to sidecar version 7 "
-            "without rerunning CandidateFinder or SolutionFilter."
+            "Migrate Pi Camera Capture MP4/JSON pairs to sidecar version 8 "
+            "using the frozen logistic classifier on saved sidecar brightness data."
         )
     )
 

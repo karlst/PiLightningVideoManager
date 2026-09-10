@@ -1,11 +1,11 @@
 """
-Run Pi-side SolutionFilter classification periodically.
+Run Pi-side capture classification periodically.
 
-This small service runner deliberately reuses SolutionFilter batch engine rather than
-creating another classification path. Every interval it scans the capture
-folder. TRUE_FLASH pairs are renamed from trigger_* to flash_* and remain in
-the capture folder. Rejected Candidate pairs are either moved to anomaly
-folders or deleted according to system_config.json.
+This service reuses common.solution_batch so the Pi has one production
+classification path.  Each pass scans pending capture_* pairs, applies the
+frozen logistic FLASH/ANOMALY classifier, optionally uploads eligible pairs to
+S3, and applies the configured false-positive retention policy.  The legacy
+SolutionFilter is not part of this production path.
 
 The capture application and this process remain independent; Linux schedules
 them separately.

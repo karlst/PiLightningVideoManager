@@ -132,94 +132,53 @@ class S3CaptureRepository:
     def _metadata_from_base_key(
         base_key: str,
     ) -> dict[str, Any] | None:
+        """Parse metadata encoded in the canonical V8 S3 base key.
+
+        V8 layouts:
+            unverified/<site>/<stem>
+            verified/FLASH/<type>/<site>/<stem>
+            verified/ANOMALY/<site>/<stem>
+        """
         parts = PurePosixPath(base_key).parts
 
         if not parts:
             return None
 
-        def parse_bucket(text: str, prefix: str) -> int | None:
-            if (
-                len(text) != 4
-                or not text.startswith(prefix)
-                or not text[1:].isdigit()
-            ):
-                return None
-            return int(text[1:])
-
         if parts[0] == "verified":
-            # V7:
-            # verified/<classification>/<type>/dXXX/bXXX/<site>/<stem>
-            if len(parts) == 7:
-                delta = parse_bucket(parts[3], "d")
-                brightness = parse_bucket(parts[4], "b")
-                if delta is None or brightness is None:
-                    return None
+            if len(parts) == 5 and parts[1] == "FLASH":
                 return {
                     "verified": True,
-                    "classification": parts[1],
-                    "type": parts[2],
-                    "max_brightness_delta": delta,
-                    "mean_brightness": brightness,
-                    "site": parts[5],
-                }
-
-            # V6 compatibility.
-            if len(parts) == 5:
-                return {
-                    "verified": True,
-                    "classification": parts[1],
+                    "classification": "FLASH",
                     "type": parts[2],
                     "max_brightness_delta": None,
                     "mean_brightness": None,
                     "site": parts[3],
                 }
 
-        if parts[0] == "unverified":
-            # V7:
-            # unverified/<H-M-L>/dXXX/bXXX/<site>/<stem>
-            if len(parts) == 6:
-                signature = parts[1].split("-")
-                delta = parse_bucket(parts[2], "d")
-                brightness = parse_bucket(parts[3], "b")
-                if (
-                    len(signature) != 3
-                    or not all(signature)
-                    or delta is None
-                    or brightness is None
-                ):
-                    return None
+            if len(parts) == 4 and parts[1] == "ANOMALY":
                 return {
-                    "verified": False,
-                    "classification": parts[1],
-                    "type": "UK",
-                    "max_brightness_delta": delta,
-                    "mean_brightness": brightness,
-                    "site": parts[4],
-                }
-
-            # V6 compatibility.
-            if len(parts) == 4:
-                signature = parts[1].split("-")
-                if len(signature) != 3 or not all(signature):
-                    return None
-                return {
-                    "verified": False,
-                    "classification": parts[1],
+                    "verified": True,
+                    "classification": "ANOMALY",
                     "type": "UK",
                     "max_brightness_delta": None,
                     "mean_brightness": None,
                     "site": parts[2],
                 }
 
+            return None
+
+        if parts[0] == "unverified":
             if len(parts) == 3:
                 return {
                     "verified": False,
-                    "classification": "",
+                    "classification": "FLASH",
                     "type": "UK",
                     "max_brightness_delta": None,
                     "mean_brightness": None,
                     "site": parts[1],
                 }
+
+            return None
 
         return None
 
