@@ -13,7 +13,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=55">
+        href="/static/css/main.css?v=54">
 </head>
 
 <body>
@@ -79,7 +79,10 @@
                         <button class="graphButton" data-window="1">1 HR</button>
                         <button class="graphButton" data-window="6">6 HR</button>
                         <button class="graphButton" data-window="12">12 HR</button>
-                        <button class="graphButton" data-window="24">24H</button>
+                        <button class="graphButton" data-window="24">1 D</button>
+                        <button class="graphButton" data-window="120">5 D</button>
+                        <button class="graphButton" data-window="240">10 D</button>
+                        <button class="graphButton" data-window="720">30 D</button>
 
                     </div>
 
@@ -91,8 +94,8 @@
                 </div>
 
                 <div class="metricGraph">
-                    <div class="metricGraphTitle">Candidates / Captures</div>
-                    <canvas class="historyGraph" id="capture-activity-graph"></canvas>
+                    <div class="metricGraphTitle">Trigger Metric</div>
+                    <canvas class="historyGraph" id="brightness-delta-graph"></canvas>
                 </div>
 
             </section>
@@ -111,7 +114,7 @@
                     class="ccButton ccButtonDanger"
                     id="buffer-capture-button"
                     type="button">
-                    Manual Trigger
+                    Capture Frames
                 </button>
 
                 <button
@@ -142,6 +145,12 @@
                     Camera Settings...
                 </button>
 
+                <button
+                    class="ccButton ccButtonSecondary"
+                    id="show-event-log-button"
+                    type="button">
+                    Show Event Log...
+                </button>
 
                 <button
                     class="ccButton"
@@ -166,16 +175,14 @@
 
                     <div>Version</div><div id="summary-version-value">--</div>
                     <div>Started UTC</div><div id="summary-started-value">--</div>
+                    <div>Trigger</div><div id="summary-trigger-value">--</div>
                     <div>Sensitivity</div><div id="summary-sensitivity-value">--</div>
                     <div>FPS</div><div id="summary-fps-value">--</div>
                     <div>Chip Temp</div><div id="summary-chip-temp-value">-- °C</div>
+                    <div>Buffer</div><div id="summary-buffer-value">-- / --</div>
                     <div>Frames</div><div id="summary-frames-value">--</div>
                     <div>RAM</div><div id="summary-ram-value">-- MB</div>
-                    <div>PSF</div><div id="summary-psf-value">--</div>
-                    <div>Captures 1H</div><div id="summary-captures-hour-value">--</div>
-                    <div>Classifications 1H</div><div id="summary-classifications-hour-value">--</div>
-                    <div>S3 Uploads 1H</div><div id="summary-s3-hour-value">--</div>
-                    <div>Last S3 Upload</div><div id="summary-s3-last-value">--</div>
+                    <div>Preview</div><div id="summary-preview-value">--</div>
                     <div>Last Error</div><div id="summary-error-value">--</div>
 
                 </div>

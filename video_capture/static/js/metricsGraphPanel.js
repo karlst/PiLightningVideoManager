@@ -328,9 +328,10 @@ export class MetricsGraphPanel
         const telemetry =
             this._captureTelemetry || {};
 
-        // The backend keeps a dedicated ten-bucket, 30-second view for the
-        // 5-minute graph. Longer graph windows continue to use the 5-minute
-        // buckets maintained for the full 24-hour session.
+        // The backend keeps a second, high-resolution telemetry window
+        // for the latest five minutes.  Use those 30-second buckets only
+        // for the 5 MIN graph; longer windows continue to use the normal
+        // 5-minute / 24-hour buckets.
         const useRecentTelemetry =
             this._getWindowSeconds() <= (5 * 60 + 1);
 
@@ -365,15 +366,44 @@ export class MetricsGraphPanel
                 }
             );
 
-        let maxCandidates = 1;
+        let maxActivity = 1;
 
         visible.forEach(
             (bucket) =>
             {
-                maxCandidates =
+                const candidates =
                     Math.max(
-                        maxCandidates,
+                        0,
                         Number(bucket.candidates ?? 0)
+                    );
+
+                const captures =
+                    Math.max(
+                        0,
+                        Number(bucket.captures ?? 0)
+                    );
+
+                const automaticCaptures =
+                    Math.min(
+                        candidates,
+                        Math.max(
+                            0,
+                            Number(bucket.automatic_captures ?? 0)
+                        )
+                    );
+
+                const candidateOnly =
+                    Math.max(
+                        0,
+                        candidates - automaticCaptures
+                    );
+
+                // Captures includes both automatic and manual captures.
+                // Candidate-only events stack above the captured events.
+                maxActivity =
+                    Math.max(
+                        maxActivity,
+                        captures + candidateOnly
                     );
             }
         );
@@ -384,7 +414,7 @@ export class MetricsGraphPanel
                 canvas.width,
                 canvas.height,
                 0,
-                maxCandidates,
+                maxActivity,
                 false
             );
 
@@ -439,6 +469,12 @@ export class MetricsGraphPanel
                         );
 
                     const captures =
+                        Math.max(
+                            0,
+                            Number(bucket.captures ?? 0)
+                        );
+
+                    const automaticCaptures =
                         Math.min(
                             candidates,
                             Math.max(
@@ -450,12 +486,12 @@ export class MetricsGraphPanel
                     const candidateOnly =
                         Math.max(
                             0,
-                            candidates - captures
+                            candidates - automaticCaptures
                         );
 
                     const scale =
                         (plot.bottom - plot.top) /
-                        maxCandidates;
+                        maxActivity;
 
                     const capturedHeight =
                         captures * scale;
