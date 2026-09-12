@@ -357,11 +357,6 @@ export class StatusPanel
             result.application_start_utc ?? "--"
         );
 
-        setElementText(
-            "summary-trigger-value",
-            result.trigger_enabled ? "Enabled" : "Disabled"
-        );
-
         const sensitivity =
             result.
                 trigger_status?.
@@ -389,11 +384,6 @@ export class StatusPanel
         );
 
         setElementText(
-            "summary-buffer-value",
-            `${result.buffer_count ?? "--"} / ${result.buffer_capacity ?? "--"}`
-        );
-
-        setElementText(
             "summary-frames-value",
             result.camera_frames ?? "--"
         );
@@ -401,13 +391,6 @@ export class StatusPanel
         setElementText(
             "summary-ram-value",
             `${memoryMb} MB`
-        );
-
-        setElementText(
-            "summary-preview-value",
-            formatOnOff(
-                result.preview_running
-            )
         );
 
         const captureTelemetry =
