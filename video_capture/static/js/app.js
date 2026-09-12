@@ -6,7 +6,7 @@ import
 {
     StatusPanel
 }
-from "./statusPanel.js?v=32";
+from "./statusPanel.js?v=34";
 
 import
 {
@@ -36,13 +36,13 @@ import
 {
     MetricsGraphPanel
 }
-from "./metricsGraphPanel.js?v=37";
+from "./metricsGraphPanel.js?v=39";
 
 import
 {
     DialogPanel
 }
-from "./dialogPanel.js?v=32";
+from "./dialogPanel.js?v=33";
 
 import
 {
@@ -101,8 +101,13 @@ function initializePage()
 
     const triggerManager =
         new TriggerManager();
-        
-            
+
+    statusPanel.setSystemSampleHandler(
+        (result) => metricsGraphPanel.updateTelemetry(
+            result
+        )
+    );
+
     triggerManager.initialize();
 
     

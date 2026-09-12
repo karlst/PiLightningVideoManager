@@ -328,10 +328,9 @@ export class MetricsGraphPanel
         const telemetry =
             this._captureTelemetry || {};
 
-        // The backend keeps a second, high-resolution telemetry window
-        // for the latest five minutes.  Use those 30-second buckets only
-        // for the 5 MIN graph; longer windows continue to use the normal
-        // 5-minute / 24-hour buckets.
+        // The backend keeps a dedicated ten-bucket, 30-second view for the
+        // 5-minute graph. Longer graph windows continue to use the 5-minute
+        // buckets maintained for the full 24-hour session.
         const useRecentTelemetry =
             this._getWindowSeconds() <= (5 * 60 + 1);
 
@@ -398,8 +397,6 @@ export class MetricsGraphPanel
                         candidates - automaticCaptures
                     );
 
-                // Captures includes both automatic and manual captures.
-                // Candidate-only events stack above the captured events.
                 maxActivity =
                     Math.max(
                         maxActivity,
