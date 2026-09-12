@@ -54,6 +54,87 @@ function formatOnOff(value)
 }
 
 
+
+
+// ## Sum selected telemetry fields over buckets overlapping the last N minutes.
+function sumRecentBuckets(telemetry, minutes, fields)
+{
+    const totals = {};
+
+    fields.forEach(
+        (field) =>
+        {
+            totals[field] = 0;
+        }
+    );
+
+    const buckets =
+        Array.isArray(telemetry?.buckets)
+            ? telemetry.buckets
+            : [];
+
+    const bucketSeconds =
+        Number(telemetry?.bucket_seconds ?? 300);
+
+    const cutoffMs =
+        Date.now() - (minutes * 60 * 1000);
+
+    buckets.forEach(
+        (bucket) =>
+        {
+            const startMs =
+                Date.parse(bucket?.start_utc ?? "");
+
+            if (
+                Number.isFinite(startMs) &&
+                (startMs + bucketSeconds * 1000) > cutoffMs
+            )
+            {
+                fields.forEach(
+                    (field) =>
+                    {
+                        totals[field] +=
+                            Number(bucket?.[field] ?? 0);
+                    }
+                );
+            }
+        }
+    );
+
+    return totals;
+}
+
+
+// ## Compact UTC timestamp for status rows.
+function formatUtcTimestamp(value)
+{
+    if (!value)
+    {
+        return "--";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime()))
+    {
+        return String(value);
+    }
+
+    return date.toLocaleString(
+        undefined,
+        {
+            timeZone: "UTC",
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+            hour12: false
+        }
+    ) + " UTC";
+}
+
+
 // ## Updates the top status bar and operational status panel.
 export class StatusPanel
 {
@@ -329,9 +410,110 @@ export class StatusPanel
             )
         );
 
+        const captureTelemetry =
+            result.capture_telemetry || {};
+
+        const psfTelemetry =
+            result.psf_telemetry || {};
+
+        let psfText =
+            "Not running";
+
+        if (psfTelemetry.available)
+        {
+            psfText =
+                psfTelemetry.running
+                    ? "Running"
+                    : "Not running (stale)";
+        }
+
+        setElementText(
+            "summary-psf-value",
+            psfText
+        );
+
+        const captureHour =
+            sumRecentBuckets(
+                captureTelemetry,
+                60,
+                ["captures"]
+            );
+
+        setElementText(
+            "summary-captures-hour-value",
+            captureTelemetry.available
+                ? String(captureHour.captures)
+                : "--"
+        );
+
+        const psfHour =
+            sumRecentBuckets(
+                psfTelemetry,
+                60,
+                [
+                    "flash",
+                    "anomaly",
+                    "s3_success",
+                    "s3_failure"
+                ]
+            );
+
+        setElementText(
+            "summary-classifications-hour-value",
+            psfTelemetry.available
+                ? (
+                    `${psfHour.flash} FLASH / ` +
+                    `${psfHour.anomaly} ANOMALY`
+                )
+                : "--"
+        );
+
+        const fieldPi =
+            psfTelemetry.ap_active === true;
+
+        let s3HourText = "--";
+        let s3LastText = "--";
+
+        if (fieldPi)
+        {
+            s3HourText = "N/A — offline";
+            s3LastText = "N/A — offline";
+        }
+        else if (psfTelemetry.available)
+        {
+            if (psfTelemetry.configured_upload_to_s3 === false)
+            {
+                s3HourText = "Disabled";
+                s3LastText = "Disabled";
+            }
+            else
+            {
+                s3HourText =
+                    `${psfHour.s3_success} OK / ` +
+                    `${psfHour.s3_failure} failed`;
+
+                s3LastText =
+                    formatUtcTimestamp(
+                        psfTelemetry.last_upload_utc
+                    );
+            }
+        }
+
+        setElementText(
+            "summary-s3-hour-value",
+            s3HourText
+        );
+
+        setElementText(
+            "summary-s3-last-value",
+            s3LastText
+        );
+
         setElementText(
             "summary-error-value",
-            result.last_error || "None"
+            result.last_error ||
+            psfTelemetry.last_error ||
+            "None"
         );
     }
 }

@@ -13,9 +13,9 @@ export class MetricsGraphPanel
     {
         this._iGraphWindowHours = 1;
         this._aMetricHistory = [];
+        this._captureTelemetry = null;
         this._mode = "live";
         this._aCaptureMetrics = [];
-        this._captureName = "";
         this._captureCursorFrameIndex = null;
         this._piTriggerFrameIndex = null;
         this._replayTriggerFrameIndex = null;
@@ -28,12 +28,9 @@ export class MetricsGraphPanel
             {
                 button.addEventListener(
                     "click",
-                    () =>
-                    {
-                        this.setGraphWindow(
-                            Number(button.dataset.window)
-                        );
-                    }
+                    () => this.setGraphWindow(
+                        Number(button.dataset.window)
+                    )
                 );
             }
         );
@@ -48,22 +45,27 @@ export class MetricsGraphPanel
         this.updateMetricHistory();
     }
 
-    
+    updateTelemetry(result)
+    {
+        this._captureTelemetry =
+            result?.capture_telemetry || null;
+
+        this.drawAllGraphs();
+    }
 
     async updateMetricHistory()
     {
         try
         {
-            const result = await getJson("/metrics_history");
+            const result =
+                await getJson("/metrics_history");
 
             if (result.success)
             {
-                this._aMetricHistory = result.metrics;
+                this._aMetricHistory =
+                    result.metrics || [];
 
-                if (this._mode === "live")
-                {
-                    this.drawAllGraphs();
-                }
+                this.drawAllGraphs();
             }
         }
         catch (error)
@@ -72,23 +74,14 @@ export class MetricsGraphPanel
         }
     }
 
-    // ## Replace long-term live graphs with frame-by-frame capture graphs.
     showCaptureMetrics(captureFile)
     {
         const analysis =
             captureFile?.analysis || {};
 
-        this._mode =
-            "capture";
-
+        this._mode = "capture";
         this._aCaptureMetrics =
             analysis.frame_records || [];
-
-        this._captureName =
-            captureFile?.capture_time_display ||
-            captureFile?.display_name ||
-            captureFile?.name ||
-            "Capture";
 
         this._piTriggerFrameIndex =
             this._getInitialCaptureCursorFrameIndex(
@@ -98,45 +91,23 @@ export class MetricsGraphPanel
         this._captureCursorFrameIndex =
             this._piTriggerFrameIndex;
 
-        this._replayTriggerFrameIndex =
-            null;
+        this._replayTriggerFrameIndex = null;
 
-        this._setGraphButtonsVisible(
-            false
-        );
-
+        this._setGraphButtonsVisible(false);
         this.drawAllGraphs();
     }
 
-    // ## Return graph stack to long-term live metrics mode.
     showLiveMetrics()
     {
-        this._mode =
-            "live";
-
-        this._aCaptureMetrics =
-            [];
-
-        this._captureName =
-            "";
-
-        this._captureCursorFrameIndex =
-            null;
-
-        this._piTriggerFrameIndex =
-            null;
-
-        this._replayTriggerFrameIndex =
-            null;
-
-        this._setGraphButtonsVisible(
-            true
-        );
-
+        this._mode = "live";
+        this._aCaptureMetrics = [];
+        this._captureCursorFrameIndex = null;
+        this._piTriggerFrameIndex = null;
+        this._replayTriggerFrameIndex = null;
+        this._setGraphButtonsVisible(true);
         this.drawAllGraphs();
     }
 
-    // ## Move the capture graph cursor to match the current playback frame.
     setCaptureCursorFrameIndex(frameIndex)
     {
         if (this._mode === "capture")
@@ -150,7 +121,6 @@ export class MetricsGraphPanel
         }
     }
 
-    // ## Set the CandidateFinder replay trigger marker on capture graphs.
     setCaptureReplayTriggerFrameIndex(frameIndex)
     {
         if (this._mode === "capture")
@@ -163,7 +133,6 @@ export class MetricsGraphPanel
             this.drawAllGraphs();
         }
     }
-
 
     setGraphWindow(iHours)
     {
@@ -186,10 +155,18 @@ export class MetricsGraphPanel
     {
         if (this._mode === "capture")
         {
-            this._drawCaptureGraphs();
-            return;
+            this._drawCaptureBrightness();
+        }
+        else
+        {
+            this._drawLiveBrightness();
         }
 
+        this._drawCaptureActivity();
+    }
+
+    _drawLiveBrightness()
+    {
         const metrics =
             this._getVisibleMetrics();
 
@@ -201,317 +178,93 @@ export class MetricsGraphPanel
             "Brightness",
             "Moving average"
         );
-
-        this._drawOneSeriesGraph(
-            "brightness-delta-graph",
-            metrics,
-            "brightness_delta",
-            "Delta brightness"
-        );
     }
 
-    // ## Draw frame-by-frame metrics for the currently selected capture.
-    _drawCaptureGraphs()
+    _drawCaptureBrightness()
     {
         const records =
             this._aCaptureMetrics;
 
-        this._drawCaptureOneSeriesGraph(
-            "brightness-graph",
-            records,
-            "mean_brightness",
-            "Brightness"
-        );
-
-        this._drawCaptureOneSeriesGraph(
-            "brightness-delta-graph",
-            records,
-            "brightness_delta_adjacent",
-            "Delta brightness"
-        );
-    }
-    
-
-    // ## Hide graph time-window buttons during capture playback.
-    _setGraphButtonsVisible(visible)
-    {
-        const buttonBar =
-            document.querySelector(
-                ".graphButtonBar"
+        const canvas =
+            document.getElementById(
+                "brightness-graph"
             );
 
-        if (buttonBar !== null)
+        if (canvas === null)
         {
-            buttonBar.style.display =
-                visible ? "" : "none";
-        }
-    }
-
-    
-
-    
-
-    _getNewestMetricTime()
-    {
-        let newestTime = 0.0;
-
-        if (this._aMetricHistory.length > 0)
-        {
-            const newestMetric =
-                this._aMetricHistory[
-                    this._aMetricHistory.length - 1
-                ];
-
-            newestTime =
-                Number(newestMetric.timestamp_monotonic ?? 0.0);
+            return;
         }
 
-        return newestTime;
-    }
+        this._resizeCanvas(canvas);
 
-    _getVisibleMetrics()
-    {
-        let visibleMetrics = [];
+        const context =
+            canvas.getContext("2d");
 
-        if (this._aMetricHistory.length > 0)
-        {
-            const newestTime = this._getNewestMetricTime();
-
-            const minimumTime =
-                newestTime - this._getWindowSeconds();
-
-            visibleMetrics =
-                this._aMetricHistory.filter(
-                    (metric) =>
-                    {
-                        return (
-                            Number(metric.timestamp_monotonic ?? 0.0) >=
-                            minimumTime
-                        );
-                    }
-                );
-        }
-
-        return visibleMetrics;
-    }
-
-    
-
-    _getWindowSeconds()
-    {
-        return (
-            this._iGraphWindowHours *
-            60.0 *
-            60.0
-        );
-    }
-
-    _resizeCanvas(canvas)
-    {
-        const rect = canvas.getBoundingClientRect();
-
-        canvas.width =
-            Math.max(
-                1,
-                Math.floor(rect.width)
+        const values =
+            records.map(
+                (record) => Number(
+                    record.mean_brightness ?? 0
+                )
             );
 
-        canvas.height =
-            Math.max(
-                1,
-                Math.floor(rect.height)
-            );
-    }
+        const limits =
+            this._getValueLimits(values);
 
-    _drawAxes(
-        context,
-        width,
-        height,
-        minValue,
-        maxValue
-    )
-    {
         const plot =
-        {
-            left: 46,
-            right: width - 8,
-            top: 8,
-            bottom: height - 38
-        };
-
-        context.clearRect(0, 0, width, height);
-
-        context.strokeStyle = "#d0d0d0";
-        context.lineWidth = 1;
-
-        for (let iGrid = 0; iGrid <= 4; iGrid += 1)
-        {
-            const y =
-                plot.top +
-                (
-                    (plot.bottom - plot.top) *
-                    iGrid /
-                    4
-                );
-
-            context.beginPath();
-            context.moveTo(plot.left, y);
-            context.lineTo(plot.right, y);
-            context.stroke();
-        }
-
-        context.strokeStyle = "#888888";
-
-        context.beginPath();
-        context.moveTo(plot.left, plot.top);
-        context.lineTo(plot.left, plot.bottom);
-        context.lineTo(plot.right, plot.bottom);
-        context.stroke();
-
-        this._drawXAxis(
-            context,
-            plot
-        );
-
-        context.fillStyle = "#333333";
-        context.font = "10px Arial";
-        context.textAlign = "left";
-
-        context.fillText(
-            maxValue.toFixed(1),
-            4,
-            plot.top + 8
-        );
-
-        context.fillText(
-            minValue.toFixed(1),
-            4,
-            plot.bottom
-        );
-
-        return plot;
-    }
-
-    _drawXAxis(
-        context,
-        plot
-    )
-    {
-        context.fillStyle = "#333333";
-        context.font = "10px Arial";
-        context.textAlign = "center";
-
-        const tickCount = 4;
-
-        for (let iTick = 0; iTick <= tickCount; iTick += 1)
-        {
-            const fraction =
-                iTick / tickCount;
-
-            const x =
-                plot.left +
-                (
-                    (plot.right - plot.left) *
-                    fraction
-                );
-
-            const ageSeconds =
-                -this._getWindowSeconds() *
-                (1.0 - fraction);
-
-            context.beginPath();
-            context.moveTo(x, plot.bottom);
-            context.lineTo(x, plot.bottom + 4);
-            context.stroke();
-
-            context.fillText(
-                this._formatXAxisLabel(ageSeconds),
-                x,
-                plot.bottom + 22
+            this._drawAxes(
+                context,
+                canvas.width,
+                canvas.height,
+                limits.minValue,
+                limits.maxValue,
+                true
             );
-        }
-    }
 
-    _formatXAxisLabel(ageSeconds)
-    {
-        let label = "now";
+        if (records.length >= 2)
+        {
+            const durationMs =
+                Math.max(
+                    1,
+                    Number(
+                        records[records.length - 1].offset_ms ?? 0
+                    )
+                );
 
-        const ageMagnitude =
-            Math.abs(ageSeconds);
-
-        if (ageMagnitude >= 24.0 * 60.0 * 60.0)
-        {
-            label =
-                `-${(ageMagnitude / (24.0 * 60.0 * 60.0)).toFixed(0)}d`;
-        }
-        else if (ageMagnitude >= 60.0 * 60.0)
-        {
-            label =
-                `-${(ageMagnitude / (60.0 * 60.0)).toFixed(1)}h`;
-        }
-        else if (ageMagnitude >= 60.0)
-        {
-            label =
-                `-${(ageMagnitude / 60.0).toFixed(0)}m`;
-        }
-        else
-        {
-            label =
-                `-${ageMagnitude.toFixed(0)}s`;
-        }
-
-        return label;
-    }
-
-    _drawLine(
-        context,
-        plot,
-        samples,
-        valueKey,
-        minValue,
-        maxValue,
-        newestTimeSeconds,
-        strokeStyle
-    )
-    {
-        if (samples.length >= 2)
-        {
             const valueRange =
                 Math.max(
                     0.000001,
-                    maxValue - minValue
+                    limits.maxValue - limits.minValue
                 );
 
-            context.strokeStyle = strokeStyle;
+            context.strokeStyle = "#2f80ed";
             context.lineWidth = 1.5;
-
             context.beginPath();
 
-            samples.forEach(
-                (sample, index) =>
+            records.forEach(
+                (record, index) =>
                 {
-                    const sampleTimeSeconds =
-                        this._getSampleTimeSeconds(sample);
-
-                    const ageSeconds =
-                        sampleTimeSeconds - newestTimeSeconds;
-
-                    const x =
-                        this._xAgeSecondsToPixel(
-                            plot,
-                            ageSeconds
+                    const fraction =
+                        Math.max(
+                            0,
+                            Math.min(
+                                1,
+                                Number(record.offset_ms ?? 0) /
+                                durationMs
+                            )
                         );
 
+                    const x =
+                        plot.left +
+                        (plot.right - plot.left) * fraction;
+
                     const value =
-                        Number(sample[valueKey] ?? 0.0);
+                        Number(record.mean_brightness ?? 0);
 
                     const y =
                         plot.bottom -
-                        (
-                            (value - minValue) *
-                            (plot.bottom - plot.top) /
-                            valueRange
-                        );
+                        (value - limits.minValue) *
+                        (plot.bottom - plot.top) /
+                        valueRange;
 
                     if (index === 0)
                     {
@@ -525,7 +278,213 @@ export class MetricsGraphPanel
             );
 
             context.stroke();
+
+            this._drawCaptureMarker(
+                context,
+                plot,
+                records,
+                this._piTriggerFrameIndex,
+                "#7a3db8",
+                "Pi"
+            );
+
+            this._drawCaptureMarker(
+                context,
+                plot,
+                records,
+                this._replayTriggerFrameIndex,
+                "#d47a00",
+                "Replay"
+            );
+
+            this._drawCaptureMarker(
+                context,
+                plot,
+                records,
+                this._captureCursorFrameIndex,
+                "#c00020",
+                "Frame"
+            );
         }
+    }
+
+    _drawCaptureActivity()
+    {
+        const canvas =
+            document.getElementById(
+                "capture-activity-graph"
+            );
+
+        if (canvas === null)
+        {
+            return;
+        }
+
+        this._resizeCanvas(canvas);
+
+        const context =
+            canvas.getContext("2d");
+
+        const telemetry =
+            this._captureTelemetry || {};
+
+        const buckets =
+            Array.isArray(telemetry.buckets)
+                ? telemetry.buckets
+                : [];
+
+        const bucketSeconds =
+            Number(telemetry.bucket_seconds ?? 300);
+
+        const cutoffMs =
+            Date.now() -
+            this._getWindowSeconds() * 1000;
+
+        const visible =
+            buckets.filter(
+                (bucket) =>
+                {
+                    const startMs =
+                        Date.parse(bucket?.start_utc ?? "");
+
+                    return (
+                        Number.isFinite(startMs) &&
+                        startMs + bucketSeconds * 1000 > cutoffMs
+                    );
+                }
+            );
+
+        let maxCandidates = 1;
+
+        visible.forEach(
+            (bucket) =>
+            {
+                maxCandidates =
+                    Math.max(
+                        maxCandidates,
+                        Number(bucket.candidates ?? 0)
+                    );
+            }
+        );
+
+        const plot =
+            this._drawAxes(
+                context,
+                canvas.width,
+                canvas.height,
+                0,
+                maxCandidates,
+                false
+            );
+
+        if (visible.length > 0)
+        {
+            const newestStartMs =
+                Math.max(
+                    ...visible.map(
+                        (bucket) =>
+                            Date.parse(bucket.start_utc)
+                    )
+                );
+
+            const newestEndMs =
+                newestStartMs + bucketSeconds * 1000;
+
+            const windowMs =
+                this._getWindowSeconds() * 1000;
+
+            const availableWidth =
+                plot.right - plot.left;
+
+            const nominalBarWidth =
+                Math.max(
+                    1,
+                    availableWidth *
+                    (bucketSeconds * 1000) /
+                    windowMs
+                );
+
+            visible.forEach(
+                (bucket) =>
+                {
+                    const bucketStartMs =
+                        Date.parse(bucket.start_utc);
+
+                    const ageMs =
+                        bucketStartMs - newestEndMs;
+
+                    const fraction =
+                        (ageMs + windowMs) /
+                        windowMs;
+
+                    const x =
+                        plot.left +
+                        availableWidth * fraction;
+
+                    const candidates =
+                        Math.max(
+                            0,
+                            Number(bucket.candidates ?? 0)
+                        );
+
+                    const captures =
+                        Math.min(
+                            candidates,
+                            Math.max(
+                                0,
+                                Number(bucket.automatic_captures ?? 0)
+                            )
+                        );
+
+                    const candidateOnly =
+                        Math.max(
+                            0,
+                            candidates - captures
+                        );
+
+                    const scale =
+                        (plot.bottom - plot.top) /
+                        maxCandidates;
+
+                    const capturedHeight =
+                        captures * scale;
+
+                    const candidateOnlyHeight =
+                        candidateOnly * scale;
+
+                    context.fillStyle = "#2f80ed";
+                    context.fillRect(
+                        x,
+                        plot.bottom - capturedHeight,
+                        Math.max(1, nominalBarWidth - 1),
+                        capturedHeight
+                    );
+
+                    context.fillStyle = "#d6a348";
+                    context.fillRect(
+                        x,
+                        plot.bottom - capturedHeight - candidateOnlyHeight,
+                        Math.max(1, nominalBarWidth - 1),
+                        candidateOnlyHeight
+                    );
+                }
+            );
+        }
+
+        context.font = "10px Arial";
+        context.textAlign = "left";
+        context.fillStyle = "#2f80ed";
+        context.fillText(
+            "Captured",
+            plot.left + 4,
+            plot.top + 12
+        );
+        context.fillStyle = "#d6a348";
+        context.fillText(
+            "Candidate only",
+            plot.left + 72,
+            plot.top + 12
+        );
     }
 
     _drawTwoSeriesGraph(
@@ -540,243 +499,145 @@ export class MetricsGraphPanel
         const canvas =
             document.getElementById(canvasId);
 
-        if (canvas !== null)
+        if (canvas === null)
         {
-            this._resizeCanvas(canvas);
-
-            const context =
-                canvas.getContext("2d");
-
-            const valuesA =
-                metrics.map(
-                    (metric) =>
-                    {
-                        return Number(metric[keyA] ?? 0.0);
-                    }
-                );
-
-            const valuesB =
-                metrics.map(
-                    (metric) =>
-                    {
-                        return Number(metric[keyB] ?? 0.0);
-                    }
-                );
-
-            const limits =
-                this._getValueLimits(
-                    valuesA.concat(valuesB)
-                );
-
-            const plot =
-                this._drawAxes(
-                    context,
-                    canvas.width,
-                    canvas.height,
-                    limits.minValue,
-                    limits.maxValue
-                );
-
-            const newestTimeSeconds =
-                this._getNewestMetricTime();
-
-            this._drawLine(
-                context,
-                plot,
-                metrics,
-                keyA,
-                limits.minValue,
-                limits.maxValue,
-                newestTimeSeconds,
-                "#2f80ed"
-            );
-
-            this._drawLine(
-                context,
-                plot,
-                metrics,
-                keyB,
-                limits.minValue,
-                limits.maxValue,
-                newestTimeSeconds,
-                "#d35400"
-            );
-
-            context.fillStyle = "#2f80ed";
-            context.textAlign = "left";
-
-            context.fillText(
-                labelA,
-                plot.left + 4,
-                plot.top + 12
-            );
-
-            context.fillStyle = "#d35400";
-
-            context.fillText(
-                labelB,
-                plot.left + 110,
-                plot.top + 12
-            );
+            return;
         }
+
+        this._resizeCanvas(canvas);
+        const context = canvas.getContext("2d");
+
+        const values = [];
+        metrics.forEach(
+            (metric) =>
+            {
+                values.push(Number(metric[keyA] ?? 0));
+                values.push(Number(metric[keyB] ?? 0));
+            }
+        );
+
+        const limits =
+            this._getValueLimits(values);
+
+        const plot =
+            this._drawAxes(
+                context,
+                canvas.width,
+                canvas.height,
+                limits.minValue,
+                limits.maxValue,
+                false
+            );
+
+        const newestTime =
+            this._getNewestMetricTime();
+
+        this._drawLine(
+            context,
+            plot,
+            metrics,
+            keyA,
+            limits,
+            newestTime,
+            "#2f80ed"
+        );
+
+        this._drawLine(
+            context,
+            plot,
+            metrics,
+            keyB,
+            limits,
+            newestTime,
+            "#d35400"
+        );
+
+        context.font = "10px Arial";
+        context.textAlign = "left";
+        context.fillStyle = "#2f80ed";
+        context.fillText(labelA, plot.left + 4, plot.top + 12);
+        context.fillStyle = "#d35400";
+        context.fillText(labelB, plot.left + 90, plot.top + 12);
     }
 
-    _drawOneSeriesGraph(
-        canvasId,
-        metrics,
+    _drawLine(
+        context,
+        plot,
+        samples,
         key,
-        label
+        limits,
+        newestTime,
+        strokeStyle
     )
     {
-        const canvas =
-            document.getElementById(canvasId);
-
-        if (canvas !== null)
+        if (samples.length < 2)
         {
-            this._resizeCanvas(canvas);
-
-            const context =
-                canvas.getContext("2d");
-
-            const values =
-                metrics.map(
-                    (metric) =>
-                    {
-                        return Number(metric[key] ?? 0.0);
-                    }
-                );
-
-            const limits =
-                this._getValueLimits(values);
-
-            const plot =
-                this._drawAxes(
-                    context,
-                    canvas.width,
-                    canvas.height,
-                    limits.minValue,
-                    limits.maxValue
-                );
-
-            const newestTimeSeconds =
-                this._getNewestMetricTime();
-
-            this._drawLine(
-                context,
-                plot,
-                metrics,
-                key,
-                limits.minValue,
-                limits.maxValue,
-                newestTimeSeconds,
-                "#2f80ed"
-            );
-
-            context.fillStyle = "#2f80ed";
-            context.textAlign = "left";
-
-            context.fillText(
-                label,
-                plot.left + 4,
-                plot.top + 12
-            );
+            return;
         }
+
+        const valueRange =
+            Math.max(
+                0.000001,
+                limits.maxValue - limits.minValue
+            );
+
+        context.strokeStyle = strokeStyle;
+        context.lineWidth = 1.5;
+        context.beginPath();
+
+        samples.forEach(
+            (sample, index) =>
+            {
+                const sampleTime =
+                    Number(sample.timestamp_monotonic ?? 0);
+
+                const ageSeconds =
+                    sampleTime - newestTime;
+
+                const fraction =
+                    Math.max(
+                        0,
+                        Math.min(
+                            1,
+                            (ageSeconds + this._getWindowSeconds()) /
+                            this._getWindowSeconds()
+                        )
+                    );
+
+                const x =
+                    plot.left +
+                    (plot.right - plot.left) * fraction;
+
+                const value =
+                    Number(sample[key] ?? 0);
+
+                const y =
+                    plot.bottom -
+                    (value - limits.minValue) *
+                    (plot.bottom - plot.top) /
+                    valueRange;
+
+                if (index === 0)
+                {
+                    context.moveTo(x, y);
+                }
+                else
+                {
+                    context.lineTo(x, y);
+                }
+            }
+        );
+
+        context.stroke();
     }
 
-    
-
-    // ## Draw one capture-local metric using offset_ms as the x-axis.
-    _drawCaptureOneSeriesGraph(
-        canvasId,
-        records,
-        key,
-        label
-    )
-    {
-        const canvas =
-            document.getElementById(canvasId);
-
-        if (canvas !== null)
-        {
-            this._resizeCanvas(canvas);
-
-            const context =
-                canvas.getContext("2d");
-
-            const values =
-                records.map(
-                    (record) =>
-                    {
-                        return Number(record[key] ?? 0.0);
-                    }
-                );
-
-            const limits =
-                this._getValueLimits(values);
-
-            const plot =
-                this._drawCaptureAxes(
-                    context,
-                    canvas.width,
-                    canvas.height,
-                    limits.minValue,
-                    limits.maxValue,
-                    records
-                );
-
-            this._drawCaptureLine(
-                context,
-                plot,
-                records,
-                key,
-                limits.minValue,
-                limits.maxValue,
-                "#2f80ed"
-            );
-
-            this._drawCaptureTriggerMarker(
-                context,
-                plot,
-                records,
-                this._piTriggerFrameIndex,
-                "#7a3db8",
-                "Pi"
-            );
-
-            this._drawCaptureTriggerMarker(
-                context,
-                plot,
-                records,
-                this._replayTriggerFrameIndex,
-                "#d47a00",
-                "Replay"
-            );
-
-            this._drawCaptureCursor(
-                context,
-                plot,
-                records
-            );
-
-            context.fillStyle = "#2f80ed";
-            context.textAlign = "left";
-
-            context.fillText(
-                label,
-                plot.left + 4,
-                plot.top + 12
-            );
-        }
-    }
-
-    // ## Draw capture graph axes using capture-relative milliseconds.
-    _drawCaptureAxes(
+    _drawAxes(
         context,
         width,
         height,
         minValue,
         maxValue,
-        records
+        captureMode
     )
     {
         const plot =
@@ -788,19 +649,14 @@ export class MetricsGraphPanel
         };
 
         context.clearRect(0, 0, width, height);
-
         context.strokeStyle = "#d0d0d0";
         context.lineWidth = 1;
 
-        for (let iGrid = 0; iGrid <= 4; iGrid += 1)
+        for (let index = 0; index <= 4; index += 1)
         {
             const y =
                 plot.top +
-                (
-                    (plot.bottom - plot.top) *
-                    iGrid /
-                    4
-                );
+                (plot.bottom - plot.top) * index / 4;
 
             context.beginPath();
             context.moveTo(plot.left, y);
@@ -809,69 +665,57 @@ export class MetricsGraphPanel
         }
 
         context.strokeStyle = "#888888";
-
         context.beginPath();
         context.moveTo(plot.left, plot.top);
         context.lineTo(plot.left, plot.bottom);
         context.lineTo(plot.right, plot.bottom);
         context.stroke();
 
-        this._drawCaptureXAxis(
-            context,
-            plot,
-            records
-        );
-
         context.fillStyle = "#333333";
         context.font = "10px Arial";
         context.textAlign = "left";
-
         context.fillText(
-            maxValue.toFixed(1),
+            Number(maxValue).toFixed(
+                Number.isInteger(maxValue) ? 0 : 1
+            ),
             4,
             plot.top + 8
         );
-
         context.fillText(
-            minValue.toFixed(1),
+            Number(minValue).toFixed(
+                Number.isInteger(minValue) ? 0 : 1
+            ),
             4,
             plot.bottom
         );
 
+        if (!captureMode)
+        {
+            this._drawTimeAxis(
+                context,
+                plot
+            );
+        }
+
         return plot;
     }
 
-    // ## Draw capture-local x-axis labels from 0 to capture duration.
-    _drawCaptureXAxis(
-        context,
-        plot,
-        records
-    )
+    _drawTimeAxis(context, plot)
     {
         context.fillStyle = "#333333";
         context.font = "10px Arial";
         context.textAlign = "center";
 
-        const tickCount = 4;
-        const durationMs =
-            this._getCaptureDurationMs(
-                records
-            );
-
-        for (let iTick = 0; iTick <= tickCount; iTick += 1)
+        for (let index = 0; index <= 4; index += 1)
         {
-            const fraction =
-                iTick / tickCount;
-
+            const fraction = index / 4;
             const x =
                 plot.left +
-                (
-                    (plot.right - plot.left) *
-                    fraction
-                );
+                (plot.right - plot.left) * fraction;
 
-            const offsetMs =
-                durationMs * fraction;
+            const ageSeconds =
+                -this._getWindowSeconds() *
+                (1 - fraction);
 
             context.beginPath();
             context.moveTo(x, plot.bottom);
@@ -879,391 +723,153 @@ export class MetricsGraphPanel
             context.stroke();
 
             context.fillText(
-                this._formatCaptureOffsetLabel(
-                    offsetMs
-                ),
+                this._formatAgeLabel(ageSeconds),
                 x,
                 plot.bottom + 22
             );
         }
     }
 
-    // ## Draw capture-local line using offset_ms for x position.
-    _drawCaptureLine(
-        context,
-        plot,
-        records,
-        valueKey,
-        minValue,
-        maxValue,
-        strokeStyle
-    )
+    _formatAgeLabel(ageSeconds)
     {
-        if (records.length >= 2)
+        const age = Math.abs(ageSeconds);
+
+        if (age < 1)
         {
-            const valueRange =
-                Math.max(
-                    0.000001,
-                    maxValue - minValue
-                );
-
-            context.strokeStyle = strokeStyle;
-            context.lineWidth = 1.5;
-
-            context.beginPath();
-
-            records.forEach(
-                (record, index) =>
-                {
-                    const x =
-                        this._xCaptureOffsetToPixel(
-                            plot,
-                            records,
-                            Number(record.offset_ms ?? 0.0)
-                        );
-
-                    const value =
-                        Number(record[valueKey] ?? 0.0);
-
-                    const y =
-                        plot.bottom -
-                        (
-                            (value - minValue) *
-                            (plot.bottom - plot.top) /
-                            valueRange
-                        );
-
-                    if (index === 0)
-                    {
-                        context.moveTo(x, y);
-                    }
-                    else
-                    {
-                        context.lineTo(x, y);
-                    }
-                }
-            );
-
-            context.stroke();
+            return "now";
         }
+
+        if (age >= 3600)
+        {
+            return `-${(age / 3600).toFixed(
+                age >= 21600 ? 0 : 1
+            )}h`;
+        }
+
+        return `-${(age / 60).toFixed(0)}m`;
     }
 
-    // ## Convert capture offset to graph x pixel.
-    _xCaptureOffsetToPixel(
-        plot,
-        records,
-        offsetMs
-    )
-    {
-        const durationMs =
-            Math.max(
-                0.001,
-                this._getCaptureDurationMs(
-                    records
-                )
-            );
-
-        const fraction =
-            Math.max(
-                0.0,
-                Math.min(
-                    1.0,
-                    offsetMs / durationMs
-                )
-            );
-
-        return (
-            plot.left +
-            (
-                (plot.right - plot.left) *
-                fraction
-            )
-        );
-    }
-
-    // ## Draw a fixed Pi or replay trigger marker on a capture graph.
-    _drawCaptureTriggerMarker(
+    _drawCaptureMarker(
         context,
         plot,
         records,
-        requestedFrameIndex,
+        frameIndex,
         strokeStyle,
         label
     )
     {
-        const frameIndex =
-            this._clampCaptureFrameIndex(
-                requestedFrameIndex
-            );
+        const index =
+            this._clampCaptureFrameIndex(frameIndex);
 
-        if (
-            frameIndex === null ||
-            records.length === 0
-        )
+        if (index === null || records.length === 0)
         {
             return;
         }
 
-        const record =
-            records[frameIndex];
-
-        const x =
-            this._xCaptureOffsetToPixel(
-                plot,
-                records,
+        const durationMs =
+            Math.max(
+                1,
                 Number(
-                    record.offset_ms ?? 0.0
+                    records[records.length - 1].offset_ms ?? 0
                 )
             );
 
+        const fraction =
+            Number(records[index].offset_ms ?? 0) /
+            durationMs;
+
+        const x =
+            plot.left +
+            (plot.right - plot.left) * fraction;
+
         context.save();
-        context.strokeStyle =
-            strokeStyle;
-        context.lineWidth =
-            1.5;
-
+        context.strokeStyle = strokeStyle;
+        context.lineWidth = label === "Frame" ? 2 : 1.5;
         context.beginPath();
-        context.moveTo(
-            x,
-            plot.top
-        );
-        context.lineTo(
-            x,
-            plot.bottom
-        );
+        context.moveTo(x, plot.top);
+        context.lineTo(x, plot.bottom);
         context.stroke();
-
-        context.fillStyle =
-            strokeStyle;
-        context.textAlign =
-            "center";
-        context.font =
-            "10px Arial";
-
-        context.fillText(
-            label,
-            x,
-            plot.top + 11
-        );
-
+        context.fillStyle = strokeStyle;
+        context.font = "10px Arial";
+        context.textAlign = "center";
+        context.fillText(label, x, plot.top + 11);
         context.restore();
     }
 
-
-    // ## Draw a vertical cursor at the current playback frame.
-    _drawCaptureCursor(
-        context,
-        plot,
-        records
-    )
+    _getVisibleMetrics()
     {
-        const frameIndex =
-            this._clampCaptureFrameIndex(
-                this._captureCursorFrameIndex
-            );
-
-        if (frameIndex !== null && records.length > 0)
+        if (this._aMetricHistory.length === 0)
         {
-            const record =
-                records[frameIndex];
-
-            const x =
-                this._xCaptureOffsetToPixel(
-                    plot,
-                    records,
-                    Number(record.offset_ms ?? 0.0)
-                );
-
-            context.save();
-            context.strokeStyle = "#c00020";
-            context.lineWidth = 2;
-            context.beginPath();
-            context.moveTo(
-                x,
-                plot.top
-            );
-            context.lineTo(
-                x,
-                plot.bottom
-            );
-            context.stroke();
-
-            context.fillStyle = "#c00020";
-            context.textAlign = "center";
-            context.font = "10px Arial";
-            context.fillText(
-                `F${frameIndex + 1}`,
-                x,
-                plot.bottom + 34
-            );
-            context.restore();
-        }
-    }
-
-    // ## Pick the original Pi trigger frame as the first playback cursor.
-    _getInitialCaptureCursorFrameIndex(analysis)
-    {
-        let frameIndex =
-            null;
-
-        const candidate =
-            analysis?.candidate || {};
-
-        if (
-            candidate.trigger_frame_index !== null &&
-            candidate.trigger_frame_index !== undefined
-        )
-        {
-            frameIndex =
-                Number(
-                    candidate.trigger_frame_index
-                );
-        }
-        else if (
-            analysis?.trigger_frame_index !== null &&
-            analysis?.trigger_frame_index !== undefined
-        )
-        {
-            frameIndex =
-                Number(
-                    analysis.trigger_frame_index
-                );
-        }
-        else if (
-            candidate.trigger_frame_number !== null &&
-            candidate.trigger_frame_number !== undefined
-        )
-        {
-            frameIndex =
-                Number(
-                    candidate.trigger_frame_number
-                ) -
-                1;
-        }
-        else if (
-            analysis?.trigger_frame_number !== null &&
-            analysis?.trigger_frame_number !== undefined
-        )
-        {
-            frameIndex =
-                Number(
-                    analysis.trigger_frame_number
-                ) -
-                1;
+            return [];
         }
 
-        return this._clampCaptureFrameIndex(
-            frameIndex
+        const newest =
+            this._getNewestMetricTime();
+
+        const minimum =
+            newest - this._getWindowSeconds();
+
+        return this._aMetricHistory.filter(
+            (metric) =>
+                Number(metric.timestamp_monotonic ?? 0) >= minimum
         );
     }
 
-    // ## Keep requested frame index inside the current capture frame range.
-    _clampCaptureFrameIndex(frameIndex)
+    _getNewestMetricTime()
     {
-        let clampedIndex =
-            null;
-
-        if (frameIndex !== null && frameIndex !== undefined && this._aCaptureMetrics.length > 0)
+        if (this._aMetricHistory.length === 0)
         {
-            clampedIndex =
-                Math.min(
-                    this._aCaptureMetrics.length - 1,
-                    Math.max(
-                        0,
-                        Math.round(
-                            Number(frameIndex)
-                        )
-                    )
-                );
-
-            if (Number.isNaN(clampedIndex))
-            {
-                clampedIndex =
-                    null;
-            }
+            return 0;
         }
 
-        return clampedIndex;
+        return Number(
+            this._aMetricHistory[
+                this._aMetricHistory.length - 1
+            ].timestamp_monotonic ?? 0
+        );
     }
 
-    // ## Return the capture-local graph duration in milliseconds.
-    _getCaptureDurationMs(records)
+    _getWindowSeconds()
     {
-        let durationMs = 0.0;
+        return this._iGraphWindowHours * 3600;
+    }
 
-        if (records.length > 0)
-        {
-            durationMs = Number(
-                records[records.length - 1].offset_ms ?? 0.0
+    _setGraphButtonsVisible(visible)
+    {
+        const bar =
+            document.querySelector(
+                ".graphButtonBar"
             );
-        }
 
-        return durationMs;
-    }
-
-    // ## Format capture-local x-axis offsets.
-    _formatCaptureOffsetLabel(offsetMs)
-    {
-        let label =
-            `${offsetMs.toFixed(0)}ms`;
-
-        if (offsetMs >= 1000.0)
+        if (bar !== null)
         {
-            label =
-                `${(offsetMs / 1000.0).toFixed(2)}s`;
+            bar.style.display =
+                visible ? "" : "none";
         }
-
-        return label;
     }
 
-    _getSampleTimeSeconds(sample)
+    _resizeCanvas(canvas)
     {
-        let sampleTimeSeconds =
-            Number(sample.timestamp_monotonic ?? 0.0);
+        const rect =
+            canvas.getBoundingClientRect();
 
-        if (sample.timestamp !== undefined)
-        {
-            sampleTimeSeconds =
-                Number(sample.timestamp ?? 0) / 1000.0;
-        }
-
-        return sampleTimeSeconds;
-    }
-
-    _xAgeSecondsToPixel(
-        plot,
-        ageSeconds
-    )
-    {
-        const windowSeconds =
-            this._getWindowSeconds();
-
-        const fraction =
-            (ageSeconds + windowSeconds) /
-            windowSeconds;
-
-        const clippedFraction =
+        canvas.width =
             Math.max(
-                0.0,
-                Math.min(
-                    1.0,
-                    fraction
-                )
+                1,
+                Math.floor(rect.width)
             );
 
-        return (
-            plot.left +
-            (
-                (plot.right - plot.left) *
-                clippedFraction
-            )
-        );
+        canvas.height =
+            Math.max(
+                1,
+                Math.floor(rect.height)
+            );
     }
 
     _getValueLimits(values)
     {
-        let minValue = 0.0;
-        let maxValue = 1.0;
+        let minValue = 0;
+        let maxValue = 1;
 
         if (values.length > 0)
         {
@@ -1272,8 +878,8 @@ export class MetricsGraphPanel
 
             if (minValue === maxValue)
             {
-                minValue -= 1.0;
-                maxValue += 1.0;
+                minValue -= 1;
+                maxValue += 1;
             }
         }
 
@@ -1281,5 +887,61 @@ export class MetricsGraphPanel
             minValue,
             maxValue
         };
+    }
+
+    _getInitialCaptureCursorFrameIndex(analysis)
+    {
+        const candidate =
+            analysis?.candidate || {};
+
+        let frameIndex =
+            candidate.trigger_frame_index ??
+            analysis?.trigger_frame_index ??
+            null;
+
+        if (frameIndex === null)
+        {
+            const frameNumber =
+                candidate.trigger_frame_number ??
+                analysis?.trigger_frame_number ??
+                null;
+
+            if (frameNumber !== null)
+            {
+                frameIndex = Number(frameNumber) - 1;
+            }
+        }
+
+        return this._clampCaptureFrameIndex(
+            frameIndex
+        );
+    }
+
+    _clampCaptureFrameIndex(frameIndex)
+    {
+        if (
+            frameIndex === null ||
+            frameIndex === undefined ||
+            this._aCaptureMetrics.length === 0
+        )
+        {
+            return null;
+        }
+
+        const numericIndex =
+            Number(frameIndex);
+
+        if (!Number.isFinite(numericIndex))
+        {
+            return null;
+        }
+
+        return Math.min(
+            this._aCaptureMetrics.length - 1,
+            Math.max(
+                0,
+                Math.round(numericIndex)
+            )
+        );
     }
 }

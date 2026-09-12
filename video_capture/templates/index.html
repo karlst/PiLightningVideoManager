@@ -79,10 +79,7 @@
                         <button class="graphButton" data-window="1">1 HR</button>
                         <button class="graphButton" data-window="6">6 HR</button>
                         <button class="graphButton" data-window="12">12 HR</button>
-                        <button class="graphButton" data-window="24">1 D</button>
-                        <button class="graphButton" data-window="120">5 D</button>
-                        <button class="graphButton" data-window="240">10 D</button>
-                        <button class="graphButton" data-window="720">30 D</button>
+                        <button class="graphButton" data-window="24">24H</button>
 
                     </div>
 
@@ -94,8 +91,8 @@
                 </div>
 
                 <div class="metricGraph">
-                    <div class="metricGraphTitle">Trigger Metric</div>
-                    <canvas class="historyGraph" id="brightness-delta-graph"></canvas>
+                    <div class="metricGraphTitle">Candidates / Captures</div>
+                    <canvas class="historyGraph" id="capture-activity-graph"></canvas>
                 </div>
 
             </section>
@@ -114,7 +111,7 @@
                     class="ccButton ccButtonDanger"
                     id="buffer-capture-button"
                     type="button">
-                    Capture Frames
+                    Manual Trigger
                 </button>
 
                 <button
@@ -145,12 +142,6 @@
                     Camera Settings...
                 </button>
 
-                <button
-                    class="ccButton ccButtonSecondary"
-                    id="show-event-log-button"
-                    type="button">
-                    Show Event Log...
-                </button>
 
                 <button
                     class="ccButton"
@@ -183,6 +174,11 @@
                     <div>Frames</div><div id="summary-frames-value">--</div>
                     <div>RAM</div><div id="summary-ram-value">-- MB</div>
                     <div>Preview</div><div id="summary-preview-value">--</div>
+                    <div>PSF</div><div id="summary-psf-value">--</div>
+                    <div>Captures 1H</div><div id="summary-captures-hour-value">--</div>
+                    <div>Classifications 1H</div><div id="summary-classifications-hour-value">--</div>
+                    <div>S3 Uploads 1H</div><div id="summary-s3-hour-value">--</div>
+                    <div>Last S3 Upload</div><div id="summary-s3-last-value">--</div>
                     <div>Last Error</div><div id="summary-error-value">--</div>
 
                 </div>
@@ -269,7 +265,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=49">
+        src="/static/js/app.js?v=50">
     </script>
 
 </body>

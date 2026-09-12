@@ -80,7 +80,7 @@ export class DialogPanel
                 <h3>Pi Lightning Camera Control</h3>
 
                 <p>
-                    <strong>Version 0.9</strong><br>
+                    <strong>Version 1.0.0</strong><br>
                     Copyright &copy; 2026 Karl Stock<br>
                     All rights reserved.
                 </p>
@@ -109,7 +109,7 @@ export class DialogPanel
                     <li>MP4 capture storage and browser playback</li>
                     <li>Live camera preview from buffered frames</li>
                     <li>Configurable camera, trigger, location, bearing, and field-of-view settings</li>
-                    <li>Real-time graphs for brightness, trigger metrics, motion, and system status</li>
+                    <li>Real-time brightness and candidate/capture activity graphs</li>
                     <li>Event logging and system diagnostics</li>
                     <li>Web control from desktop, tablet, or phone</li>
                     <li>Remote access through Tailscale without exposing the Pi to the public internet</li>
