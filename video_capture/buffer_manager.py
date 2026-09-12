@@ -186,6 +186,14 @@ class BufferManager:
             bucket_seconds=5 * 60,
             window_hours=24,
         )
+        # Fine-grained activity for the 5-minute PLCC graph: ten
+        # 30-second buckets. This is live state only and resets with pcm.
+        self._runtime_telemetry_recent = RollingEventCounts(
+            ("candidates", "captures", "automatic_captures", "manual_captures"),
+            bucket_seconds=30,
+            window_hours=1,
+            max_buckets=10,
+        )
         self._runtime_status_path = Path(
             "/run/picam/capture_status.json"
         )
@@ -463,11 +471,11 @@ class BufferManager:
                 )
 
         if success and sidecar_data is not None:
-            self._runtime_telemetry.increment("captures")
+            self._increment_runtime_telemetry("captures")
             if trigger_type == "manual":
-                self._runtime_telemetry.increment("manual_captures")
+                self._increment_runtime_telemetry("manual_captures")
             else:
-                self._runtime_telemetry.increment("automatic_captures")
+                self._increment_runtime_telemetry("automatic_captures")
 
         return success, message, capture_status
 
@@ -747,6 +755,21 @@ class BufferManager:
     def get_metrics_history(self) -> list[dict]:
         return self._metric_history.snapshot()
 
+    # ## Increment both long-window and fine-grained runtime counters.
+    def _increment_runtime_telemetry(
+        self,
+        field: str,
+        amount: int = 1,
+    ) -> None:
+        self._runtime_telemetry.increment(
+            field,
+            amount,
+        )
+        self._runtime_telemetry_recent.increment(
+            field,
+            amount,
+        )
+
     # ## Publish session telemetry to volatile /run state for webController.
     def _runtime_status_loop(self) -> None:
         while True:
@@ -756,6 +779,7 @@ class BufferManager:
                     "component": "picam",
                     "heartbeat_utc": utc_now_text(),
                     **self._runtime_telemetry.snapshot(),
+                    "recent": self._runtime_telemetry_recent.snapshot(),
                 }
                 atomic_write_json(
                     self._runtime_status_path,
@@ -1029,7 +1053,7 @@ class BufferManager:
         self,
         timestamp_monotonic: float
     ) -> None:
-        self._runtime_telemetry.increment("candidates")
+        self._increment_runtime_telemetry("candidates")
 
         self._candidate_trigger_times.append(
             timestamp_monotonic

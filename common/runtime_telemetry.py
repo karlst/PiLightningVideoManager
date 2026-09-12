@@ -33,6 +33,7 @@ class RollingEventCounts:
         *,
         bucket_seconds: int = DEFAULT_BUCKET_SECONDS,
         window_hours: int = DEFAULT_WINDOW_HOURS,
+        max_buckets: int | None = None,
     ) -> None:
         fields = tuple(str(field) for field in fields)
         if not fields:
@@ -44,10 +45,17 @@ class RollingEventCounts:
 
         self._fields = fields
         self._bucket_seconds = int(bucket_seconds)
-        self._max_buckets = max(
+        default_max_buckets = max(
             1,
             int(window_hours * 3600 / self._bucket_seconds),
         )
+        if max_buckets is None:
+            self._max_buckets = default_max_buckets
+        else:
+            if int(max_buckets) <= 0:
+                raise ValueError("max_buckets must be positive")
+            self._max_buckets = int(max_buckets)
+
         self._window_hours = int(window_hours)
         self._lock = Lock()
         self._buckets: deque[dict] = deque()
@@ -142,6 +150,8 @@ class RollingEventCounts:
             "started_utc": self._started_utc,
             "bucket_seconds": self._bucket_seconds,
             "window_hours": self._window_hours,
+            "max_buckets": self._max_buckets,
+            "window_seconds": self._max_buckets * self._bucket_seconds,
             "totals": totals,
             "buckets": serialized,
         }

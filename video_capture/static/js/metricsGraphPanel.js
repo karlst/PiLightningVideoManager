@@ -328,13 +328,24 @@ export class MetricsGraphPanel
         const telemetry =
             this._captureTelemetry || {};
 
+        // The backend keeps a dedicated ten-bucket, 30-second view for the
+        // 5-minute graph. Longer graph windows continue to use the 5-minute
+        // buckets maintained for the full 24-hour session.
+        const useRecentTelemetry =
+            this._getWindowSeconds() <= (5 * 60 + 1);
+
+        const selectedTelemetry =
+            useRecentTelemetry && telemetry.recent
+                ? telemetry.recent
+                : telemetry;
+
         const buckets =
-            Array.isArray(telemetry.buckets)
-                ? telemetry.buckets
+            Array.isArray(selectedTelemetry.buckets)
+                ? selectedTelemetry.buckets
                 : [];
 
         const bucketSeconds =
-            Number(telemetry.bucket_seconds ?? 300);
+            Number(selectedTelemetry.bucket_seconds ?? 300);
 
         const cutoffMs =
             Date.now() -

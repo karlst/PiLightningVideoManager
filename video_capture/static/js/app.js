@@ -6,7 +6,7 @@ import
 {
     StatusPanel
 }
-from "./statusPanel.js?v=33";
+from "./statusPanel.js?v=34";
 
 import
 {
@@ -36,7 +36,7 @@ import
 {
     MetricsGraphPanel
 }
-from "./metricsGraphPanel.js?v=37";
+from "./metricsGraphPanel.js?v=38";
 
 import
 {
