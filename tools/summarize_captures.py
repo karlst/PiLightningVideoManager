@@ -3,19 +3,25 @@
 
 @brief Summarize classifications and lightning types in a folder of captures.
 
-The tool examines MP4 files and their matching JSON sidecars. It expects the
-current V7 sidecar layout, where workflow metadata lives under "capture":
+The tool examines MP4 files and their matching JSON sidecars. By default it
+expects current V8 sidecars. Use --sidecar-version 7 to summarize a historical
+V7 capture folder, including legacy classifications such as FDA, SSA, STA, NA,
+NAC, UFA and TF.
+
+Both V7 and V8 store the workflow metadata used by this tool under "capture":
 
     capture.verified
     capture.classification
     capture.type
 
-It does not modify any files.
+The requested sidecar version is checked exactly. The tool does not modify any
+files.
 
 Examples:
 
-    python summarize_captures.py C:\\S3Staging
-    python summarize_captures.py C:\\Lightning --recursive
+    python -m tools.summarize_captures C:\\S3Staging
+    python -m tools.summarize_captures C:\\Lightning --recursive
+    python -m tools.summarize_captures E:\\SideCarsFromS3\\training --recursive --sidecar-version 7
 """
 
 from __future__ import annotations
@@ -27,88 +33,47 @@ from pathlib import Path
 import sys
 from typing import Any
 
-
 from common.capture_sidecar import SIDECAR_VERSION
 
 
-def read_sidecar(
-    sidecar_path: Path,
-) -> dict[str, Any]:
-    try:
-        data = json.loads(
-            sidecar_path.read_text(
-                encoding="utf-8"
-            )
-        )
-    except OSError as error:
-        raise RuntimeError(
-            f"Unable to read sidecar: {error}"
-        ) from error
-    except json.JSONDecodeError as error:
-        raise RuntimeError(
-            f"Invalid JSON: {error}"
-        ) from error
+SUPPORTED_SIDECAR_VERSIONS = (7, 8)
 
-    if not isinstance(
-        data,
-        dict,
-    ):
-        raise RuntimeError(
-            "Sidecar root is not a JSON object"
-        )
+
+def read_sidecar(sidecar_path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    except OSError as error:
+        raise RuntimeError(f"Unable to read sidecar: {error}") from error
+    except json.JSONDecodeError as error:
+        raise RuntimeError(f"Invalid JSON: {error}") from error
+
+    if not isinstance(data, dict):
+        raise RuntimeError("Sidecar root is not a JSON object")
 
     return data
 
 
 def capture_metadata(
     sidecar: dict[str, Any],
+    expected_sidecar_version: int,
 ) -> tuple[bool, str, str, float, float]:
-    version = sidecar.get(
-        "sidecar_version"
-    )
+    version = sidecar.get("sidecar_version")
 
-    if version != SIDECAR_VERSION:
+    if version != expected_sidecar_version:
         raise RuntimeError(
-            f"sidecar_version={version!r}; expected {SIDECAR_VERSION}"
+            f"sidecar_version={version!r}; expected {expected_sidecar_version}"
         )
 
-    capture = sidecar.get(
-        "capture"
-    )
+    capture = sidecar.get("capture")
+    if not isinstance(capture, dict):
+        raise RuntimeError("Missing capture object")
 
-    if not isinstance(
-        capture,
-        dict,
-    ):
-        raise RuntimeError(
-            "Missing capture object"
-        )
+    verified = capture.get("verified")
+    if not isinstance(verified, bool):
+        raise RuntimeError("capture.verified is not boolean")
 
-    verified = capture.get(
-        "verified"
-    )
-
-    if not isinstance(
-        verified,
-        bool,
-    ):
-        raise RuntimeError(
-            "capture.verified is not boolean"
-        )
-
-    classification = str(
-        capture.get(
-            "classification",
-            "",
-        ) or ""
-    ).strip().upper()
-
-    lightning_type = str(
-        capture.get(
-            "type",
-            "",
-        ) or ""
-    ).strip().upper()
+    classification = str(capture.get("classification", "") or "").strip().upper()
+    lightning_type = str(capture.get("type", "") or "").strip().upper()
 
     if not classification:
         classification = "<BLANK>"
@@ -117,15 +82,11 @@ def capture_metadata(
         lightning_type = "<BLANK>"
 
     try:
-        max_brightness_delta = float(
-            capture["max_brightness_delta"]
-        )
-        mean_brightness = float(
-            capture["mean_brightness"]
-        )
+        max_brightness_delta = float(capture["max_brightness_delta"])
+        mean_brightness = float(capture["mean_brightness"])
     except (KeyError, TypeError, ValueError) as error:
         raise RuntimeError(
-            "Missing/invalid V7 brightness summary"
+            f"Missing/invalid V{expected_sidecar_version} brightness summary"
         ) from error
 
     return (
@@ -137,65 +98,28 @@ def capture_metadata(
     )
 
 
-def collect_video_files(
-    folder: Path,
-    recursive: bool,
-) -> list[Path]:
-    pattern = (
-        "**/*.mp4"
-        if recursive
-        else "*.mp4"
-    )
-
-    return sorted(
-        folder.glob(
-            pattern
-        )
-    )
+def collect_video_files(folder: Path, recursive: bool) -> list[Path]:
+    pattern = "**/*.mp4" if recursive else "*.mp4"
+    return sorted(folder.glob(pattern))
 
 
-def print_counter(
-    title: str,
-    counter: Counter[str],
-) -> None:
+def print_counter(title: str, counter: Counter[str]) -> None:
     print()
-    print(
-        title
-    )
+    print(title)
 
     if not counter:
-        print(
-            "  (none)"
-        )
+        print("  (none)")
         return
 
-    width = max(
-        len(key)
-        for key in counter
-    )
-
-    total = sum(
-        counter.values()
-    )
+    width = max(len(key) for key in counter)
+    total = sum(counter.values())
 
     for key, count in sorted(
         counter.items(),
-        key=lambda item: (
-            -item[1],
-            item[0],
-        ),
+        key=lambda item: (-item[1], item[0]),
     ):
-        percent = (
-            100.0 * count / total
-            if total
-            else 0.0
-        )
-
-        print(
-            f"  {key:<{width}}  "
-            f"{count:6d}  "
-            f"{percent:6.2f}%"
-        )
+        percent = 100.0 * count / total if total else 0.0
+        print(f"  {key:<{width}}  {count:6d}  {percent:6.2f}%")
 
 
 def main() -> int:
@@ -209,33 +133,36 @@ def main() -> int:
     parser.add_argument(
         "folder",
         type=Path,
-        help=(
-            "Folder containing MP4 capture files and matching JSON sidecars"
-        ),
+        help="Folder containing MP4 capture files and matching JSON sidecars",
     )
 
     parser.add_argument(
         "--recursive",
         action="store_true",
+        help="Include captures in subfolders recursively",
+    )
+
+    parser.add_argument(
+        "--sidecar-version",
+        type=int,
+        choices=SUPPORTED_SIDECAR_VERSIONS,
+        default=SIDECAR_VERSION,
         help=(
-            "Include captures in subfolders recursively"
+            f"Expected sidecar version. Default: current V{SIDECAR_VERSION}. "
+            "Use 7 for historical V7 classification summaries."
         ),
     )
 
     arguments = parser.parse_args()
 
     folder = arguments.folder.expanduser()
+    expected_sidecar_version = arguments.sidecar_version
 
     if not folder.is_dir():
-        print(
-            f"Folder not found: {folder}"
-        )
+        print(f"Folder not found: {folder}")
         return 1
 
-    video_files = collect_video_files(
-        folder,
-        arguments.recursive,
-    )
+    video_files = collect_video_files(folder, arguments.recursive)
 
     classification_counts: Counter[str] = Counter()
     type_counts: Counter[str] = Counter()
@@ -248,27 +175,14 @@ def main() -> int:
     valid_count = 0
     missing_sidecar_count = 0
     invalid_sidecar_count = 0
-
-    errors: list[
-        tuple[
-            Path,
-            str,
-        ]
-    ] = []
+    errors: list[tuple[Path, str]] = []
 
     for video_path in video_files:
-        sidecar_path = video_path.with_suffix(
-            ".json"
-        )
+        sidecar_path = video_path.with_suffix(".json")
 
         if not sidecar_path.is_file():
             missing_sidecar_count += 1
-            errors.append(
-                (
-                    video_path,
-                    "matching JSON sidecar not found",
-                )
-            )
+            errors.append((video_path, "matching JSON sidecar not found"))
             continue
 
         try:
@@ -279,84 +193,35 @@ def main() -> int:
                 max_brightness_delta,
                 mean_brightness,
             ) = capture_metadata(
-                read_sidecar(
-                    sidecar_path
-                )
+                read_sidecar(sidecar_path),
+                expected_sidecar_version,
             )
-
         except RuntimeError as error:
             invalid_sidecar_count += 1
-            errors.append(
-                (
-                    video_path,
-                    str(
-                        error
-                    ),
-                )
-            )
+            errors.append((video_path, str(error)))
             continue
 
         valid_count += 1
-
-        classification_counts[
-            classification
-        ] += 1
-
-        type_counts[
-            lightning_type
-        ] += 1
-
-        verified_counts[
-            "Verified"
-            if verified
-            else "Unverified"
-        ] += 1
-
+        classification_counts[classification] += 1
+        type_counts[lightning_type] += 1
+        verified_counts["Verified" if verified else "Unverified"] += 1
         classification_type_counts[
             f"{classification} / {lightning_type}"
         ] += 1
+        max_delta_values.append(max_brightness_delta)
+        mean_brightness_values.append(mean_brightness)
 
-        max_delta_values.append(
-            max_brightness_delta
-        )
-        mean_brightness_values.append(
-            mean_brightness
-        )
+    print(f"Folder: {folder}")
+    print(f"Expected sidecar version: V{expected_sidecar_version}")
+    print(f"Captures found: {len(video_files)}")
+    print(f"Valid V{expected_sidecar_version} captures: {valid_count}")
+    print(f"Total classified captures: {sum(classification_counts.values())}")
+    print(f"Missing sidecars: {missing_sidecar_count}")
+    print(f"Invalid sidecars: {invalid_sidecar_count}")
 
-    print(
-        f"Folder: {folder}"
-    )
-    print(
-        f"Captures found: {len(video_files)}"
-    )
-    print(
-        f"Valid V7 captures: {valid_count}"
-    )
-    print(
-        f"Total classified captures: {sum(classification_counts.values())}"
-    )
-    print(
-        f"Missing sidecars: {missing_sidecar_count}"
-    )
-    print(
-        f"Invalid sidecars: {invalid_sidecar_count}"
-    )
-
-    print_counter(
-        "Verification:",
-        verified_counts,
-    )
-
-    print_counter(
-        "Classifications:",
-        classification_counts,
-    )
-
-    print_counter(
-        "Types:",
-        type_counts,
-    )
-
+    print_counter("Verification:", verified_counts)
+    print_counter("Classifications:", classification_counts)
+    print_counter("Types:", type_counts)
     print_counter(
         "Classification / Type combinations:",
         classification_type_counts,
@@ -380,23 +245,12 @@ def main() -> int:
 
     if errors:
         print()
-        print(
-            "Problems:"
-        )
-
+        print("Problems:")
         for video_path, detail in errors:
-            print(
-                f"  {video_path}: {detail}"
-            )
+            print(f"  {video_path}: {detail}")
 
-    return (
-        0
-        if not errors
-        else 1
-    )
+    return 0 if not errors else 1
 
 
 if __name__ == "__main__":
-    sys.exit(
-        main()
-    )
+    sys.exit(main())

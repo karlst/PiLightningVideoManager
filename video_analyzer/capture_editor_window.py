@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import copy
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+import re
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
@@ -65,6 +66,13 @@ SORT_VALUES = ("Filename ascending", "Filename descending")
 
 S3_BUCKET_NAME = "soloran-picam"
 S3_AUTH_PROFILE = "picam-manager"
+
+TRAINING_LABELS = ("TF", "NA", "NAC", "SSA", "STA", "FDA", "UFA")
+ANOMALY_TRAINING_LABELS = ("NA", "NAC", "SSA", "STA", "FDA", "UFA")
+ANOMALY_TRAINING_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_])(?:NA|NAC|SSA|STA|FDA|UFA)(?![A-Za-z0-9_])",
+    re.IGNORECASE,
+)
 
 
 class CaptureEditorWindow(ClipEditorWindow):
@@ -406,6 +414,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.save_button = QPushButton("Save Changes")
         self.save_button.setDefault(True)
         self.save_button.setAutoDefault(True)
+        self.save_button.setEnabled(False)
         buttons.addWidget(self.restore_button)
         buttons.addWidget(self.save_button)
         el.addLayout(buttons, 8, 0, 1, 4)
@@ -424,7 +433,10 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.refresh_file_browser()
         main.addLayout(grid, 1)
 
-        # Keep existing keyboard workflow hint.
+        # Keyboard workflow hint plus persistent save/training status.
+        status_row = QHBoxLayout()
+        status_row.setSpacing(12)
+
         shortcut_label = QLabel(
             "Ctrl+Left/Right: Previous/Next clip    "
             "Ctrl+Enter: Save + Next clip    "
@@ -432,9 +444,21 @@ class CaptureEditorWindow(ClipEditorWindow):
             "Left/Right: Previous/Next frame    "
             "Enter: Save    Esc: Restore"
         )
-        shortcut_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         shortcut_label.setStyleSheet("QLabel { color: #555; font-size: 10px; }")
-        main.addWidget(shortcut_label)
+
+        self.status_label = QLabel("")
+        self.status_label.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.status_label.setStyleSheet(
+            "QLabel { color: #555; font-size: 10px; font-weight: 600; }"
+        )
+        self.status_label.setMinimumWidth(280)
+
+        status_row.addWidget(shortcut_label)
+        status_row.addStretch(1)
+        status_row.addWidget(self.status_label)
+        main.addLayout(status_row)
 
         controls = QHBoxLayout()
         self.first_button = QPushButton("|<")
@@ -458,6 +482,10 @@ class CaptureEditorWindow(ClipEditorWindow):
         controls.addWidget(self.next_button)
         controls.addWidget(self.last_button)
         main.addLayout(controls)
+
+        # Buttons should advertise clickability with the standard pointing hand.
+        for button in central.findChildren(QPushButton):
+            button.setCursor(Qt.CursorShape.PointingHandCursor)
 
         self._set_source_ui()
 
@@ -508,6 +536,21 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.type_combo.currentTextChanged.connect(
             self.on_type_changed
         )
+
+        # Dirty-state tracking. Save Changes is enabled only when editable
+        # metadata differs from the last successfully loaded/saved values.
+        self.site_edit.textChanged.connect(self._update_dirty_state)
+        self.latitude_spin.valueChanged.connect(self._update_dirty_state)
+        self.longitude_spin.valueChanged.connect(self._update_dirty_state)
+        self.bearing_spin.valueChanged.connect(self._update_dirty_state)
+        self.hfov_spin.valueChanged.connect(self._update_dirty_state)
+        self.verified_combo.currentTextChanged.connect(self._update_dirty_state)
+        self.classification_combo.currentTextChanged.connect(self._update_dirty_state)
+        self.type_combo.currentTextChanged.connect(self._update_dirty_state)
+        self.description_edit.textChanged.connect(self._update_dirty_state)
+
+        # Establish the initial clean state after controls are wired.
+        self._update_dirty_state()
 
         # Metadata keyboard navigation
         self._editor_fields = (
@@ -805,6 +848,22 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.type_combo.setCurrentText(v["type"])
         self.description_edit.setPlainText(v["description"])
         self.on_classification_changed(self.classification_combo.currentText())
+        self._update_dirty_state()
+        self._set_status("Changes restored")
+
+    def _set_status(self, message: str):
+        if hasattr(self, "status_label"):
+            self.status_label.setText(message)
+
+    def _update_dirty_state(self, *_args):
+        if not hasattr(self, "save_button"):
+            return
+        dirty = bool(
+            self.capture_data is not None
+            and getattr(self, "loaded_metadata", None)
+            and self.current_values() != self.loaded_metadata
+        )
+        self.save_button.setEnabled(dirty)
 
     def on_classification_changed(self, classification):
         is_true_flash = (
@@ -1470,6 +1529,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.update_capture_information()
         self.set_frame(0, force=True)
         self.focus_description_at_end()
+        self._update_dirty_state()
+        self._set_status("")
 
     def _upgrade_loaded_sidecar(self, *, persist_local: bool):
         if self.capture_data is None or not isinstance(
@@ -1536,20 +1597,106 @@ class CaptureEditorWindow(ClipEditorWindow):
         sidecar, _changed = normalize_sidecar(sidecar)
         return sidecar
 
+    @staticmethod
+    def _training_label_from_sidecar(sidecar):
+        capture = sidecar.get("capture")
+        if not isinstance(capture, dict):
+            return None, "capture metadata missing"
+
+        if capture.get("verified") is not True:
+            return None, "capture is unverified"
+
+        classification = str(
+            capture.get("classification", "") or ""
+        ).strip().upper()
+
+        if classification == "FLASH":
+            return "TF", None
+
+        if classification != "ANOMALY":
+            return None, f"unsupported classification {classification or '<blank>'}"
+
+        description = str(capture.get("description", "") or "")
+        labels = {
+            match.group(0).upper()
+            for match in ANOMALY_TRAINING_PATTERN.finditer(description)
+        }
+
+        if len(labels) == 1:
+            return next(iter(labels)), None
+        if not labels:
+            return None, "no anomaly training label in Description"
+        return None, "ambiguous anomaly labels: " + ", ".join(sorted(labels))
+
+    @staticmethod
+    def _training_site_and_stem(record: S3CaptureRecord) -> tuple[str, str]:
+        parts = PurePosixPath(record.json_key).parts
+        if len(parts) < 2:
+            raise ValueError(f"Invalid canonical S3 JSON key: {record.json_key}")
+        site = parts[-2]
+        stem = PurePosixPath(parts[-1]).stem
+        return site, stem
+
+    def _sync_training_json(
+        self,
+        record: S3CaptureRecord,
+    ) -> tuple[bool, str]:
+        if self._s3_store is None:
+            raise RuntimeError("S3 store is not initialized")
+
+        site, stem = self._training_site_and_stem(record)
+        desired_label, reason = self._training_label_from_sidecar(record.sidecar)
+        desired_key = (
+            f"training/{desired_label}/{site}/{stem}.json"
+            if desired_label is not None
+            else None
+        )
+
+        # Remove stale training membership first. There are only seven possible
+        # labels, so explicit HEAD/DELETE calls avoid scanning the training tree.
+        for label in TRAINING_LABELS:
+            key = f"training/{label}/{site}/{stem}.json"
+            if key == desired_key:
+                continue
+            if self._s3_store.object_exists(key):
+                self._s3_store.delete_object(key)
+
+        if desired_key is None:
+            return False, reason or "not eligible for training"
+
+        payload = (
+            json.dumps(record.sidecar, indent=4) + "\n"
+        ).encode("utf-8")
+        self._s3_store.upload_bytes(
+            payload,
+            desired_key,
+            content_type="application/json",
+        )
+        return True, desired_label
+
     def save_changes(self):
         if self.capture_data is None or self.capture_data.sidecar is None:
+            self._set_status("Save failed: no capture is loaded")
             return False
+
+        if not self.has_unsaved_changes():
+            self._update_dirty_state()
+            return True
 
         sidecar = self._sidecar_from_editor()
 
         if self.source_mode == "S3":
             if self._current_s3_record is None:
+                message = "No S3 capture is associated with the current clip."
+                self._set_status(f"Save failed: {message}")
                 QMessageBox.critical(
                     self,
                     "Unable to save",
-                    "No S3 capture is associated with the current clip.",
+                    message,
                 )
                 return False
+
+            training_message = None
 
             try:
                 repo = self._ensure_s3_repository()
@@ -1569,8 +1716,21 @@ class CaptureEditorWindow(ClipEditorWindow):
                 ValueError,
                 TypeError,
             ) as exc:
+                self._set_status(f"Save to S3 failed: {exc}")
                 QMessageBox.critical(self, "Unable to save S3 capture", str(exc))
                 return False
+
+            # The canonical S3 save succeeded. Training maintenance is
+            # deliberately secondary: a training failure never rolls back the
+            # authoritative capture edit.
+            try:
+                updated_training, detail = self._sync_training_json(new_record)
+                if updated_training:
+                    training_message = f"updated training data ({detail})"
+                else:
+                    training_message = f"training not updated ({detail})"
+            except (S3StoreError, OSError, RuntimeError, ValueError, TypeError) as exc:
+                training_message = f"training update failed: {exc}"
 
             self.capture_data.sidecar = new_record.sidecar
             self._replace_s3_record(old_record, new_record)
@@ -1590,6 +1750,10 @@ class CaptureEditorWindow(ClipEditorWindow):
                 current_item.setText(new_record.filename)
                 current_item.setToolTip(new_record.json_key)
 
+            self._set_status(
+                f"Saved changes to S3; {training_message}"
+            )
+
         else:
             try:
                 self._write_local_sidecar_atomic(
@@ -1597,6 +1761,7 @@ class CaptureEditorWindow(ClipEditorWindow):
                     sidecar,
                 )
             except OSError as exc:
+                self._set_status(f"Local save failed: {exc}")
                 QMessageBox.critical(
                     self,
                     "Unable to save sidecar",
@@ -1609,8 +1774,10 @@ class CaptureEditorWindow(ClipEditorWindow):
                 self.capture_data.video_path,
                 sidecar,
             )
+            self._set_status("Saved changes locally")
 
         self.loaded_metadata = copy.deepcopy(self.metadata())
+        self._update_dirty_state()
 
         # Refresh only the QListWidget from the already-built local/S3 index.
         self.refresh_file_browser()
