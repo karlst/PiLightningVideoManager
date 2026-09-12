@@ -188,7 +188,8 @@ def run_batch_solution_filter(
     find_candidates: bool = False,
     upload_to_s3: bool = False,
     candidate_config: CandidateConfig = CANDIDATE_CONFIG,
-) -> int:
+    return_summary: bool = False,
+) -> int | dict:
     """Classify every pending capture_* pair in one captures folder."""
     if not input_directory.is_dir():
         raise RuntimeError(f"Folder not found: {input_directory}")
@@ -228,6 +229,7 @@ def run_batch_solution_filter(
         copy_flash_directory.mkdir(parents=True, exist_ok=True)
 
     counts: Counter[str] = Counter()
+    new_classification_counts: Counter[str] = Counter()
     s3_uploaded_capture_count = 0
     s3_failed_capture_count = 0
     s3_store: S3Store | None = None
@@ -255,6 +257,14 @@ def run_batch_solution_filter(
 
         try:
             update_capture_brightness_summary(sidecar_path)
+            sidecar_before = read_sidecar(sidecar_path)
+            capture_before = sidecar_before.get("capture", {})
+            current_classification = str(
+                capture_before.get("classification", "")
+                if isinstance(capture_before, dict)
+                else ""
+            ).strip().upper()
+            was_pending_classification = current_classification in ("", "PENDING")
         except (OSError, json.JSONDecodeError, RuntimeError) as error:
             print(f"SKIP  {video_path.name}: {error}")
             counts[CATEGORY_UNCLASSIFIED] += 1
@@ -277,6 +287,12 @@ def run_batch_solution_filter(
         result = classified
         category = result.classification
         reason = result.reason
+
+        # Operational telemetry counts a capture's initial production
+        # classification once. A retained pair may be revisited later for an
+        # S3 retry; that must not inflate FLASH/ANOMALY activity counts.
+        if was_pending_classification:
+            new_classification_counts[category] += 1
 
         try:
             # Persist FLASH/ANOMALY, initial confidence and model identity before any
@@ -474,5 +490,14 @@ def run_batch_solution_filter(
 
     if delete_rejects:
         print(f"  Deleted: {counts[CLASSIFICATION_ANOMALY]}")
+
+    if return_summary:
+        return {
+            "flash": int(new_classification_counts[CLASSIFICATION_FLASH]),
+            "anomaly": int(new_classification_counts[CLASSIFICATION_ANOMALY]),
+            "unclassified": int(counts[CATEGORY_UNCLASSIFIED]),
+            "s3_success": int(s3_uploaded_capture_count),
+            "s3_failure": int(s3_failed_capture_count),
+        }
 
     return 0

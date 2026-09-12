@@ -223,45 +223,24 @@ RemainAfterExit=yes
 WantedBy=multi-user.target
 EOF
 
-cat > /etc/systemd/system/pcm.service <<EOF
-[Unit]
-Description=Pi Camera Capture WebApp
-After=NetworkManager.service wifiStartup.service
-Wants=wifiStartup.service
+render_service() {
+    local source_file="$1"
+    local destination_file="$2"
 
-[Service]
-Type=simple
-User=$INSTALL_USER
-WorkingDirectory=$PROGRAM_ROOT
-ExecStart=/usr/bin/python3 -m video_capture.main
-Restart=always
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
+    sed \
+        -e "s|@INSTALL_USER@|$INSTALL_USER|g" \
+        -e "s|@PROGRAM_ROOT@|$PROGRAM_ROOT|g" \
+        -e "s|@DATA_ROOT@|$DATA_ROOT|g" \
+        "$source_file" > "$destination_file"
+}
 
-[Install]
-WantedBy=multi-user.target
-EOF
+render_service \
+    "$PACKAGE_ROOT/pcm.service" \
+    /etc/systemd/system/pcm.service
 
-cat > /etc/systemd/system/psf.service <<EOF
-[Unit]
-Description=Pi Camera Capture SolutionFilter
-After=pcm.service
-Wants=pcm.service
-
-[Service]
-Type=simple
-User=$INSTALL_USER
-WorkingDirectory=$PROGRAM_ROOT
-ExecStart=/usr/bin/python3 -m video_capture.solution_filter_service $DATA_ROOT/captures --interval 60
-Restart=on-failure
-RestartSec=5
-StandardOutput=journal
-StandardError=journal
-
-[Install]
-WantedBy=multi-user.target
-EOF
+render_service \
+    "$PACKAGE_ROOT/psf.service" \
+    /etc/systemd/system/psf.service
 
 systemctl daemon-reload
 systemctl enable wifiStartup.service

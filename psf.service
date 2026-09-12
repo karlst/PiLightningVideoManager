@@ -1,15 +1,19 @@
 [Unit]
-Description=Pi SolutionFilter
+Description=Pi Camera Capture SolutionFilter
 After=pcm.service
 Wants=pcm.service
 
 [Service]
 Type=simple
-User=karlst
-WorkingDirectory=/home/karlst/Documents/videoManager
-ExecStart=/usr/bin/python3 -m video_analyzer.solution_filter_service ~/elpData3709/captures --interval 60
+User=@INSTALL_USER@
+WorkingDirectory=@PROGRAM_ROOT@
+ExecStart=/usr/bin/python3 -m video_capture.solution_filter_service @DATA_ROOT@/captures --interval 60
 Restart=on-failure
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
+RuntimeDirectory=psf
+RuntimeDirectoryMode=0755
 
 [Install]
 WantedBy=multi-user.target

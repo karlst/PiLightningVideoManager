@@ -19,8 +19,12 @@ import signal
 import subprocess
 import sys
 import time
+from threading import Lock, Thread
 
 from common.solution_batch import run_batch_solution_filter
+from common.runtime_telemetry import RollingEventCounts
+from common.runtime_telemetry import atomic_write_json
+from common.runtime_telemetry import utc_now_text
 from common.system_config import load_system_settings
 
 
@@ -175,6 +179,55 @@ def main() -> int:
         _stop,
     )
 
+    runtime_counts = RollingEventCounts(
+        ("flash", "anomaly", "s3_success", "s3_failure"),
+        bucket_seconds=5 * 60,
+        window_hours=24,
+    )
+    runtime_status_path = Path(
+        "/run/psf/psf_status.json"
+    )
+    runtime_state_lock = Lock()
+    runtime_state = {
+        "ap_active": None,
+        "configured_upload_to_s3": False,
+        "effective_upload_to_s3": False,
+        "last_classification_utc": None,
+        "last_upload_utc": None,
+        "last_pass_utc": None,
+        "last_error": "",
+    }
+
+    def publish_runtime_status() -> None:
+        while _running:
+            try:
+                with runtime_state_lock:
+                    state = dict(runtime_state)
+
+                atomic_write_json(
+                    runtime_status_path,
+                    {
+                        "schema_version": 1,
+                        "component": "psf",
+                        "heartbeat_utc": utc_now_text(),
+                        **state,
+                        **runtime_counts.snapshot(),
+                    },
+                )
+            except Exception:
+                # Runtime status is diagnostic only. If /run/psf is absent
+                # during development, or publishing otherwise fails, PSF must
+                # continue classifying captures.
+                pass
+
+            time.sleep(5.0)
+
+    Thread(
+        target=publish_runtime_status,
+        name="PsfRuntimeStatus",
+        daemon=True,
+    ).start()
+
     while _running:
         started = time.monotonic()
 
@@ -224,6 +277,15 @@ def main() -> int:
                 and not ap_active
             )
 
+            with runtime_state_lock:
+                runtime_state["ap_active"] = ap_active
+                runtime_state["configured_upload_to_s3"] = (
+                    configured_upload_to_s3
+                )
+                runtime_state["effective_upload_to_s3"] = (
+                    effective_upload_to_s3
+                )
+
             # In AP/offline field mode, retain true flashes for later upload
             # but delete recognized anomalies / rejects so storage does not
             # fill with known false positives.  When not in AP mode, preserve
@@ -234,13 +296,38 @@ def main() -> int:
                 else not save_false_positives
             )
 
-            run_batch_solution_filter(
+            batch_summary = run_batch_solution_filter(
                 arguments.folder,
                 verbosity=arguments.verbosity,
                 delete_rejects=delete_rejects,
                 upload_to_s3=effective_upload_to_s3,
+                return_summary=True,
             )
+
+            flash_count = int(batch_summary.get("flash", 0))
+            anomaly_count = int(batch_summary.get("anomaly", 0))
+            s3_success_count = int(batch_summary.get("s3_success", 0))
+            s3_failure_count = int(batch_summary.get("s3_failure", 0))
+
+            runtime_counts.increment("flash", flash_count)
+            runtime_counts.increment("anomaly", anomaly_count)
+            runtime_counts.increment("s3_success", s3_success_count)
+            runtime_counts.increment("s3_failure", s3_failure_count)
+
+            now_utc = utc_now_text()
+            with runtime_state_lock:
+                runtime_state["last_pass_utc"] = now_utc
+                runtime_state["last_error"] = ""
+                if flash_count or anomaly_count:
+                    runtime_state["last_classification_utc"] = now_utc
+                if s3_success_count:
+                    runtime_state["last_upload_utc"] = now_utc
+
         except Exception as error:
+            with runtime_state_lock:
+                runtime_state["last_pass_utc"] = utc_now_text()
+                runtime_state["last_error"] = str(error)
+
             print(
                 f"SolutionFilter service pass failed: {error}",
                 file=sys.stderr,

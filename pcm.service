@@ -1,0 +1,19 @@
+[Unit]
+Description=Pi Camera Capture WebApp
+After=NetworkManager.service wifiStartup.service
+Wants=wifiStartup.service
+
+[Service]
+Type=simple
+User=@INSTALL_USER@
+WorkingDirectory=@PROGRAM_ROOT@
+ExecStart=/usr/bin/python3 -m video_capture.main
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+RuntimeDirectory=picam
+RuntimeDirectoryMode=0755
+
+[Install]
+WantedBy=multi-user.target

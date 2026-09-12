@@ -54,6 +54,7 @@ from common.candidate_config import load_candidate_settings
 from common.system_config import load_system_settings
 from common.system_config import set_save_filtered_false_positives
 from common.system_config import set_upload_to_s3
+from common.runtime_telemetry import read_json_status
 
 
 @dataclass
@@ -85,6 +86,51 @@ def get_chip_temperature_c() -> float | None:
 
     except Exception:
         return None
+
+
+def get_runtime_status(
+    path: Path,
+    *,
+    stale_seconds: float = 15.0,
+) -> dict:
+    """Read one optional /run status file without making it a dependency."""
+    payload, error = read_json_status(path)
+    if payload is None:
+        return {
+            "available": False,
+            "running": False,
+            "reason": error or "status unavailable",
+        }
+
+    heartbeat_text = str(
+        payload.get("heartbeat_utc", "") or ""
+    )
+    age_seconds = None
+    running = False
+    reason = "heartbeat unavailable"
+
+    if heartbeat_text:
+        try:
+            heartbeat = datetime.fromisoformat(heartbeat_text)
+            if heartbeat.tzinfo is None:
+                heartbeat = heartbeat.replace(tzinfo=timezone.utc)
+            age_seconds = max(
+                0.0,
+                (datetime.now(timezone.utc) - heartbeat).total_seconds(),
+            )
+            running = age_seconds <= stale_seconds
+            reason = "ok" if running else "stale heartbeat"
+        except ValueError:
+            reason = "invalid heartbeat"
+
+    return {
+        "available": True,
+        "running": running,
+        "reason": reason,
+        "age_seconds": age_seconds,
+        **payload,
+    }
+
 
 def register_routes(
     app: Flask,
@@ -945,6 +991,13 @@ def register_routes(
             services.trigger_manager.get_status()
         )
 
+        capture_telemetry = get_runtime_status(
+            Path("/run/picam/capture_status.json")
+        )
+        psf_telemetry = get_runtime_status(
+            Path("/run/psf/psf_status.json")
+        )
+
         return jsonify(
             {
                 "success": True,
@@ -1035,6 +1088,12 @@ def register_routes(
 
                 "memory_mb":
                     memory_mb,
+
+                "capture_telemetry":
+                    capture_telemetry,
+
+                "psf_telemetry":
+                    psf_telemetry,
 
                 "last_error":
                     buffer_status["last_error"]

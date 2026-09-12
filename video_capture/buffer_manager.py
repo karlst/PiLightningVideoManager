@@ -64,6 +64,9 @@ from video_capture.capture_manager import CaptureManager
 from video_capture.sidecar_writer import SidecarWriteError
 from video_capture.sidecar_writer import SidecarWriter
 from common.candidate_config import CANDIDATE_CONFIG
+from common.runtime_telemetry import RollingEventCounts
+from common.runtime_telemetry import atomic_write_json
+from common.runtime_telemetry import utc_now_text
 
 
 # ## Owns camera buffering, analysis, trigger, and capture components.
@@ -174,6 +177,24 @@ class BufferManager:
         # Times of actual fired candidates, not raw threshold crossings
         # suppressed by cooldown. Used only for storm-rate detection.
         self._candidate_trigger_times = deque()
+
+        # Session-only operational telemetry. Counts are kept in RAM and reset
+        # whenever pcm restarts/reboots. Publishing happens on a separate
+        # low-frequency daemon thread so CameraReader never performs file I/O.
+        self._runtime_telemetry = RollingEventCounts(
+            ("candidates", "captures", "automatic_captures", "manual_captures"),
+            bucket_seconds=5 * 60,
+            window_hours=24,
+        )
+        self._runtime_status_path = Path(
+            "/run/picam/capture_status.json"
+        )
+        self._runtime_status_thread = Thread(
+            target=self._runtime_status_loop,
+            name="CaptureRuntimeStatus",
+            daemon=True,
+        )
+        self._runtime_status_thread.start()
 
     # ## Start the camera reader and clear existing runtime buffers.
     def start(self) -> tuple[bool, str]:
@@ -440,6 +461,13 @@ class BufferManager:
                             duration_seconds
                     }
                 )
+
+        if success and sidecar_data is not None:
+            self._runtime_telemetry.increment("captures")
+            if trigger_type == "manual":
+                self._runtime_telemetry.increment("manual_captures")
+            else:
+                self._runtime_telemetry.increment("automatic_captures")
 
         return success, message, capture_status
 
@@ -719,6 +747,28 @@ class BufferManager:
     def get_metrics_history(self) -> list[dict]:
         return self._metric_history.snapshot()
 
+    # ## Publish session telemetry to volatile /run state for webController.
+    def _runtime_status_loop(self) -> None:
+        while True:
+            try:
+                payload = {
+                    "schema_version": 1,
+                    "component": "picam",
+                    "heartbeat_utc": utc_now_text(),
+                    **self._runtime_telemetry.snapshot(),
+                }
+                atomic_write_json(
+                    self._runtime_status_path,
+                    payload,
+                )
+            except Exception:
+                # Telemetry is diagnostic only. During source development or
+                # before systemd creates /run/picam, the path may be absent.
+                # Never allow status publishing to affect camera acquisition.
+                pass
+
+            time.sleep(5.0)
+
     # ## Return combined camera, buffer, metrics, and trigger status.
     def get_status(self) -> dict:
         reader_status = (
@@ -979,6 +1029,8 @@ class BufferManager:
         self,
         timestamp_monotonic: float
     ) -> None:
+        self._runtime_telemetry.increment("candidates")
+
         self._candidate_trigger_times.append(
             timestamp_monotonic
         )
