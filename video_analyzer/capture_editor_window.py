@@ -14,6 +14,7 @@ import re
 
 from PySide6.QtCore import QEvent, Qt
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QDialog,
     QFileDialog,
@@ -34,6 +35,7 @@ from PySide6.QtWidgets import (
 )
 
 from common.aws_auth import AwsAuthConfig, AwsAuthenticator, AwsAuthError
+from common.capture_s3_uploader import upload_capture_pair_to_s3
 from common.capture_sidecar import (
     CLASSIFICATION_CODE_TO_NAME,
     CLASSIFICATION_NAME_TO_CODE,
@@ -409,6 +411,15 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
         el.addWidget(self.description_edit, 7, 1, 1, 3)
 
+        self.upload_to_s3_checkbox = QCheckBox("Upload to S3")
+        self.upload_to_s3_checkbox.setChecked(
+            getattr(self, "_upload_local_to_s3_checked", False)
+        )
+        self.upload_to_s3_checkbox.setVisible(
+            getattr(self, "source_mode", "Local Storage") == "Local Storage"
+        )
+        el.addWidget(self.upload_to_s3_checkbox, 8, 1, 1, 3)
+
         buttons = QHBoxLayout()
         self.restore_button = QPushButton("Restore")
         self.save_button = QPushButton("Save Changes")
@@ -417,7 +428,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.save_button.setEnabled(False)
         buttons.addWidget(self.restore_button)
         buttons.addWidget(self.save_button)
-        el.addLayout(buttons, 8, 0, 1, 4)
+        el.addLayout(buttons, 9, 0, 1, 4)
 
         el.setColumnStretch(1, 1)
         el.setColumnStretch(3, 1)
@@ -548,6 +559,9 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.classification_combo.currentTextChanged.connect(self._update_dirty_state)
         self.type_combo.currentTextChanged.connect(self._update_dirty_state)
         self.description_edit.textChanged.connect(self._update_dirty_state)
+        self.upload_to_s3_checkbox.toggled.connect(
+            self._on_upload_to_s3_toggled
+        )
 
         # Establish the initial clean state after controls are wired.
         self._update_dirty_state()
@@ -563,6 +577,7 @@ class CaptureEditorWindow(ClipEditorWindow):
             self.classification_combo,
             self.type_combo,
             self.description_edit,
+            self.upload_to_s3_checkbox,
         )
         for field in self._editor_fields:
             field.installEventFilter(self)
@@ -577,6 +592,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.setTabOrder(self.verified_combo, self.classification_combo)
         self.setTabOrder(self.classification_combo, self.type_combo)
         self.setTabOrder(self.type_combo, self.description_edit)
+        self.setTabOrder(self.description_edit, self.upload_to_s3_checkbox)
+        self.setTabOrder(self.upload_to_s3_checkbox, self.restore_button)
 
     # ------------------------------------------------------------------
     # Source UI
@@ -600,6 +617,9 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.location_edit.setVisible(local)
         self.parent_folder_button.setVisible(local)
         self.browse_location_button.setVisible(local)
+
+        if hasattr(self, "upload_to_s3_checkbox"):
+            self.upload_to_s3_checkbox.setVisible(local)
 
         if local:
             self.location_edit.setText(str(self.open_directory))
@@ -855,15 +875,34 @@ class CaptureEditorWindow(ClipEditorWindow):
         if hasattr(self, "status_label"):
             self.status_label.setText(message)
 
+    def _on_upload_to_s3_toggled(self, checked: bool):
+        # This is session state, not capture metadata.  It intentionally
+        # survives clip changes and source switches for the life of the window.
+        self._upload_local_to_s3_checked = bool(checked)
+        self._update_dirty_state()
+
+    def _local_upload_pending(self) -> bool:
+        return bool(
+            self.source_mode == "Local Storage"
+            and getattr(self, "_upload_local_to_s3_checked", False)
+            and self.capture_data is not None
+            and not getattr(self, "_local_capture_uploaded_this_load", False)
+        )
+
     def _update_dirty_state(self, *_args):
         if not hasattr(self, "save_button"):
             return
-        dirty = bool(
+
+        metadata_dirty = bool(
             self.capture_data is not None
             and getattr(self, "loaded_metadata", None)
             and self.current_values() != self.loaded_metadata
         )
-        self.save_button.setEnabled(dirty)
+
+        # Upload is an explicit Save action even when metadata is unchanged.
+        self.save_button.setEnabled(
+            metadata_dirty or self._local_upload_pending()
+        )
 
     def on_classification_changed(self, classification):
         is_true_flash = (
@@ -983,6 +1022,7 @@ class CaptureEditorWindow(ClipEditorWindow):
             self.classification_combo,
             self.type_combo,
             self.description_edit,
+            self.upload_to_s3_checkbox,
             self.restore_button,
             self.save_button,
         )
@@ -1257,6 +1297,14 @@ class CaptureEditorWindow(ClipEditorWindow):
         self._s3_records = []
         self._current_s3_record = None
 
+        # Session-persistent Local Storage upload option.
+        self._upload_local_to_s3_checked = False
+
+        # Tracks whether the currently loaded local capture has already been
+        # uploaded by this editor instance.  The checkbox itself stays checked
+        # across clips; this flag resets for each newly loaded clip.
+        self._local_capture_uploaded_this_load = False
+
         # Local filtering currently requires reading each JSON sidecar. Cache
         # that metadata once per folder so opening/rebuilding one capture does
         # not reread thousands of sidecars.
@@ -1522,6 +1570,7 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         self.source_mode = source_mode
         self._current_s3_record = s3_record
+        self._local_capture_uploaded_this_load = False
 
         self.create_ui()
         self.connect_controls()
@@ -1637,15 +1686,16 @@ class CaptureEditorWindow(ClipEditorWindow):
         stem = PurePosixPath(parts[-1]).stem
         return site, stem
 
-    def _sync_training_json(
+    def _sync_training_json_for_site_stem(
         self,
-        record: S3CaptureRecord,
+        sidecar,
+        site: str,
+        stem: str,
     ) -> tuple[bool, str]:
         if self._s3_store is None:
             raise RuntimeError("S3 store is not initialized")
 
-        site, stem = self._training_site_and_stem(record)
-        desired_label, reason = self._training_label_from_sidecar(record.sidecar)
+        desired_label, reason = self._training_label_from_sidecar(sidecar)
         desired_key = (
             f"training/{desired_label}/{site}/{stem}.json"
             if desired_label is not None
@@ -1665,7 +1715,7 @@ class CaptureEditorWindow(ClipEditorWindow):
             return False, reason or "not eligible for training"
 
         payload = (
-            json.dumps(record.sidecar, indent=4) + "\n"
+            json.dumps(sidecar, indent=4) + "\n"
         ).encode("utf-8")
         self._s3_store.upload_bytes(
             payload,
@@ -1674,12 +1724,89 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
         return True, desired_label
 
+    def _sync_training_json(
+        self,
+        record: S3CaptureRecord,
+    ) -> tuple[bool, str]:
+        site, stem = self._training_site_and_stem(record)
+        return self._sync_training_json_for_site_stem(
+            record.sidecar,
+            site,
+            stem,
+        )
+
+    @staticmethod
+    def _site_and_stem_from_canonical_base_key(
+        base_key: str,
+    ) -> tuple[str, str]:
+        parts = PurePosixPath(base_key).parts
+        if len(parts) < 3:
+            raise ValueError(f"Invalid canonical S3 base key: {base_key}")
+
+        # All current canonical layouts end in <site>/<stem>.
+        return parts[-2], parts[-1]
+
+    def _upload_local_capture_to_s3(
+        self,
+        sidecar,
+    ) -> tuple[str, str, bool]:
+        if self.capture_data is None:
+            raise RuntimeError("No local capture is loaded")
+
+        video_path = Path(self.capture_data.video_path)
+        sidecar_path = Path(self.capture_data.sidecar_path)
+
+        if not video_path.is_file():
+            raise RuntimeError(f"Local MP4 not found: {video_path}")
+        if not sidecar_path.is_file():
+            raise RuntimeError(f"Local JSON not found: {sidecar_path}")
+
+        # Reuse the desktop manager-profile S3 connection already used by the
+        # editor.  Do not use the Pi ingest profile for a desktop operation.
+        self._ensure_s3_repository()
+        if self._s3_store is None:
+            raise RuntimeError("S3 store is not initialized")
+
+        # Reuse the production canonical pair uploader so verified/unverified
+        # key selection and MP4/JSON rollback semantics stay in one place.
+        base_key = upload_capture_pair_to_s3(
+            self._s3_store,
+            video_path,
+            sidecar_path,
+        )
+
+        site, stem = self._site_and_stem_from_canonical_base_key(base_key)
+
+        training_failed = False
+        try:
+            updated_training, detail = self._sync_training_json_for_site_stem(
+                sidecar,
+                site,
+                stem,
+            )
+            training_message = (
+                f"updated training data ({detail})"
+                if updated_training
+                else f"training not updated ({detail})"
+            )
+        except (
+            S3StoreError,
+            OSError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+        ) as exc:
+            training_failed = True
+            training_message = f"training update failed: {exc}"
+
+        return base_key, training_message, training_failed
+
     def save_changes(self):
         if self.capture_data is None or self.capture_data.sidecar is None:
             self._set_status("Save failed: no capture is loaded")
             return False
 
-        if not self.has_unsaved_changes():
+        if not self.has_unsaved_changes() and not self._local_upload_pending():
             self._update_dirty_state()
             return True
 
@@ -1774,7 +1901,52 @@ class CaptureEditorWindow(ClipEditorWindow):
                 self.capture_data.video_path,
                 sidecar,
             )
-            self._set_status("Saved changes locally")
+
+            if self._local_upload_pending():
+                try:
+                    base_key, training_message, training_failed = (
+                        self._upload_local_capture_to_s3(sidecar)
+                    )
+                except (
+                    AwsAuthError,
+                    S3StoreError,
+                    OSError,
+                    RuntimeError,
+                    ValueError,
+                    TypeError,
+                ) as exc:
+                    # The local save succeeded.  Keep this upload pending so the
+                    # same Save Changes button can retry the S3 operation.
+                    self._set_status(
+                        f"Saved changes locally; S3 upload failed: {exc}"
+                    )
+                    self.loaded_metadata = copy.deepcopy(self.metadata())
+                    self._update_dirty_state()
+                    QMessageBox.critical(
+                        self,
+                        "S3 upload failed",
+                        str(exc),
+                    )
+                    return False
+
+                if training_failed:
+                    # Canonical upload succeeded, but the requested training
+                    # maintenance did not.  Leave the action pending for retry.
+                    self._set_status(
+                        f"Saved changes locally; uploaded to S3 ({base_key}); "
+                        f"{training_message}"
+                    )
+                    self.loaded_metadata = copy.deepcopy(self.metadata())
+                    self._update_dirty_state()
+                    return False
+
+                self._local_capture_uploaded_this_load = True
+                self._set_status(
+                    f"Saved changes locally; uploaded to S3 ({base_key}); "
+                    f"{training_message}"
+                )
+            else:
+                self._set_status("Saved changes locally")
 
         self.loaded_metadata = copy.deepcopy(self.metadata())
         self._update_dirty_state()
@@ -1814,7 +1986,7 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         original_row = self.file_list.row(item)
 
-        if self.has_unsaved_changes():
+        if self.has_unsaved_changes() or self._local_upload_pending():
             if not self.save_changes():
                 return
 

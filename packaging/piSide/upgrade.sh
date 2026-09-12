@@ -16,6 +16,17 @@ fi
 
 PROGRAM_ROOT="/opt/piCameraCapture"
 PACKAGE_ROOT="$(cd "$(dirname "$0")" && pwd)"
+INSTALL_USER="${SUDO_USER:-}"
+
+if [ -z "$INSTALL_USER" ] || [ "$INSTALL_USER" = "root" ]; then
+    echo "Unable to determine the non-root install user."
+    echo "Run as: sudo ./upgrade.sh"
+    exit 1
+fi
+
+INSTALL_HOME="$(getent passwd "$INSTALL_USER" | cut -d: -f6)"
+DATA_ROOT="$INSTALL_HOME/piCameraData"
+
 BACKUP_ROOT="$(mktemp -d)"
 CONFIG_BACKUP="$BACKUP_ROOT/config"
 
@@ -44,6 +55,26 @@ install -m 755 "$PACKAGE_ROOT/network/wifiStartup.py" /usr/local/lib/piCameraCap
 for command in "$PACKAGE_ROOT"/bin/*; do
     install -m 755 "$command" "/usr/local/bin/$(basename "$command")"
 done
+
+echo "Refreshing systemd services..."
+render_service() {
+    local source_file="$1"
+    local destination_file="$2"
+
+    sed \
+        -e "s|@INSTALL_USER@|$INSTALL_USER|g" \
+        -e "s|@PROGRAM_ROOT@|$PROGRAM_ROOT|g" \
+        -e "s|@DATA_ROOT@|$DATA_ROOT|g" \
+        "$source_file" > "$destination_file"
+}
+
+render_service \
+    "$PACKAGE_ROOT/pcm.service" \
+    /etc/systemd/system/pcm.service
+
+render_service \
+    "$PACKAGE_ROOT/psf.service" \
+    /etc/systemd/system/psf.service
 
 rm -rf "$BACKUP_ROOT"
 

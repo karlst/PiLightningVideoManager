@@ -50,6 +50,7 @@ apt-get install -y \
     ffmpeg \
     network-manager \
     python3 \
+    python3-boto3 \
     python3-flask \
     python3-numpy \
     python3-opencv \
@@ -58,12 +59,14 @@ apt-get install -y \
 
 echo "Checking Python runtime..."
 python3 - <<'PY'
+import boto3
 import cv2
 import flask
 import numpy
 import psutil
 
 print("Python imports OK")
+print("boto3:", boto3.__version__)
 print("OpenCV:", cv2.__version__)
 print("Flask:", flask.__version__ if hasattr(flask, "__version__") else "installed")
 print("NumPy:", numpy.__version__)
@@ -106,7 +109,8 @@ cat > "$PROGRAM_ROOT/config/system_config.json" <<EOF
     "program_root": "$PROGRAM_ROOT",
     "data_root": "$DATA_ROOT",
     "psf_interval_seconds": 60,
-    "save_filtered_false_positives": false
+    "save_filtered_false_positives": false,
+    "upload_to_s3": false
 }
 EOF
 

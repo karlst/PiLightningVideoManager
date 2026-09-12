@@ -56,6 +56,8 @@ SUPPORT_FILES = (
     "install.sh",
     "upgrade.sh",
     "uninstall.sh",
+    "pcm.service",
+    "psf.service",
 )
 
 BIN_FILES = (
@@ -79,19 +81,32 @@ def require_file(path: Path) -> None:
         raise RuntimeError(f"Required file not found: {path}")
 
 
+def require_directory(path: Path) -> None:
+    if not path.is_dir():
+        raise RuntimeError(f"Required directory not found: {path}")
+
+
 def copy_python_directory(
     source: Path,
     destination: Path,
     exclude: set[str] | None = None,
 ) -> None:
+    """Copy Python source recursively while preserving package subdirectories."""
     exclude = exclude or set()
+    require_directory(source)
+
     destination.mkdir(parents=True, exist_ok=True)
 
-    for path in sorted(source.glob("*.py")):
-        if path.name in exclude:
-            continue
-        shutil.copy2(path, destination / path.name)
+    for source_file in sorted(source.rglob("*.py")):
+        relative = source_file.relative_to(source)
 
+        # Preserve existing behavior: exclude names only at the package root.
+        if len(relative.parts) == 1 and source_file.name in exclude:
+            continue
+
+        destination_file = destination / relative
+        destination_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, destination_file)
 
 def build() -> None:
     if DIST_DIRECTORY.exists():
@@ -233,14 +248,16 @@ def build() -> None:
 
     # Normalize shell scripts to Unix LF line endings.  The package is built
     # on Windows, so do not rely on the source checkout's line-ending mode.
-    executable_paths = [
+    text_paths = [
         DIST_DIRECTORY / "install.sh",
         DIST_DIRECTORY / "upgrade.sh",
         DIST_DIRECTORY / "uninstall.sh",
+        DIST_DIRECTORY / "pcm.service",
+        DIST_DIRECTORY / "psf.service",
         *[bin_destination / name for name in BIN_FILES],
     ]
 
-    for path in executable_paths:
+    for path in text_paths:
         data = path.read_bytes().replace(b"\r\n", b"\n")
         path.write_bytes(data)
 
