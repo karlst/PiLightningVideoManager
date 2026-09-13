@@ -1,9 +1,8 @@
-"""Vce Capture Editor for local and S3 Pi Camera captures.
+"""Lightning Video Clip Editor/Reader for local and S3 Pi Camera captures.
 
-The editor displays the production classifier's original FLASH/ANOMALY result
-and initial confidence from the V8 sidecar, supports human verification/editing, and
-displays the recorded geographic search bounding box. Legacy SolutionFilter
-results are intentionally not computed or displayed.
+Editor mode supports the existing human verification/editing workflow. Reader
+mode uses the same browser/video/graph layout but presents capture metadata as
+fixed fields and never writes local or S3 capture metadata.
 """
 from __future__ import annotations
 
@@ -346,89 +345,122 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         rl.addWidget(search_group)
 
-        # Editable Clip Metadata
+        # Clip metadata. Editor mode preserves the existing editable controls;
+        # Reader mode shows fixed values in the same panel footprint.
         edit = QGroupBox("Clip metadata")
         el = QGridLayout(edit)
         el.setHorizontalSpacing(5)
         el.setVerticalSpacing(2)
 
-        self.site_edit = QLineEdit()
-        self.latitude_spin = self.spin(-90, 90, 7)
-        self.longitude_spin = self.spin(-180, 180, 7)
-        self.bearing_spin = self.spin(0, 359.999, 3)
-        self.hfov_spin = self.spin(1, 120, 3)
+        if self.read_only:
+            self.reader_metadata_labels = {
+                "site_name": QLabel("—"),
+                "latitude": QLabel("—"),
+                "longitude": QLabel("—"),
+                "bearing": QLabel("—"),
+                "hfov": QLabel("—"),
+                "verified": QLabel("—"),
+                "classification": QLabel("—"),
+                "type": QLabel("—"),
+            }
 
-        # Keep VFOV in memory for compatibility with current sidecars/save code,
-        # but it is deliberately not presented in the UI.
-        self.vfov_spin = self.spin(1, 120, 3)
-        self.vfov_spin.hide()
+            el.addWidget(QLabel("Site name:"), 0, 0)
+            el.addWidget(self.reader_metadata_labels["site_name"], 0, 1, 1, 3)
+            el.addWidget(QLabel("Latitude:"), 1, 0)
+            el.addWidget(self.reader_metadata_labels["latitude"], 1, 1, 1, 3)
+            el.addWidget(QLabel("Longitude:"), 2, 0)
+            el.addWidget(self.reader_metadata_labels["longitude"], 2, 1, 1, 3)
+            el.addWidget(QLabel("Bearing:"), 3, 0)
+            el.addWidget(self.reader_metadata_labels["bearing"], 3, 1)
+            el.addWidget(QLabel("HFOV:"), 3, 2)
+            el.addWidget(self.reader_metadata_labels["hfov"], 3, 3)
+            el.addWidget(QLabel("Verified:"), 4, 0)
+            el.addWidget(self.reader_metadata_labels["verified"], 4, 1, 1, 3)
+            el.addWidget(QLabel("Classification:"), 5, 0)
+            el.addWidget(self.reader_metadata_labels["classification"], 5, 1, 1, 3)
+            el.addWidget(QLabel("Type:"), 6, 0)
+            el.addWidget(self.reader_metadata_labels["type"], 6, 1, 1, 3)
 
-        self.verified_combo = QComboBox()
-        self.verified_combo.addItems(VERIFIED_VALUES)
+            self.reader_description = QPlainTextEdit()
+            self.reader_description.setReadOnly(True)
+            self.reader_description.setMinimumHeight(150)
+            self.reader_description.setMaximumHeight(240)
+            el.addWidget(
+                QLabel("Description:"),
+                7,
+                0,
+                Qt.AlignmentFlag.AlignTop,
+            )
+            el.addWidget(self.reader_description, 7, 1, 1, 3)
 
-        self.classification_combo = QComboBox()
-        self.classification_combo.addItems(CLASSIFICATION_VALUES)
+        else:
+            self.site_edit = QLineEdit()
+            self.latitude_spin = self.spin(-90, 90, 7)
+            self.longitude_spin = self.spin(-180, 180, 7)
+            self.bearing_spin = self.spin(0, 359.999, 3)
+            self.hfov_spin = self.spin(1, 120, 3)
 
-        self.type_combo = QComboBox()
-        self.type_combo.addItems(TYPE_VALUES)
+            # Keep VFOV in memory for compatibility with current sidecars/save code,
+            # but it is deliberately not presented in the UI.
+            self.vfov_spin = self.spin(1, 120, 3)
+            self.vfov_spin.hide()
 
-        self.description_edit = QTextEdit()
-        self.description_edit.setAcceptRichText(False)
-        self.description_edit.setMinimumHeight(150)
-        self.description_edit.setMaximumHeight(240)
+            self.verified_combo = QComboBox()
+            self.verified_combo.addItems(VERIFIED_VALUES)
 
-        # Site
-        el.addWidget(QLabel("Site name:"), 0, 0)
-        el.addWidget(self.site_edit, 0, 1, 1, 3)
+            self.classification_combo = QComboBox()
+            self.classification_combo.addItems(CLASSIFICATION_VALUES)
 
-        # Latitude / Longitude on separate rows to use vertical space cleanly.
-        el.addWidget(QLabel("Latitude:"), 1, 0)
-        el.addWidget(self.latitude_spin, 1, 1, 1, 3)
+            self.type_combo = QComboBox()
+            self.type_combo.addItems(TYPE_VALUES)
 
-        el.addWidget(QLabel("Longitude:"), 2, 0)
-        el.addWidget(self.longitude_spin, 2, 1, 1, 3)
+            self.description_edit = QTextEdit()
+            self.description_edit.setAcceptRichText(False)
+            self.description_edit.setMinimumHeight(150)
+            self.description_edit.setMaximumHeight(240)
 
-        # Bearing / HFOV still share one row.
-        el.addWidget(QLabel("Bearing:"), 3, 0)
-        el.addWidget(self.bearing_spin, 3, 1)
-        el.addWidget(QLabel("HFOV:"), 3, 2)
-        el.addWidget(self.hfov_spin, 3, 3)
+            el.addWidget(QLabel("Site name:"), 0, 0)
+            el.addWidget(self.site_edit, 0, 1, 1, 3)
+            el.addWidget(QLabel("Latitude:"), 1, 0)
+            el.addWidget(self.latitude_spin, 1, 1, 1, 3)
+            el.addWidget(QLabel("Longitude:"), 2, 0)
+            el.addWidget(self.longitude_spin, 2, 1, 1, 3)
+            el.addWidget(QLabel("Bearing:"), 3, 0)
+            el.addWidget(self.bearing_spin, 3, 1)
+            el.addWidget(QLabel("HFOV:"), 3, 2)
+            el.addWidget(self.hfov_spin, 3, 3)
+            el.addWidget(QLabel("Verified:"), 4, 0)
+            el.addWidget(self.verified_combo, 4, 1, 1, 3)
+            el.addWidget(QLabel("Classification:"), 5, 0)
+            el.addWidget(self.classification_combo, 5, 1, 1, 3)
+            el.addWidget(QLabel("Type:"), 6, 0)
+            el.addWidget(self.type_combo, 6, 1, 1, 3)
+            el.addWidget(
+                QLabel("Description:"),
+                7,
+                0,
+                Qt.AlignmentFlag.AlignTop,
+            )
+            el.addWidget(self.description_edit, 7, 1, 1, 3)
 
-        el.addWidget(QLabel("Verified:"), 4, 0)
-        el.addWidget(self.verified_combo, 4, 1, 1, 3)
+            self.upload_to_s3_checkbox = QCheckBox("Upload to S3")
+            self.upload_to_s3_checkbox.setChecked(
+                getattr(self, "_upload_local_to_s3_checked", False)
+            )
+            self.upload_to_s3_checkbox.setVisible(
+                getattr(self, "source_mode", "Local Storage") == "Local Storage"
+            )
+            el.addWidget(self.upload_to_s3_checkbox, 8, 1, 1, 3)
 
-        el.addWidget(QLabel("Classification:"), 5, 0)
-        el.addWidget(self.classification_combo, 5, 1, 1, 3)
-
-        el.addWidget(QLabel("Type:"), 6, 0)
-        el.addWidget(self.type_combo, 6, 1, 1, 3)
-
-        el.addWidget(
-            QLabel("Description:"),
-            7,
-            0,
-            Qt.AlignmentFlag.AlignTop,
-        )
-        el.addWidget(self.description_edit, 7, 1, 1, 3)
-
-        self.upload_to_s3_checkbox = QCheckBox("Upload to S3")
-        self.upload_to_s3_checkbox.setChecked(
-            getattr(self, "_upload_local_to_s3_checked", False)
-        )
-        self.upload_to_s3_checkbox.setVisible(
-            getattr(self, "source_mode", "Local Storage") == "Local Storage"
-        )
-        el.addWidget(self.upload_to_s3_checkbox, 8, 1, 1, 3)
-
-        buttons = QHBoxLayout()
-        self.restore_button = QPushButton("Restore")
-        self.save_button = QPushButton("Save Changes")
-        self.save_button.setDefault(True)
-        self.save_button.setAutoDefault(True)
-        self.save_button.setEnabled(False)
-        buttons.addWidget(self.restore_button)
-        buttons.addWidget(self.save_button)
-        el.addLayout(buttons, 9, 0, 1, 4)
+            buttons = QHBoxLayout()
+            self.restore_button = QPushButton("Restore")
+            self.save_button = QPushButton("Save Changes")
+            self.save_button.setDefault(True)
+            self.save_button.setAutoDefault(True)
+            self.save_button.setEnabled(False)
+            buttons.addWidget(self.restore_button)
+            buttons.addWidget(self.save_button)
+            el.addLayout(buttons, 9, 0, 1, 4)
 
         el.setColumnStretch(1, 1)
         el.setColumnStretch(3, 1)
@@ -448,13 +480,21 @@ class CaptureEditorWindow(ClipEditorWindow):
         status_row = QHBoxLayout()
         status_row.setSpacing(12)
 
-        shortcut_label = QLabel(
-            "Ctrl+Left/Right: Previous/Next clip    "
-            "Ctrl+Enter: Save + Next clip    "
-            "Ctrl+I: IC    Ctrl+G: CG    Ctrl+J: View JSON    "
-            "Left/Right: Previous/Next frame    "
-            "Enter: Save    Esc: Restore"
-        )
+        if self.read_only:
+            shortcut_text = (
+                "Ctrl+Left/Right: Previous/Next clip    "
+                "Ctrl+J: View JSON    "
+                "Left/Right: Previous/Next frame"
+            )
+        else:
+            shortcut_text = (
+                "Ctrl+Left/Right: Previous/Next clip    "
+                "Ctrl+Enter: Save + Next clip    "
+                "Ctrl+I: IC    Ctrl+G: CG    Ctrl+J: View JSON    "
+                "Left/Right: Previous/Next frame    "
+                "Enter: Save    Esc: Restore"
+            )
+        shortcut_label = QLabel(shortcut_text)
         shortcut_label.setStyleSheet("QLabel { color: #555; font-size: 10px; }")
 
         self.status_label = QLabel("")
@@ -535,6 +575,9 @@ class CaptureEditorWindow(ClipEditorWindow):
             )
         )
         self.frame_slider.valueChanged.connect(self.on_slider_changed)
+
+        if self.read_only:
+            return
 
         # Existing metadata workflow
         self.restore_button.clicked.connect(self.restore_loaded_values)
@@ -839,6 +882,9 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
 
     def current_values(self):
+        if self.read_only:
+            return copy.deepcopy(getattr(self, "loaded_metadata", None))
+
         return dict(
             site_name=self.site_edit.text().strip(),
             latitude=self.latitude_spin.value(),
@@ -854,9 +900,25 @@ class CaptureEditorWindow(ClipEditorWindow):
 
     def restore_loaded_values(self):
         if not self.loaded_metadata:
+            if self.read_only and hasattr(self, "reader_metadata_labels"):
+                for label in self.reader_metadata_labels.values():
+                    label.setText("—")
+                self.reader_description.setPlainText("")
             return
 
         v = self.loaded_metadata
+        if self.read_only:
+            labels = self.reader_metadata_labels
+            labels["site_name"].setText(v["site_name"] or "—")
+            labels["latitude"].setText(f'{v["latitude"]:.7f}')
+            labels["longitude"].setText(f'{v["longitude"]:.7f}')
+            labels["bearing"].setText(f'{v["bearing"]:.3f}')
+            labels["hfov"].setText(f'{v["hfov"]:.3f}')
+            labels["verified"].setText("Yes" if v["verified"] else "No")
+            labels["classification"].setText(v["classification"] or "—")
+            labels["type"].setText(v["type"] or "—")
+            self.reader_description.setPlainText(v["description"])
+            return
         self.site_edit.setText(v["site_name"])
         self.latitude_spin.setValue(v["latitude"])
         self.longitude_spin.setValue(v["longitude"])
@@ -882,6 +944,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         self._update_dirty_state()
 
     def _local_upload_pending(self) -> bool:
+        if self.read_only:
+            return False
         return bool(
             self.source_mode == "Local Storage"
             and getattr(self, "_upload_local_to_s3_checked", False)
@@ -890,7 +954,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
 
     def _update_dirty_state(self, *_args):
-        if not hasattr(self, "save_button"):
+        if self.read_only or not hasattr(self, "save_button"):
             return
 
         metadata_dirty = bool(
@@ -921,6 +985,12 @@ class CaptureEditorWindow(ClipEditorWindow):
             modifiers
             & Qt.KeyboardModifier.ControlModifier
         ):
+            return False
+
+        if self.read_only:
+            if key == Qt.Key.Key_J:
+                self.show_json_sidecar()
+                return True
             return False
 
         if key == Qt.Key.Key_I:
@@ -1012,6 +1082,9 @@ class CaptureEditorWindow(ClipEditorWindow):
         dialog.exec()
 
     def set_editor_enabled(self, enabled):
+        if self.read_only:
+            return
+
         widgets = (
             self.site_edit,
             self.latitude_spin,
@@ -1280,8 +1353,17 @@ class CaptureEditorWindow(ClipEditorWindow):
         candidate_result,
         solution_result,
         open_directory=None,
+        *,
+        app_mode="editor",
+        s3_client=None,
+        initial_source="S3",
     ):
-        self.source_mode = "Local Storage"
+        self.app_mode = str(app_mode).strip().lower()
+        if self.app_mode not in {"editor", "reader"}:
+            raise ValueError(f"Unknown Capture Editor mode: {app_mode}")
+        self.read_only = self.app_mode == "reader"
+        self._s3_client = s3_client
+        self.source_mode = initial_source
         self._source_change_in_progress = False
 
         self._browser_filter_settings = {
@@ -1327,25 +1409,65 @@ class CaptureEditorWindow(ClipEditorWindow):
             open_directory=open_directory,
         )
 
+        self.setWindowTitle(
+            "Lightning Video Clip Reader"
+            if self.read_only
+            else "Lightning Video Clip Editor"
+        )
+
         # A capture supplied at startup is local.
         if self._local_open_directory is None:
             self._local_open_directory = Path(self.open_directory)
 
         if capture_data is not None:
-            self._upgrade_loaded_sidecar(persist_local=True)
+            self._upgrade_loaded_sidecar(
+                persist_local=not self.read_only
+            )
+
+        if self.source_mode == "S3":
+            self._load_s3_index()
+
+    def load_editor_fields(self):
+        if not self.read_only:
+            return super().load_editor_fields()
+
+        self.loaded_metadata = (
+            copy.deepcopy(self.metadata())
+            if self.capture_data is not None
+            else None
+        )
+        self.restore_loaded_values()
+
+    def _load_s3_index(self):
+        try:
+            self._ensure_s3_repository()
+            self._s3_records = self._s3_repository.list_capture_index()
+        except (AwsAuthError, S3StoreError, OSError, ValueError) as exc:
+            QMessageBox.critical(self, "Unable to open S3", str(exc))
+            self._s3_records = []
+        self.refresh_file_browser()
 
     def _ensure_s3_repository(self):
         if self._s3_repository is not None:
             return self._s3_repository
 
-        auth = AwsAuthenticator(
-            AwsAuthConfig(profile_name=S3_AUTH_PROFILE)
+        if self._s3_client is not None:
+            self._s3_store = S3Store(
+                S3_BUCKET_NAME,
+                client=self._s3_client,
+            )
+        else:
+            auth = AwsAuthenticator(
+                AwsAuthConfig(profile_name=S3_AUTH_PROFILE)
+            )
+            self._s3_store = S3Store(
+                S3_BUCKET_NAME,
+                authenticator=auth,
+            )
+        self._s3_repository = S3CaptureRepository(
+            self._s3_store,
+            read_only=self.read_only,
         )
-        self._s3_store = S3Store(
-            S3_BUCKET_NAME,
-            authenticator=auth,
-        )
-        self._s3_repository = S3CaptureRepository(self._s3_store)
         return self._s3_repository
 
     def on_source_changed(self, source):
@@ -1375,12 +1497,7 @@ class CaptureEditorWindow(ClipEditorWindow):
                 )
 
         if source == "S3":
-            try:
-                self._ensure_s3_repository()
-                self._s3_records = self._s3_repository.list_capture_index()
-            except (AwsAuthError, S3StoreError, OSError, ValueError) as exc:
-                QMessageBox.critical(self, "Unable to open S3", str(exc))
-                self._s3_records = []
+            self._load_s3_index()
 
         self._set_source_ui()
         self._applied_filters = self._current_filter_settings()
@@ -1543,7 +1660,11 @@ class CaptureEditorWindow(ClipEditorWindow):
             if isinstance(cd.sidecar, dict):
                 upgraded, changed = normalize_sidecar(cd.sidecar)
                 cd.sidecar = upgraded
-                if changed and source_mode == "Local Storage":
+                if (
+                    changed
+                    and source_mode == "Local Storage"
+                    and not self.read_only
+                ):
                     self._write_local_sidecar_atomic(cd.sidecar_path, upgraded)
 
             cr = replay_candidate_finder(cd, self.candidate_config)
@@ -1577,7 +1698,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.load_editor_fields()
         self.update_capture_information()
         self.set_frame(0, force=True)
-        self.focus_description_at_end()
+        if not self.read_only:
+            self.focus_description_at_end()
         self._update_dirty_state()
         self._set_status("")
 
@@ -1802,6 +1924,9 @@ class CaptureEditorWindow(ClipEditorWindow):
         return base_key, training_message, training_failed
 
     def save_changes(self):
+        if self.read_only:
+            return False
+
         if self.capture_data is None or self.capture_data.sidecar is None:
             self._set_status("Save failed: no capture is loaded")
             return False

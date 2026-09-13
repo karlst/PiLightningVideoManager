@@ -44,8 +44,9 @@ class S3CaptureRecord:
 class S3CaptureRepository:
     """Browse/open/save Pi Camera MP4+JSON pairs in one S3 bucket."""
 
-    def __init__(self, store: S3Store) -> None:
+    def __init__(self, store: S3Store, *, read_only: bool = False) -> None:
         self.store = store
+        self.read_only = bool(read_only)
         self._tempdir = tempfile.TemporaryDirectory(prefix="picam-vce-s3-")
         self.cache_root = Path(self._tempdir.name)
 
@@ -198,9 +199,11 @@ class S3CaptureRepository:
         sidecar = json.loads(raw.decode("utf-8-sig"))
         sidecar, changed = normalize_sidecar(sidecar)
 
-        if changed:
+        if changed and not self.read_only:
             record = self.save_capture(record, sidecar)
         else:
+            # Reader mode may normalize the downloaded sidecar in memory/local
+            # cache, but it must never write that normalization back to S3.
             record.sidecar = sidecar
             record.metadata_hint = None
 
@@ -234,6 +237,9 @@ class S3CaptureRepository:
 
         Old objects are never deleted before the new pair has been verified.
         """
+        if self.read_only:
+            raise S3StoreError("Capture repository is read-only")
+
         normalized, _changed = normalize_sidecar(sidecar)
         new_base = canonical_capture_base_key(
             normalized,
