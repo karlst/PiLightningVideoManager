@@ -45,6 +45,11 @@ test_output/
 # Local captures
 captures/
 
+#Never want commited, have security stuff
+common/reader_credentials.py
+tests/encdec.py
+tests/verify_aws_creds.py
+
 network/wifiProfiles.txt
 network/wifiStartup.log
 

@@ -164,7 +164,11 @@ def main():
 
     try:
         app_mode, s3_client = select_application_mode()
-        initial_source = "S3" if p is None else "Local Storage"
+        if app_mode == "reader":
+            p = None
+            initial_source = "S3"
+        else:
+            initial_source = "S3" if p is None else "Local Storage"
 
         if p is None:
             w = CaptureEditorWindow(
@@ -224,6 +228,15 @@ def main():
         return 1
 
     w.show()
+    app.processEvents()
+
+    try:
+        import pyi_splash
+    except ImportError:
+        pass
+    else:
+        pyi_splash.close()
+
     return app.exec()
 
 

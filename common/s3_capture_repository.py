@@ -56,7 +56,12 @@ class S3CaptureRepository:
     def list_captures(self) -> list[S3CaptureRecord]:
         """Read sidecars under the two Capture Editor namespaces."""
         json_keys: set[str] = set()
-        for prefix in ("unverified/", "verified/"):
+        prefixes = (
+            ("verified/FLASH/",)
+            if self.read_only
+            else ("unverified/", "verified/")
+        )
+        for prefix in prefixes:
             for obj in self.store.list_objects(prefix):
                 if obj.key.lower().endswith(".json"):
                     json_keys.add(obj.key)
@@ -93,10 +98,13 @@ class S3CaptureRepository:
         """
         object_keys: set[str] = set()
 
-        for prefix in (
-            "unverified/",
-            "verified/",
-        ):
+        prefixes = (
+            ("verified/FLASH/",)
+            if self.read_only
+            else ("unverified/", "verified/")
+        )
+
+        for prefix in prefixes:
             for obj in self.store.list_objects(prefix):
                 object_keys.add(obj.key)
 

@@ -34,6 +34,8 @@ SPEC_DIRECTORY = BUILD_DIRECTORY / "spec"
 DIST_DIRECTORY = REPOSITORY_ROOT / "dist" / "windows" / "Lvce"
 RUNTIME_HOOK = BUILD_DIRECTORY / "lvce_runtime.py"
 
+SPLASH_IMAGE = PACKAGING_DIRECTORY / "LvceSplash.png"
+
 EXECUTABLE_NAME = "Lvce"
 EXECUTABLE_PATH = DIST_DIRECTORY / f"{EXECUTABLE_NAME}.exe"
 
@@ -98,10 +100,11 @@ def build() -> None:
     if sys.platform != "win32":
         raise RuntimeError("This build script must be run on Windows.")
 
-    for module_name in ("PyInstaller", "PySide6", "cv2", "numpy", "boto3"):
+    for module_name in ("PyInstaller", "PySide6", "cv2", "numpy", "boto3", "tkinter"):
         require_python_module(module_name)
 
     require_file(SOURCE_FILE)
+    require_file(SPLASH_IMAGE)
 
     ffmpeg_path = require_path_tool("ffmpeg.exe")
     ffprobe_path = require_path_tool("ffprobe.exe")
@@ -126,6 +129,8 @@ def build() -> None:
         "--clean",
         "--onefile",
         "--windowed",
+        "--splash",
+        str(SPLASH_IMAGE),
         "--name",
         EXECUTABLE_NAME,
         "--paths",
@@ -160,6 +165,7 @@ def build() -> None:
     print(f"Size: {size_mb:.1f} MB")
     print(f"Embedded ffmpeg:  {ffmpeg_path}")
     print(f"Embedded ffprobe: {ffprobe_path}")
+    print(f"Splash image:     {SPLASH_IMAGE}")
 
 
 def print_usage() -> None:

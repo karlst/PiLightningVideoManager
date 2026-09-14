@@ -58,6 +58,8 @@ RUNTIME_HOOK = (
     / "lvce_runtime.py"
 )
 
+SPLASH_IMAGE = PACKAGING_DIRECTORY / "LvceSplash.png"
+
 EXECUTABLE_NAME = "Lvce"
 EXECUTABLE_PATH = DIST_DIRECTORY / EXECUTABLE_NAME
 
@@ -143,10 +145,12 @@ def build() -> None:
         "cv2",
         "numpy",
         "boto3",
+        "tkinter",
     ):
         require_python_module(module_name)
 
     require_file(SOURCE_FILE)
+    require_file(SPLASH_IMAGE)
 
     ffmpeg_path = require_path_tool("ffmpeg")
     ffprobe_path = require_path_tool("ffprobe")
@@ -180,6 +184,8 @@ def build() -> None:
         "--clean",
         "--onefile",
         "--windowed",
+        "--splash",
+        str(SPLASH_IMAGE),
         "--name",
         EXECUTABLE_NAME,
         "--paths",
@@ -219,6 +225,7 @@ def build() -> None:
     print(f"Size: {size_mb:.1f} MB")
     print(f"Embedded ffmpeg:  {ffmpeg_path}")
     print(f"Embedded ffprobe: {ffprobe_path}")
+    print(f"Splash image:     {SPLASH_IMAGE}")
 
 
 def print_usage() -> None:

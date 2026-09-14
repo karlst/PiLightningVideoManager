@@ -10,8 +10,9 @@ import copy
 import json
 from pathlib import Path, PurePosixPath
 import re
+import time
 
-from PySide6.QtCore import QEvent, Qt
+from PySide6.QtCore import QEvent, QTimer, Qt
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -64,6 +65,7 @@ FILTER_VERIFIED = ("Any", "Yes", "No")
 FILTER_CLASSIFICATION = ("Any",) + CLASSIFICATION_VALUES
 FILTER_TYPE = ("Any",) + TYPE_VALUES
 SORT_VALUES = ("Filename ascending", "Filename descending")
+PLAYBACK_SLOWDOWN = 16.0
 
 S3_BUCKET_NAME = "soloran-picam"
 S3_AUTH_PROFILE = "picam-manager"
@@ -113,11 +115,15 @@ class CaptureEditorWindow(ClipEditorWindow):
         nav.setHorizontalSpacing(4)
         nav.setVerticalSpacing(4)
 
-        self.source_combo = QComboBox()
-        self.source_combo.addItems(("Local Storage", "S3"))
-        self.source_combo.setCurrentText(
-            getattr(self, "source_mode", "Local Storage")
-        )
+        if self.read_only:
+            self.source_value_label = QLabel("S3")
+            self.source_combo = None
+        else:
+            self.source_combo = QComboBox()
+            self.source_combo.addItems(("Local Storage", "S3"))
+            self.source_combo.setCurrentText(
+                getattr(self, "source_mode", "Local Storage")
+            )
 
         self.location_edit = QLineEdit(str(self.open_directory))
         self.location_edit.setReadOnly(True)
@@ -129,7 +135,13 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.location_label = QLabel("Location:")
 
         nav.addWidget(self.source_label, 0, 0)
-        nav.addWidget(self.source_combo, 0, 1, 1, 2)
+        nav.addWidget(
+            self.source_value_label if self.read_only else self.source_combo,
+            0,
+            1,
+            1,
+            2,
+        )
         nav.addWidget(self.location_label, 1, 0)
         nav.addWidget(self.location_edit, 1, 1, 1, 2)
         nav.addWidget(self.parent_folder_button, 2, 1)
@@ -142,11 +154,17 @@ class CaptureEditorWindow(ClipEditorWindow):
         filters.setHorizontalSpacing(4)
         filters.setVerticalSpacing(4)
 
-        self.verified_filter_combo = QComboBox()
-        self.verified_filter_combo.addItems(FILTER_VERIFIED)
+        if self.read_only:
+            self.verified_filter_value = QLabel("Yes")
+            self.classification_filter_value = QLabel("Flash")
+            self.verified_filter_combo = None
+            self.classification_filter_combo = None
+        else:
+            self.verified_filter_combo = QComboBox()
+            self.verified_filter_combo.addItems(FILTER_VERIFIED)
 
-        self.classification_filter_combo = QComboBox()
-        self.classification_filter_combo.addItems(FILTER_CLASSIFICATION)
+            self.classification_filter_combo = QComboBox()
+            self.classification_filter_combo.addItems(FILTER_CLASSIFICATION)
 
         self.type_filter_combo = QComboBox()
         self.type_filter_combo.addItems(FILTER_TYPE)
@@ -169,12 +187,13 @@ class CaptureEditorWindow(ClipEditorWindow):
             },
         )
 
-        self.verified_filter_combo.setCurrentText(
-            saved_filters.get("verified", "No")
-        )
-        self.classification_filter_combo.setCurrentText(
-            saved_filters.get("classification", "Any")
-        )
+        if not self.read_only:
+            self.verified_filter_combo.setCurrentText(
+                saved_filters.get("verified", "No")
+            )
+            self.classification_filter_combo.setCurrentText(
+                saved_filters.get("classification", "Any")
+            )
         self.type_filter_combo.setCurrentText(
             saved_filters.get("type", "Any")
         )
@@ -183,8 +202,18 @@ class CaptureEditorWindow(ClipEditorWindow):
         )
 
         filter_rows = (
-            ("Verified:", self.verified_filter_combo),
-            ("Classification:", self.classification_filter_combo),
+            (
+                "Verified:",
+                self.verified_filter_value
+                if self.read_only
+                else self.verified_filter_combo,
+            ),
+            (
+                "Classification:",
+                self.classification_filter_value
+                if self.read_only
+                else self.classification_filter_combo,
+            ),
             ("Type:", self.type_filter_combo),
             ("Site:", self.site_filter_combo),
             ("Sort:", self.sort_combo),
@@ -472,7 +501,12 @@ class CaptureEditorWindow(ClipEditorWindow):
         # rather than by empty gaps between groups.
         grid.addWidget(right, 0, 2, 2, 1)
 
-        self._applied_filters = self._current_filter_settings()
+        # Preserve the last applied browser filters across a UI rebuild.
+        # The Site combo initially contains only "Any"; its real site values
+        # are populated by refresh_file_browser().  Taking the current combo
+        # values here would therefore silently replace an applied Site filter
+        # with "Any" even though the combo later displays the saved site.
+        self._applied_filters = dict(self._browser_filter_settings)
         self.refresh_file_browser()
         main.addLayout(grid, 1)
 
@@ -514,6 +548,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         controls = QHBoxLayout()
         self.first_button = QPushButton("|<")
         self.previous_button = QPushButton("<")
+        self.play_pause_button = QPushButton("Play")
         self.next_button = QPushButton(">")
         self.last_button = QPushButton(">|")
 
@@ -528,6 +563,7 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         controls.addWidget(self.first_button)
         controls.addWidget(self.previous_button)
+        controls.addWidget(self.play_pause_button)
         controls.addWidget(self.frame_slider, 1)
         controls.addWidget(self.slider_frame_label)
         controls.addWidget(self.next_button)
@@ -542,9 +578,10 @@ class CaptureEditorWindow(ClipEditorWindow):
 
     def connect_controls(self):
         # Navigation
-        self.source_combo.currentTextChanged.connect(self.on_source_changed)
-        self.parent_folder_button.clicked.connect(self.browse_parent_directory)
-        self.browse_location_button.clicked.connect(self.browse_local_directory)
+        if not self.read_only:
+            self.source_combo.currentTextChanged.connect(self.on_source_changed)
+            self.parent_folder_button.clicked.connect(self.browse_parent_directory)
+            self.browse_location_button.clicked.connect(self.browse_local_directory)
         self.open_browser_button.clicked.connect(self.open_selected_browser_item)
         self.file_list.itemDoubleClicked.connect(
             lambda _item: self.open_selected_browser_item()
@@ -552,29 +589,38 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         # Filter changes are staged. The file list changes only when Apply
         # Filters is pressed.
-        self.verified_filter_combo.currentTextChanged.connect(self.on_filter_changed)
-        self.classification_filter_combo.currentTextChanged.connect(self.on_filter_changed)
+        if not self.read_only:
+            self.verified_filter_combo.currentTextChanged.connect(self.on_filter_changed)
+            self.classification_filter_combo.currentTextChanged.connect(self.on_filter_changed)
         self.type_filter_combo.currentTextChanged.connect(self.on_filter_changed)
         self.site_filter_combo.currentTextChanged.connect(self.on_filter_changed)
         self.sort_combo.currentTextChanged.connect(self.on_filter_changed)
         self.apply_filters_button.clicked.connect(self.apply_filters)
 
-        # Existing frame controls
-        self.first_button.clicked.connect(lambda: self.set_frame(0))
+        # Existing frame controls plus 4x slow-motion playback.
+        if not hasattr(self, "_playback_timer"):
+            self._playback_timer = QTimer(self)
+            self._playback_timer.setTimerType(Qt.TimerType.PreciseTimer)
+            self._playback_timer.setSingleShot(True)
+            self._playback_timer.timeout.connect(self._advance_playback)
+
+        self.first_button.clicked.connect(lambda: self._manual_set_frame(0))
         self.previous_button.clicked.connect(
-            lambda: self.set_frame(self.frame_number - 1)
+            lambda: self._manual_set_frame(self.frame_number - 1)
         )
+        self.play_pause_button.clicked.connect(self.toggle_playback)
         self.next_button.clicked.connect(
-            lambda: self.set_frame(self.frame_number + 1)
+            lambda: self._manual_set_frame(self.frame_number + 1)
         )
         self.last_button.clicked.connect(
-            lambda: self.set_frame(
+            lambda: self._manual_set_frame(
                 self.capture_data.frame_count - 1
                 if self.capture_data is not None
                 else 0
             )
         )
         self.frame_slider.valueChanged.connect(self.on_slider_changed)
+        self.frame_slider.sliderPressed.connect(self.stop_playback)
 
         if self.read_only:
             return
@@ -638,21 +684,126 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.setTabOrder(self.description_edit, self.upload_to_s3_checkbox)
         self.setTabOrder(self.upload_to_s3_checkbox, self.restore_button)
 
+
+    def _playback_base_interval_ms(self):
+        if self.capture_data is None:
+            return 1000.0 / 260.0
+
+        sidecar = (
+            self.capture_data.sidecar
+            if isinstance(self.capture_data.sidecar, dict)
+            else {}
+        )
+        records = sidecar.get("frame_records", [])
+        offsets = []
+        if isinstance(records, list):
+            for record in records:
+                if not isinstance(record, dict):
+                    continue
+                try:
+                    offsets.append(float(record["offset_ms"]))
+                except (KeyError, TypeError, ValueError):
+                    pass
+
+        gaps = [
+            later - earlier
+            for earlier, later in zip(offsets, offsets[1:])
+            if later > earlier
+        ]
+        if gaps:
+            return sum(gaps) / len(gaps)
+
+        return 1000.0 / 260.0
+
+    def _schedule_next_playback_frame(self):
+        if self.capture_data is None:
+            self.stop_playback()
+            return
+
+        next_frame = self.frame_number + 1
+        last_frame = self.capture_data.frame_count - 1
+        if next_frame > last_frame:
+            self.stop_playback()
+            return
+
+        elapsed_ms = (time.perf_counter() - self._playback_started_at) * 1000.0
+        frames_from_start = next_frame - self._playback_start_frame
+        target_ms = frames_from_start * self._playback_frame_interval_ms
+        delay_ms = max(0, round(target_ms - elapsed_ms))
+        self._playback_timer.start(delay_ms)
+
+    def toggle_playback(self):
+        if self.capture_data is None:
+            return
+
+        if getattr(self, "_playback_active", False):
+            self.stop_playback()
+            return
+
+        last_frame = self.capture_data.frame_count - 1
+        if self.frame_number >= last_frame:
+            self.set_frame(0)
+
+        self._playback_active = True
+        self._playback_start_frame = self.frame_number
+        self._playback_started_at = time.perf_counter()
+        self._playback_frame_interval_ms = (
+            self._playback_base_interval_ms() * PLAYBACK_SLOWDOWN
+        )
+        self.play_pause_button.setText("Pause")
+        self._schedule_next_playback_frame()
+
+    def stop_playback(self):
+        self._playback_active = False
+        timer = getattr(self, "_playback_timer", None)
+        if timer is not None and timer.isActive():
+            timer.stop()
+        if hasattr(self, "play_pause_button"):
+            self.play_pause_button.setText("Play")
+
+    def _advance_playback(self):
+        if not getattr(self, "_playback_active", False):
+            return
+
+        if self.capture_data is None:
+            self.stop_playback()
+            return
+
+        last_frame = self.capture_data.frame_count - 1
+        if self.frame_number >= last_frame:
+            self.stop_playback()
+            return
+
+        self.set_frame(self.frame_number + 1)
+
+        if self.frame_number >= last_frame:
+            self.stop_playback()
+            return
+
+        self._schedule_next_playback_frame()
+
+    def _manual_set_frame(self, frame_number):
+        self.stop_playback()
+        self.set_frame(frame_number)
+
     # ------------------------------------------------------------------
     # Source UI
     # ------------------------------------------------------------------
     def _set_source_ui(self):
-        # source_mode is authoritative.  An S3 clip is downloaded to a local
-        # temporary cache for decoding, but that cache must never make the UI
-        # look like Local Storage.
-        if self.source_combo.currentText() != self.source_mode:
+        # Reader mode is S3-only. Editor mode keeps the existing source selector.
+        if self.read_only:
+            self.source_mode = "S3"
+        elif self.source_combo.currentText() != self.source_mode:
             self.source_combo.blockSignals(True)
             try:
                 self.source_combo.setCurrentText(self.source_mode)
             finally:
                 self.source_combo.blockSignals(False)
 
-        local = self.source_mode == "Local Storage"
+        local = (
+            not self.read_only
+            and self.source_mode == "Local Storage"
+        )
 
         # Location/Up/Browse are local-storage navigation controls. S3 does not
         # show a meaningless path field in this UI pass.
@@ -669,8 +820,16 @@ class CaptureEditorWindow(ClipEditorWindow):
 
     def _current_filter_settings(self):
         return {
-            "verified": self.verified_filter_combo.currentText(),
-            "classification": self.classification_filter_combo.currentText(),
+            "verified": (
+                "Yes"
+                if self.read_only
+                else self.verified_filter_combo.currentText()
+            ),
+            "classification": (
+                "Flash"
+                if self.read_only
+                else self.classification_filter_combo.currentText()
+            ),
             "type": self.type_filter_combo.currentText(),
             "site": self.site_filter_combo.currentText(),
             "sort": self.sort_combo.currentText(),
@@ -707,7 +866,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.refresh_file_browser()
 
     def browse_local_directory(self):
-        if self.source_combo.currentText() != "Local Storage":
+        if self.read_only or self.source_mode != "Local Storage":
             return
 
         selected = QFileDialog.getExistingDirectory(
@@ -728,6 +887,26 @@ class CaptureEditorWindow(ClipEditorWindow):
     # ------------------------------------------------------------------
     # Compact Capture Information
     # ------------------------------------------------------------------
+    def _capture_start_frame(self):
+        trigger_frames = []
+
+        for key in ("trigger_frame", "replay_trigger_frame"):
+            text = self.capture_value_labels[key].text().strip()
+            try:
+                frame_number = int(text)
+            except (TypeError, ValueError):
+                continue
+
+            if frame_number > 0:
+                trigger_frames.append(frame_number)
+
+        if not trigger_frames:
+            return 0
+
+        # Displayed trigger frame numbers are one-based; set_frame() is zero-based.
+        desired_frame_number = max(1, min(trigger_frames) - 20)
+        return desired_frame_number - 1
+
     def update_capture_information(self):
         if self.capture_data is None or not hasattr(self, "capture_value_labels"):
             return
@@ -1029,6 +1208,14 @@ class CaptureEditorWindow(ClipEditorWindow):
         ):
             return
 
+        if event.key() in (
+            Qt.Key.Key_Left,
+            Qt.Key.Key_Right,
+            Qt.Key.Key_Home,
+            Qt.Key.Key_End,
+        ):
+            self.stop_playback()
+
         super().keyPressEvent(
             event
         )
@@ -1187,7 +1374,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         if not hasattr(self, "file_list"):
             return
 
-        if self.source_combo.currentText() == "S3":
+        if self.source_mode == "S3":
             self._refresh_s3_browser()
             return
 
@@ -1367,8 +1554,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         self._source_change_in_progress = False
 
         self._browser_filter_settings = {
-            "verified": "No",
-            "classification": "Any",
+            "verified": "Yes" if self.read_only else "No",
+            "classification": "Flash" if self.read_only else "Any",
             "type": "Any",
             "site": "Any",
             "sort": "Filename ascending",
@@ -1654,6 +1841,8 @@ class CaptureEditorWindow(ClipEditorWindow):
         if confirm and not self.confirm_abandon_changes():
             return
 
+        self.stop_playback()
+
         try:
             cd = load_capture(video_path)
 
@@ -1697,7 +1886,20 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.connect_controls()
         self.load_editor_fields()
         self.update_capture_information()
-        self.set_frame(0, force=True)
+        self.set_frame(self._capture_start_frame(), force=True)
+
+        # The window layout is rebuilt for each newly loaded capture. The first
+        # frame can therefore be scaled against the image label's temporary
+        # pre-layout size. Repaint the same frame after Qt completes the current
+        # layout pass so it uses the final label size.
+        QTimer.singleShot(
+            0,
+            lambda: self.set_frame(
+                self.frame_number,
+                force=True,
+            ),
+        )
+
         if not self.read_only:
             self.focus_description_at_end()
         self._update_dirty_state()
@@ -2135,6 +2337,8 @@ class CaptureEditorWindow(ClipEditorWindow):
             self.open_selected_browser_item()
 
     def closeEvent(self, event):
+        self.stop_playback()
+
         if not self.confirm_abandon_changes():
             event.ignore()
             return
