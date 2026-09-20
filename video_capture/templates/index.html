@@ -10,7 +10,7 @@
 
     <link
         rel="stylesheet"
-        href="/static/css/main.css?v=57">
+        href="/static/css/main.css?v=58">
 </head>
 
 <body>
@@ -52,6 +52,23 @@
                 <div class="metricGraph">
                     <div class="metricGraphTitle">FPS</div>
                     <canvas class="historyGraph" id="fps-graph"></canvas>
+                </div>
+            </section>
+
+            <section class="subPanel scenePreviewPanel">
+                <h2>Camera Scene</h2>
+
+                <div class="scenePreviewViewport">
+                    <div
+                        class="scenePreviewPlaceholder"
+                        id="scene-preview-placeholder">
+                        Waiting for camera scene
+                    </div>
+
+                    <img
+                        class="scenePreviewImage scenePreviewImageHidden"
+                        id="scene-preview-image"
+                        alt="Camera scene">
                 </div>
             </section>
 
@@ -243,7 +260,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=53">
+        src="/static/js/app.js?v=54">
     </script>
 </body>
 </html>

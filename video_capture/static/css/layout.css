@@ -86,8 +86,9 @@
 {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 36%);
-    grid-template-rows: minmax(0, 1fr) 270px;
+    grid-template-rows: 180px minmax(0, 1fr) 270px;
     grid-template-areas:
+        "graphs scenePreview"
         "graphs context"
         "graphs controls";
     gap: 8px;
@@ -114,6 +115,53 @@
     grid-area: context;
 }
 
+.scenePreviewPanel
+{
+    grid-area: scenePreview;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+    min-height: 0;
+}
+
+.scenePreviewPanel h2
+{
+    margin: 0;
+}
+
+.scenePreviewViewport
+{
+    position: relative;
+    min-height: 0;
+    overflow: hidden;
+    background: #111;
+}
+
+.scenePreviewImage
+{
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #111;
+}
+
+.scenePreviewImageHidden
+{
+    display: none;
+}
+
+.scenePreviewPlaceholder
+{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ddd;
+    background: #111;
+}
+
 @media (max-width: 900px) and (orientation: portrait)
 {
     .pageGrid
@@ -137,9 +185,10 @@
     .mainGrid
     {
         grid-template-columns: 1fr;
-        grid-template-rows: auto auto auto;
+        grid-template-rows: auto 180px auto auto;
         grid-template-areas:
             "graphs"
+            "scenePreview"
             "context"
             "controls";
     }
@@ -163,8 +212,9 @@
     .mainGrid
     {
         grid-template-columns: minmax(0, 1fr) minmax(280px, 44%);
-        grid-template-rows: minmax(0, 1fr) 235px;
+        grid-template-rows: 140px minmax(0, 1fr) 235px;
         grid-template-areas:
+            "graphs scenePreview"
             "graphs context"
             "graphs controls";
     }
