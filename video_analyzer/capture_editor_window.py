@@ -8,12 +8,14 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from pathlib import Path, PurePosixPath
 import re
 import time
 
 from PySide6.QtCore import QEvent, QTimer, Qt
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QDialog,
@@ -66,6 +68,8 @@ FILTER_CLASSIFICATION = ("Any",) + CLASSIFICATION_VALUES
 FILTER_TYPE = ("Any",) + TYPE_VALUES
 SORT_VALUES = ("Filename ascending", "Filename descending")
 PLAYBACK_SLOWDOWN = 16.0
+SEARCH_MINIMUM_RANGE_MILES = 1.0
+SEARCH_MAXIMUM_RANGE_MILES = 25.0
 
 S3_BUCKET_NAME = "soloran-picam"
 S3_AUTH_PROFILE = "picam-manager"
@@ -640,10 +644,10 @@ class CaptureEditorWindow(ClipEditorWindow):
         # Dirty-state tracking. Save Changes is enabled only when editable
         # metadata differs from the last successfully loaded/saved values.
         self.site_edit.textChanged.connect(self._update_dirty_state)
-        self.latitude_spin.valueChanged.connect(self._update_dirty_state)
-        self.longitude_spin.valueChanged.connect(self._update_dirty_state)
-        self.bearing_spin.valueChanged.connect(self._update_dirty_state)
-        self.hfov_spin.valueChanged.connect(self._update_dirty_state)
+        self.latitude_spin.valueChanged.connect(self._on_camera_geometry_changed)
+        self.longitude_spin.valueChanged.connect(self._on_camera_geometry_changed)
+        self.bearing_spin.valueChanged.connect(self._on_camera_geometry_changed)
+        self.hfov_spin.valueChanged.connect(self._on_camera_geometry_changed)
         self.verified_combo.currentTextChanged.connect(self._update_dirty_state)
         self.classification_combo.currentTextChanged.connect(self._update_dirty_state)
         self.type_combo.currentTextChanged.connect(self._update_dirty_state)
@@ -966,24 +970,128 @@ class CaptureEditorWindow(ClipEditorWindow):
 
         self._update_search_bounding_box()
 
-    def _update_search_bounding_box(self):
+    @staticmethod
+    def _bearing_in_sector(
+        bearing_degrees: float,
+        left_degrees: float,
+        right_degrees: float,
+    ) -> bool:
+        bearing = float(bearing_degrees) % 360.0
+        left = float(left_degrees) % 360.0
+        right = float(right_degrees) % 360.0
+
+        if left <= right:
+            return left <= bearing <= right
+
+        return bearing >= left or bearing <= right
+
+    @staticmethod
+    def _destination_point(
+        latitude_degrees: float,
+        longitude_degrees: float,
+        bearing_degrees: float,
+        distance_miles: float,
+    ) -> tuple[float, float]:
+        earth_radius_miles = 3958.7613
+        latitude_radians = math.radians(latitude_degrees)
+        longitude_radians = math.radians(longitude_degrees)
+        bearing_radians = math.radians(bearing_degrees)
+        angular_distance = float(distance_miles) / earth_radius_miles
+
+        destination_latitude = math.asin(
+            math.sin(latitude_radians) * math.cos(angular_distance)
+            + math.cos(latitude_radians)
+            * math.sin(angular_distance)
+            * math.cos(bearing_radians)
+        )
+
+        destination_longitude = longitude_radians + math.atan2(
+            math.sin(bearing_radians)
+            * math.sin(angular_distance)
+            * math.cos(latitude_radians),
+            math.cos(angular_distance)
+            - math.sin(latitude_radians) * math.sin(destination_latitude),
+        )
+
+        longitude_result = (
+            (math.degrees(destination_longitude) + 540.0) % 360.0
+        ) - 180.0
+
+        return math.degrees(destination_latitude), longitude_result
+
+    def _calculate_search_bounding_box(
+        self,
+        latitude: float,
+        longitude: float,
+        bearing: float,
+        hfov: float,
+    ) -> dict:
+        minimum_range = SEARCH_MINIMUM_RANGE_MILES
+        maximum_range = SEARCH_MAXIMUM_RANGE_MILES
+        half_fov = max(0.0, min(180.0, float(hfov) / 2.0))
+        left_bearing = (float(bearing) - half_fov) % 360.0
+        right_bearing = (float(bearing) + half_fov) % 360.0
+
+        bearings = [
+            left_bearing,
+            float(bearing) % 360.0,
+            right_bearing,
+        ]
+
+        for cardinal_bearing in (0.0, 90.0, 180.0, 270.0):
+            if self._bearing_in_sector(
+                cardinal_bearing,
+                left_bearing,
+                right_bearing,
+            ):
+                bearings.append(cardinal_bearing)
+
+        points = []
+        for range_miles in (minimum_range, maximum_range):
+            for search_bearing in bearings:
+                points.append(
+                    self._destination_point(
+                        latitude,
+                        longitude,
+                        search_bearing,
+                        range_miles,
+                    )
+                )
+
+        latitudes = [point[0] for point in points]
+        longitudes = [point[1] for point in points]
+
+        return {
+            "range": [minimum_range, maximum_range],
+            "lat": [round(min(latitudes), 7), round(max(latitudes), 7)],
+            "lon": [round(min(longitudes), 7), round(max(longitudes), 7)],
+        }
+
+    def _current_search_bounding_box(self) -> dict | None:
         if self.capture_data is None:
+            return None
+
+        if not self.read_only and hasattr(self, "latitude_spin"):
+            return self._calculate_search_bounding_box(
+                self.latitude_spin.value(),
+                self.longitude_spin.value(),
+                self.bearing_spin.value(),
+                self.hfov_spin.value(),
+            )
+
+        values = self.metadata()
+        return self._calculate_search_bounding_box(
+            values["latitude"],
+            values["longitude"],
+            values["bearing"],
+            values["hfov"],
+        )
+
+    def _update_search_bounding_box(self):
+        box = self._current_search_bounding_box()
+        if not box:
             return
 
-        sidecar = (
-            self.capture_data.sidecar
-            if isinstance(self.capture_data.sidecar, dict)
-            else {}
-        )
-        camera = sidecar.get("camera")
-        if not isinstance(camera, dict):
-            camera = {}
-
-        box = camera.get("search_bounding_box")
-        if not isinstance(box, dict):
-            box = sidecar.get("search_bounding_box")
-        if not isinstance(box, dict):
-            box = {}
 
         def pair_text(name, digits):
             values = box.get(name)
@@ -999,6 +1107,10 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.search_range_label.setText(pair_text("range", 1))
         self.search_latitude_label.setText(pair_text("lat", 6))
         self.search_longitude_label.setText(pair_text("lon", 6))
+
+    def _on_camera_geometry_changed(self, *_args):
+        self._update_dirty_state()
+        self._update_search_bounding_box()
 
     # ------------------------------------------------------------------
     # New metadata model
@@ -1110,6 +1222,7 @@ class CaptureEditorWindow(ClipEditorWindow):
         self.description_edit.setPlainText(v["description"])
         self.on_classification_changed(self.classification_combo.currentText())
         self._update_dirty_state()
+        self._update_search_bounding_box()
         self._set_status("Changes restored")
 
     def _set_status(self, message: str):
@@ -1900,8 +2013,10 @@ class CaptureEditorWindow(ClipEditorWindow):
             ),
         )
 
-        if not self.read_only:
-            self.focus_description_at_end()
+        # Give frame navigation the initial keyboard focus so Left/Right work
+        # immediately when a clip opens. Users can still click into metadata
+        # controls when they want to edit them.
+        self.frame_slider.setFocus(Qt.FocusReason.OtherFocusReason)
         self._update_dirty_state()
         self._set_status("")
 
@@ -1944,6 +2059,13 @@ class CaptureEditorWindow(ClipEditorWindow):
             hfov_degrees=values["hfov"],
             vfov_degrees=values["vfov"],
         )
+        camera["search_bounding_box"] = self._calculate_search_bounding_box(
+            values["latitude"],
+            values["longitude"],
+            values["bearing"],
+            values["hfov"],
+        )
+        sidecar.pop("search_bounding_box", None)
 
         capture = sidecar.setdefault("capture", {})
         classification_code = CLASSIFICATION_NAME_TO_CODE[
@@ -2137,6 +2259,16 @@ class CaptureEditorWindow(ClipEditorWindow):
             self._update_dirty_state()
             return True
 
+        # Prevent a second Save while a synchronous local/S3 write is in
+        # progress.  Force the status repaint before entering the blocking
+        # network call so the user gets immediate feedback.
+        self.save_button.setEnabled(False)
+        if self.source_mode == "S3" or self._local_upload_pending():
+            self._set_status("Writing to S3...")
+        else:
+            self._set_status("Saving changes...")
+        QApplication.processEvents()
+
         sidecar = self._sidecar_from_editor()
 
         if self.source_mode == "S3":
@@ -2148,6 +2280,7 @@ class CaptureEditorWindow(ClipEditorWindow):
                     "Unable to save",
                     message,
                 )
+                self._update_dirty_state()
                 return False
 
             training_message = None
@@ -2172,6 +2305,7 @@ class CaptureEditorWindow(ClipEditorWindow):
             ) as exc:
                 self._set_status(f"Save to S3 failed: {exc}")
                 QMessageBox.critical(self, "Unable to save S3 capture", str(exc))
+                self._update_dirty_state()
                 return False
 
             # The canonical S3 save succeeded. Training maintenance is
@@ -2221,6 +2355,7 @@ class CaptureEditorWindow(ClipEditorWindow):
                     "Unable to save sidecar",
                     str(exc),
                 )
+                self._update_dirty_state()
                 return False
 
             self.capture_data.sidecar = sidecar

@@ -2,8 +2,12 @@
 Qt/pyqtgraph panel that visualizes brightness data for one capture.
 
 GraphPanel draws absolute brightness and adjacent-frame brightness change
-against frame number. When Pi sidecar measurements are available they are
-preferred; reconstructed MP4 measurements are used as a fallback.
+against actual elapsed capture time in milliseconds. When Pi sidecar
+measurements are available they are preferred; reconstructed MP4 measurements
+are used as a fallback.
+
+The x-axis uses each frame's recorded offset_ms, so irregular frame spacing is
+visible rather than being hidden by evenly spaced frame numbers.
 
 The graphs also show reference markers: the Candidate brightness-delta
 threshold, the currently displayed frame, the original trigger recorded by the
@@ -36,6 +40,7 @@ class GraphPanel(QWidget):
         self._capture_data = capture_data
         self._candidate_result = candidate_result
         self._candidate_config = candidate_config
+        self._elapsed_ms = self._build_elapsed_ms()
 
         self._replay_trigger_lines: list[pg.InfiniteLine] = []
 
@@ -49,8 +54,10 @@ class GraphPanel(QWidget):
         self,
         frame_index: int,
     ) -> None:
+        elapsed_ms = self._elapsed_ms_for_frame(frame_index)
+
         for line in self._current_frame_lines:
-            line.setValue(frame_index)
+            line.setValue(elapsed_ms)
 
     def update_candidate_result(
         self,
@@ -73,16 +80,95 @@ class GraphPanel(QWidget):
         self._replay_trigger_lines = []
         self._add_replay_trigger_lines()
 
+    def _build_elapsed_ms(self) -> np.ndarray:
+        """Return one elapsed-time value in ms for every decoded frame."""
+        frame_count = self._capture_data.frame_count
+        elapsed_ms = np.full(frame_count, np.nan, dtype=float)
+
+        for frame_index in range(frame_count):
+            record = self._capture_data.frame_records.get(
+                frame_index,
+                {},
+            )
+
+            try:
+                offset_ms = float(record.get("offset_ms"))
+            except (TypeError, ValueError):
+                continue
+
+            if np.isfinite(offset_ms):
+                elapsed_ms[frame_index] = offset_ms
+
+        valid = np.isfinite(elapsed_ms)
+        if valid.any():
+            if not valid.all():
+                valid_indices = np.flatnonzero(valid)
+                elapsed_ms = np.interp(
+                    np.arange(frame_count, dtype=float),
+                    valid_indices.astype(float),
+                    elapsed_ms[valid_indices],
+                )
+
+            return elapsed_ms
+
+        # Legacy fallback for captures without Pi offset_ms records. Encoded
+        # presentation timestamps keep the graph in millisecond units.
+        ffprobe_ms = np.full(frame_count, np.nan, dtype=float)
+
+        for frame_index, info in enumerate(
+            self._capture_data.frame_info[:frame_count]
+        ):
+            try:
+                timestamp_ms = (
+                    float(info.get("best_effort_timestamp_time")) *
+                    1000.0
+                )
+            except (TypeError, ValueError):
+                continue
+
+            if np.isfinite(timestamp_ms):
+                ffprobe_ms[frame_index] = timestamp_ms
+
+        valid = np.isfinite(ffprobe_ms)
+        if valid.any():
+            valid_indices = np.flatnonzero(valid)
+            ffprobe_ms[valid] -= ffprobe_ms[valid_indices[0]]
+
+            if not valid.all():
+                ffprobe_ms = np.interp(
+                    np.arange(frame_count, dtype=float),
+                    valid_indices.astype(float),
+                    ffprobe_ms[valid_indices],
+                )
+
+            return ffprobe_ms
+
+        # Last-resort compatibility for captures with no timing metadata.
+        return np.arange(frame_count, dtype=float)
+
+    def _elapsed_ms_for_frame(
+        self,
+        frame_index: int,
+    ) -> float:
+        if self._elapsed_ms.size == 0:
+            return 0.0
+
+        frame_index = max(
+            0,
+            min(
+                int(frame_index),
+                self._elapsed_ms.size - 1,
+            ),
+        )
+
+        return float(self._elapsed_ms[frame_index])
+
     def _create_graphs(
         self,
         layout: QVBoxLayout,
     ) -> None:
         pg.setConfigOptions(
             antialias=True,
-        )
-
-        frame_numbers = np.arange(
-            self._capture_data.frame_count
         )
 
         brightness_values = (
@@ -112,7 +198,7 @@ class GraphPanel(QWidget):
             alpha=0.3,
         )
         self._brightness_graph.plot(
-            frame_numbers,
+            self._elapsed_ms,
             brightness_values,
         )
 
@@ -123,15 +209,25 @@ class GraphPanel(QWidget):
         )
         self._delta_graph.setLabel(
             "bottom",
-            "Frame number",
+            "Elapsed time (ms)",
         )
+
+        # Keep elapsed-time ticks in actual milliseconds.  Passing units="ms"
+        # lets pyqtgraph apply SI prefixes automatically, which turns a 0-2500
+        # ms range into 0-2.5 with the misleading label "kms".
+        self._brightness_graph.getAxis(
+            "bottom"
+        ).enableAutoSIPrefix(False)
+        self._delta_graph.getAxis(
+            "bottom"
+        ).enableAutoSIPrefix(False)
         self._delta_graph.showGrid(
             x=True,
             y=True,
             alpha=0.3,
         )
         self._delta_graph.plot(
-            frame_numbers,
+            self._elapsed_ms,
             delta_values,
         )
 
@@ -212,9 +308,11 @@ class GraphPanel(QWidget):
             self._brightness_graph
         )
 
+        first_elapsed_ms = self._elapsed_ms_for_frame(0)
+
         self._current_frame_lines = [
             pg.InfiniteLine(
-                pos=0,
+                pos=first_elapsed_ms,
                 angle=90,
                 movable=False,
                 pen=pg.mkPen(
@@ -223,7 +321,7 @@ class GraphPanel(QWidget):
                 ),
             ),
             pg.InfiniteLine(
-                pos=0,
+                pos=first_elapsed_ms,
                 angle=90,
                 movable=False,
                 pen=pg.mkPen(
@@ -264,7 +362,7 @@ class GraphPanel(QWidget):
         ]:
             graph.addItem(
                 pg.InfiniteLine(
-                    pos=frame_index,
+                    pos=self._elapsed_ms_for_frame(frame_index),
                     angle=90,
                     movable=False,
                     pen=pg.mkPen(
@@ -280,8 +378,10 @@ class GraphPanel(QWidget):
         if frame_index is None:
             return
 
+        elapsed_ms = self._elapsed_ms_for_frame(frame_index)
+
         brightness_line = pg.InfiniteLine(
-            pos=frame_index,
+            pos=elapsed_ms,
             angle=90,
             movable=False,
             pen=pg.mkPen(
@@ -290,7 +390,7 @@ class GraphPanel(QWidget):
             ),
         )
         delta_line = pg.InfiniteLine(
-            pos=frame_index,
+            pos=elapsed_ms,
             angle=90,
             movable=False,
             pen=pg.mkPen(
