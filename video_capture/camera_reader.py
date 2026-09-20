@@ -127,6 +127,24 @@ class CameraReader:
         self._failed_read_count = 0
         self._start_time_monotonic = 0.0
         self._last_frame_time_monotonic = 0.0
+
+        # Operational FPS is intentionally a short-window measurement, not a
+        # lifetime average.  The web UI samples this value once per second and
+        # graphs it so degradation is visible immediately.
+        self._recent_fps = 0.0
+        self._fps_window_start_monotonic = 0.0
+        self._fps_window_start_frame_count = 0
+
+        # Establish a camera-specific baseline from stable early operation.
+        # Different cameras legitimately run at different rates (for example,
+        # roughly 210 vs 260 FPS), so health is judged relative to how this
+        # camera started rather than against one hard-coded target.
+        self._baseline_fps = None
+        self._baseline_fps_sum = 0.0
+        self._baseline_fps_count = 0
+        self._baseline_warmup_seconds = 5.0
+        self._baseline_sample_count = 20
+
         self._last_error = ""
 
     def start(self) -> tuple[bool, str]:
@@ -146,6 +164,12 @@ class CameraReader:
                 self._failed_read_count = 0
                 self._start_time_monotonic = time.monotonic()
                 self._last_frame_time_monotonic = 0.0
+                self._recent_fps = 0.0
+                self._fps_window_start_monotonic = self._start_time_monotonic
+                self._fps_window_start_frame_count = 0
+                self._baseline_fps = None
+                self._baseline_fps_sum = 0.0
+                self._baseline_fps_count = 0
                 self._last_error = ""
 
             self._thread = Thread(
@@ -204,7 +228,7 @@ class CameraReader:
         """
         @brief Return current reader status.
 
-        @return Dictionary containing runtime counters and estimated FPS.
+        @return Dictionary containing runtime counters and recent FPS.
         """
 
         now = time.monotonic()
@@ -214,17 +238,16 @@ class CameraReader:
             failed_read_count = self._failed_read_count
             start_time = self._start_time_monotonic
             last_frame_time = self._last_frame_time_monotonic
+            recent_fps = self._recent_fps
+            baseline_fps = self._baseline_fps
+            baseline_samples = self._baseline_fps_count
             last_error = self._last_error
 
         elapsed_seconds = 0.0
-        estimated_fps = 0.0
         seconds_since_last_frame = None
 
         if start_time > 0.0:
             elapsed_seconds = now - start_time
-
-        if elapsed_seconds > 0.0:
-            estimated_fps = frame_count / elapsed_seconds
 
         if last_frame_time > 0.0:
             seconds_since_last_frame = now - last_frame_time
@@ -234,7 +257,10 @@ class CameraReader:
             "frame_count": frame_count,
             "failed_read_count": failed_read_count,
             "elapsed_seconds": elapsed_seconds,
-            "estimated_fps": estimated_fps,
+            "recent_fps": recent_fps,
+            "baseline_fps": baseline_fps,
+            "baseline_ready": baseline_fps is not None,
+            "baseline_samples": baseline_samples,
             "seconds_since_last_frame": seconds_since_last_frame,
             "last_error": last_error
         }
@@ -350,6 +376,46 @@ class CameraReader:
             self._frame_count += 1
             sequence_number = self._frame_count
             self._last_frame_time_monotonic = timestamp_monotonic
+
+            fps_elapsed = (
+                timestamp_monotonic -
+                self._fps_window_start_monotonic
+            )
+
+            if fps_elapsed >= 1.0:
+                fps_frames = (
+                    self._frame_count -
+                    self._fps_window_start_frame_count
+                )
+
+                self._recent_fps = (
+                    fps_frames / fps_elapsed
+                )
+
+                run_elapsed = (
+                    timestamp_monotonic -
+                    self._start_time_monotonic
+                )
+
+                if (
+                    self._baseline_fps is None and
+                    run_elapsed >= self._baseline_warmup_seconds and
+                    self._recent_fps > 0.0
+                ):
+                    self._baseline_fps_sum += self._recent_fps
+                    self._baseline_fps_count += 1
+
+                    if (
+                        self._baseline_fps_count >=
+                        self._baseline_sample_count
+                    ):
+                        self._baseline_fps = (
+                            self._baseline_fps_sum /
+                            self._baseline_fps_count
+                        )
+
+                self._fps_window_start_monotonic = timestamp_monotonic
+                self._fps_window_start_frame_count = self._frame_count
 
         camera_frame = CameraFrame(
             sequence_number=sequence_number,

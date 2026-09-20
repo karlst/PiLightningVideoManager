@@ -116,6 +116,24 @@ class EventLog:
 
         return entries
 
+    # ## Return only the newest entries for the once-per-second dashboard status.
+    def recent(
+        self,
+        limit: int = 10
+    ) -> list[dict]:
+        count = max(0, int(limit))
+
+        with self._lock:
+            if count == 0:
+                entries = []
+            else:
+                entries = list(
+                    self._entries[-count:]
+                )
+
+        return entries
+
+
     # ## Clear the in-memory event list and persisted event file.
     def clear(
         self

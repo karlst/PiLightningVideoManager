@@ -6,7 +6,7 @@ import
 {
     StatusPanel
 }
-from "./statusPanel.js?v=34";
+from "./statusPanel.js?v=33";
 
 import
 {
@@ -18,13 +18,13 @@ import
 {
     EventLogPanel
 }
-from "./eventLogPanel.js?v=33";
+from "./eventLogPanel.js?v=34";
 
 import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=40";
+from "./previewPanel.js?v=41";
 
 import
 {
@@ -36,13 +36,13 @@ import
 {
     MetricsGraphPanel
 }
-from "./metricsGraphPanel.js?v=39";
+from "./metricsGraphPanel.js?v=37";
 
 import
 {
     DialogPanel
 }
-from "./dialogPanel.js?v=33";
+from "./dialogPanel.js?v=32";
 
 import
 {
@@ -101,16 +101,33 @@ function initializePage()
 
     const triggerManager =
         new TriggerManager();
+        
+            
+    triggerManager.initialize();
 
     statusPanel.setSystemSampleHandler(
-        (result) => metricsGraphPanel.updateTelemetry(
+        (result) => metricsGraphPanel.addSystemSample(
             result
         )
     );
 
-    triggerManager.initialize();
+    statusPanel.setSystemStatusHandler(
+        (result) =>
+        {
+            eventLogPanel.setRecentEntries(
+                result.recent_events ?? []
+            );
 
-    
+            metricsGraphPanel.updateTelemetry(
+                result
+            );
+
+            previewPanel.updateConfiguration(
+                result
+            );
+        }
+    );
+
     statusPanel.setStatus(
         "Ready"
     );
@@ -120,22 +137,19 @@ function initializePage()
     bufferPanel.initialize();
     metricsGraphPanel.initialize();
 
-    statusPanel.updateSystemStatus();
+    // One completion-driven heartbeat replaces the former independent
+    // event-log, system-status, and metric-history polling loops.
+    async function pollSystemStatus()
+    {
+        await statusPanel.updateSystemStatus();
 
-    setInterval(
-        () => eventLogPanel.refresh(),
-        1000
-    );
+        window.setTimeout(
+            pollSystemStatus,
+            1000
+        );
+    }
 
-    setInterval(
-        () => statusPanel.updateSystemStatus(),
-        1000
-    );
-
-    setInterval(
-        () => metricsGraphPanel.updateMetricHistory(),
-        1000
-    );
+    pollSystemStatus();
 }
 
 

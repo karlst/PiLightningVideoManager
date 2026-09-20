@@ -998,6 +998,42 @@ def register_routes(
             Path("/run/psf/psf_status.json")
         )
 
+        frame_age = buffer_status.get(
+            "seconds_since_last_frame"
+        )
+        recent_fps = float(
+            buffer_status.get("recent_fps", 0.0) or 0.0
+        )
+        baseline_fps = buffer_status.get(
+            "baseline_fps"
+        )
+
+        if not buffer_status["running"]:
+            camera_health = "STOPPED"
+        elif frame_age is None or float(frame_age) > 1.0:
+            camera_health = "STALLED"
+        elif not buffer_status.get("baseline_ready", False):
+            camera_health = "STARTING"
+        elif (
+            baseline_fps is not None and
+            float(baseline_fps) > 0.0 and
+            recent_fps < (0.90 * float(baseline_fps))
+        ):
+            camera_health = "DEGRADED"
+        else:
+            camera_health = "HEALTHY"
+
+        recent_events = []
+        for entry in services.event_log.recent(10):
+            recent_events.append(
+                {
+                    "timestamp_utc": entry.get("timestamp_utc"),
+                    "severity": entry.get("severity", "info"),
+                    "event_type": entry.get("event_type", "general"),
+                    "summary": entry.get("summary", ""),
+                }
+            )
+
         return jsonify(
             {
                 "success": True,
@@ -1047,6 +1083,9 @@ def register_routes(
                 "camera_preview_refresh_seconds":
                     services.config.camera_preview_refresh_seconds,
 
+                "camera_preview_timeout_seconds":
+                    services.config.preview_timeout_seconds,
+
                 "camera_geometry":
                 {
                     "latitude_degrees":
@@ -1065,8 +1104,19 @@ def register_routes(
                         services.config.camera_vfov_degrees
                 },
 
-                "camera_fps":
-                    buffer_status["estimated_fps"],
+                "camera_fps": recent_fps,
+
+                "camera_fps_baseline":
+                    baseline_fps,
+
+                "camera_fps_baseline_ready":
+                    buffer_status.get("baseline_ready", False),
+
+                "camera_health":
+                    camera_health,
+
+                "camera_frame_age_seconds":
+                    frame_age,
 
                 "camera_frames":
                     buffer_status["frame_count"],
@@ -1095,6 +1145,12 @@ def register_routes(
                 "psf_telemetry":
                     psf_telemetry,
 
+                "graph_sample":
+                    services.buffer_manager.get_latest_metric(),
+
+                "recent_events":
+                    recent_events,
+
                 "last_error":
                     buffer_status["last_error"]
             }
@@ -1104,16 +1160,35 @@ def register_routes(
         "/metrics_history"
     )
     def metrics_history():
+        try:
+            window_seconds = float(
+                request.args.get(
+                    "seconds",
+                    "300"
+                )
+            )
+        except (TypeError, ValueError):
+            window_seconds = 300.0
+
+        window_seconds = max(
+            60.0,
+            min(
+                86400.0,
+                window_seconds
+            )
+        )
+
         metrics = (
-            services.buffer_manager.get_metrics_history()
+            services.buffer_manager.get_metrics_history(
+                window_seconds=window_seconds
+            )
         )
 
         return jsonify(
             {
                 "success": True,
-                "count": len(
-                    metrics
-                ),
+                "window_seconds": window_seconds,
+                "count": len(metrics),
                 "metrics": metrics
             }
         )

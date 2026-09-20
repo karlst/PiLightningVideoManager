@@ -23,6 +23,27 @@ function setElementText(elementId, text)
 }
 
 
+// ## Update one prominent health indicator.
+function setHealthIndicator(elementId, text, state)
+{
+    const element = document.getElementById(elementId);
+
+    if (element === null)
+    {
+        return;
+    }
+
+    element.textContent = text;
+    element.classList.remove(
+        "healthOk",
+        "healthWarn",
+        "healthFault",
+        "healthNeutral"
+    );
+    element.classList.add(state);
+}
+
+
 // ## Format a numeric value with a fixed number of decimal places.
 function formatNumber(value, digits, fallback)
 {
@@ -224,6 +245,22 @@ export class StatusPanel
             this.setStatus(
                 "System status failed"
             );
+
+            setHealthIndicator(
+                "health-camera-value",
+                "CONNECTION LOST",
+                "healthFault"
+            );
+            setHealthIndicator(
+                "health-psf-value",
+                "UNKNOWN",
+                "healthNeutral"
+            );
+            setHealthIndicator(
+                "health-s3-value",
+                "UNKNOWN",
+                "healthNeutral"
+            );
         }
     }
 
@@ -399,6 +436,40 @@ export class StatusPanel
         const psfTelemetry =
             result.psf_telemetry || {};
 
+        const cameraHealth = String(
+            result.camera_health ?? "UNKNOWN"
+        ).toUpperCase();
+
+        let cameraHealthClass = "healthNeutral";
+        if (cameraHealth === "HEALTHY")
+        {
+            cameraHealthClass = "healthOk";
+        }
+        else if (cameraHealth === "STARTING" || cameraHealth === "DEGRADED")
+        {
+            cameraHealthClass = "healthWarn";
+        }
+        else if (cameraHealth === "STALLED" || cameraHealth === "STOPPED")
+        {
+            cameraHealthClass = "healthFault";
+        }
+
+        setHealthIndicator(
+            "health-camera-value",
+            cameraHealth,
+            cameraHealthClass
+        );
+
+        const psfHealthy =
+            psfTelemetry.available === true &&
+            psfTelemetry.running === true;
+
+        setHealthIndicator(
+            "health-psf-value",
+            psfHealthy ? "RUNNING" : "NOT RUNNING",
+            psfHealthy ? "healthOk" : "healthFault"
+        );
+
         let psfText =
             "Not running";
 
@@ -440,6 +511,41 @@ export class StatusPanel
                     "s3_failure"
                 ]
             );
+
+        let s3HealthText = "UNKNOWN";
+        let s3HealthClass = "healthNeutral";
+
+        if (psfTelemetry.ap_active === true)
+        {
+            s3HealthText = "OFFLINE";
+            s3HealthClass = "healthNeutral";
+        }
+        else if (psfTelemetry.configured_upload_to_s3 === false)
+        {
+            s3HealthText = "DISABLED";
+            s3HealthClass = "healthNeutral";
+        }
+        else if (!psfHealthy)
+        {
+            s3HealthText = "UNKNOWN";
+            s3HealthClass = "healthWarn";
+        }
+        else if (Number(psfHour.s3_failure ?? 0) > 0)
+        {
+            s3HealthText = "WARN";
+            s3HealthClass = "healthWarn";
+        }
+        else
+        {
+            s3HealthText = "OK";
+            s3HealthClass = "healthOk";
+        }
+
+        setHealthIndicator(
+            "health-s3-value",
+            s3HealthText,
+            s3HealthClass
+        );
 
         setElementText(
             "summary-classifications-hour-value",

@@ -55,11 +55,11 @@
 .mainGrid
 {
     display: grid;
-    grid-template-columns: minmax(320px, 36%) 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 36%);
     grid-template-rows: minmax(0, 1fr) 270px;
     grid-template-areas:
-        "media graphs"
-        "controls context";
+        "graphs context"
+        "graphs controls";
     gap: 8px;
     min-height: 0;
 }
@@ -107,12 +107,19 @@
     .mainGrid
     {
         grid-template-columns: 1fr;
-        grid-template-rows: 320px auto auto 300px;
+        grid-template-rows: auto auto auto;
         grid-template-areas:
-            "media"
+            "graphs"
             "context"
-            "controls"
-            "graphs";
+            "controls";
+    }
+
+    .previewWindow
+    {
+        top: 50px;
+        left: 8px;
+        width: calc(100vw - 16px);
+        min-width: 0;
     }
 }
 
@@ -125,11 +132,19 @@
 
     .mainGrid
     {
-        grid-template-columns: minmax(280px, 44%) 1fr;
+        grid-template-columns: minmax(0, 1fr) minmax(280px, 44%);
         grid-template-rows: minmax(0, 1fr) 235px;
         grid-template-areas:
-            "media graphs"
-            "controls context";
+            "graphs context"
+            "graphs controls";
+    }
+
+    .previewWindow
+    {
+        top: 48px;
+        left: 8px;
+        width: min(720px, 56vw);
+        min-width: 0;
     }
 }
 
@@ -183,7 +198,12 @@ body
     {
         grid-column: 1 / -1;
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(5, 1fr);
+    }
+
+    .healthIndicators
+    {
+        grid-template-columns: 1fr;
     }
 
     .ccButton
@@ -215,6 +235,130 @@ body
     min-width: 0;
     overflow-wrap: anywhere;
     white-space: normal;
+    font-weight: 700;
+}
+
+
+.healthIndicators
+{
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin: 0 0 10px 0;
+}
+
+.healthIndicator
+{
+    display: grid;
+    gap: 2px;
+    padding: 6px;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    background: #fafafa;
+    text-align: center;
+    font-size: 11px;
+}
+
+.healthIndicator strong
+{
+    font-size: 12px;
+}
+
+.healthOk
+{
+    color: #16723d;
+}
+
+.healthWarn
+{
+    color: #9a6900;
+}
+
+.healthFault
+{
+    color: #b00020;
+}
+
+.healthNeutral
+{
+    color: #555;
+}
+
+/* Modeless, on-demand live preview. */
+.previewWindow
+{
+    position: fixed;
+    z-index: 50;
+    top: 70px;
+    left: 8px;
+    width: min(900px, calc(64vw - 16px));
+    min-width: 520px;
+    border: 1px solid #666;
+    background: white;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.28);
+}
+
+.previewWindowHidden
+{
+    display: none;
+}
+
+.previewWindowHeader
+{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 9px;
+    border-bottom: 1px solid #999;
+    background: #f3f4f6;
+}
+
+.previewWindowHeader h2
+{
+    margin: 0;
+    font-size: 15px;
+}
+
+.previewWindowHeaderRight
+{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: Consolas, monospace;
+    font-size: 11px;
+}
+
+.previewWindowBody
+{
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background: #111;
+}
+
+.previewWindowBody .cameraImage
+{
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #111;
+}
+
+.previewWindowBody .previewPlaceholder
+{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ddd;
+    background: #111;
+}
+
+.ccButtonPrimary
+{
     font-weight: 700;
 }
 

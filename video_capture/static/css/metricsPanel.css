@@ -5,6 +5,7 @@
     grid-template-rows:
         38px
         minmax(0, 1fr)
+        minmax(0, 1fr)
         minmax(0, 1fr);
 
     gap: 6px;
@@ -90,6 +91,7 @@
     {
         grid-template-rows:
             36px
+            minmax(190px, 1fr)
             minmax(190px, 1fr)
             minmax(190px, 1fr);
     }

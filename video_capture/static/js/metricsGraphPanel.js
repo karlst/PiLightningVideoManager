@@ -11,7 +11,7 @@ export class MetricsGraphPanel
 {
     constructor()
     {
-        this._iGraphWindowHours = 1;
+        this._graphWindowSeconds = 300;
         this._aMetricHistory = [];
         this._captureTelemetry = null;
         this._mode = "live";
@@ -29,26 +29,55 @@ export class MetricsGraphPanel
                 button.addEventListener(
                     "click",
                     () => this.setGraphWindow(
-                        Number(button.dataset.window)
+                        Number(button.dataset.windowSeconds)
                     )
                 );
             }
         );
 
-        this.setGraphWindow(1);
+        this.setGraphWindow(300);
 
         window.addEventListener(
             "resize",
             () => this.drawAllGraphs()
         );
 
-        this.updateMetricHistory();
     }
 
     updateTelemetry(result)
     {
         this._captureTelemetry =
             result?.capture_telemetry || null;
+    }
+
+    // Append the newest one-second graph sample carried by /system_status.
+    // Historical arrays are fetched only on startup or when the window changes.
+    addSystemSample(result)
+    {
+        const sample = result?.graph_sample;
+
+        if (sample === null || sample === undefined)
+        {
+            this.drawAllGraphs();
+            return;
+        }
+
+        const sampleTime = Number(
+            sample.timestamp_monotonic ?? 0
+        );
+
+        const newestTime = this._getNewestMetricTime();
+
+        if (sampleTime > newestTime)
+        {
+            this._aMetricHistory.push(sample);
+
+            const minimum = sampleTime - this._getWindowSeconds();
+            this._aMetricHistory = this._aMetricHistory.filter(
+                (metric) =>
+                    Number(metric.timestamp_monotonic ?? 0) >= minimum
+            );
+        }
 
         this.drawAllGraphs();
     }
@@ -58,7 +87,9 @@ export class MetricsGraphPanel
         try
         {
             const result =
-                await getJson("/metrics_history");
+                await getJson(
+                    `/metrics_history?seconds=${this._getWindowSeconds()}`
+                );
 
             if (result.success)
             {
@@ -134,21 +165,27 @@ export class MetricsGraphPanel
         }
     }
 
-    setGraphWindow(iHours)
+    setGraphWindow(windowSeconds)
     {
-        this._iGraphWindowHours = iHours;
+        this._graphWindowSeconds = Math.max(
+            60,
+            Number(windowSeconds) || 300
+        );
 
         document.querySelectorAll(".graphButton").forEach(
             (button) =>
             {
                 button.classList.toggle(
                     "graphButtonActive",
-                    Number(button.dataset.window) === iHours
+                    Number(button.dataset.windowSeconds) ===
+                        this._graphWindowSeconds
                 );
             }
         );
 
-        this.drawAllGraphs();
+        // A window change is the only routine reason to request historical
+        // metric data.  The one-second status heartbeat appends new samples.
+        this.updateMetricHistory();
     }
 
     drawAllGraphs()
@@ -163,6 +200,7 @@ export class MetricsGraphPanel
         }
 
         this._drawCaptureActivity();
+        this._drawFps();
     }
 
     _drawLiveBrightness()
@@ -179,6 +217,20 @@ export class MetricsGraphPanel
             "Moving average"
         );
     }
+
+    _drawFps()
+    {
+        const metrics =
+            this._getVisibleMetrics();
+
+        this._drawSingleSeriesGraph(
+            "fps-graph",
+            metrics,
+            "recent_fps",
+            "FPS"
+        );
+    }
+
 
     _drawCaptureBrightness()
     {
@@ -531,6 +583,59 @@ export class MetricsGraphPanel
         );
     }
 
+    _drawSingleSeriesGraph(
+        canvasId,
+        metrics,
+        key,
+        label
+    )
+    {
+        const canvas =
+            document.getElementById(canvasId);
+
+        if (canvas === null)
+        {
+            return;
+        }
+
+        this._resizeCanvas(canvas);
+        const context = canvas.getContext("2d");
+
+        const values = metrics.map(
+            (metric) => Number(metric[key] ?? 0)
+        );
+
+        const limits = this._getValueLimits(values);
+
+        const plot =
+            this._drawAxes(
+                context,
+                canvas.width,
+                canvas.height,
+                limits.minValue,
+                limits.maxValue,
+                false
+            );
+
+        const newestTime = this._getNewestMetricTime();
+
+        this._drawLine(
+            context,
+            plot,
+            metrics,
+            key,
+            limits,
+            newestTime,
+            "#2f80ed"
+        );
+
+        context.font = "10px Arial";
+        context.textAlign = "left";
+        context.fillStyle = "#2f80ed";
+        context.fillText(label, plot.left + 4, plot.top + 12);
+    }
+
+
     _drawTwoSeriesGraph(
         canvasId,
         metrics,
@@ -875,7 +980,7 @@ export class MetricsGraphPanel
 
     _getWindowSeconds()
     {
-        return this._iGraphWindowHours * 3600;
+        return this._graphWindowSeconds;
     }
 
     _setGraphButtonsVisible(visible)

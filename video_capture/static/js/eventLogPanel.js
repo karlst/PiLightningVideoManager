@@ -18,6 +18,9 @@ export class EventLogPanel
 
         this._entries =
             [];
+
+        this._recentEntries =
+            [];
     }
 
 
@@ -34,11 +37,23 @@ export class EventLogPanel
             () => this.showFullEventLog()
         );
 
-        this.refresh();
+        this._renderRecentEvents();
     }
 
 
-    // ## Refresh recent event display from the server.
+    // ## Update the dashboard's compact recent-event list from /system_status.
+    setRecentEntries(entries)
+    {
+        this._recentEntries =
+            Array.isArray(entries)
+                ? entries.slice(-10)
+                : [];
+
+        this._renderRecentEvents();
+    }
+
+
+    // ## Fetch the complete event log only for explicit full-log actions.
     async refresh()
     {
         try
@@ -51,7 +66,9 @@ export class EventLogPanel
             this._entries =
                 result.entries ?? [];
 
-            this._renderRecentEvents();
+            this.setRecentEntries(
+                this._entries.slice(-10)
+            );
         }
         catch (error)
         {
@@ -63,8 +80,10 @@ export class EventLogPanel
 
 
     // ## Open the full event log dialog with clear-log controls.
-    showFullEventLog()
+    async showFullEventLog()
     {
+        await this.refresh();
+
         const dialog =
             document.getElementById(
                 "app-dialog"
@@ -118,9 +137,7 @@ export class EventLogPanel
                 result.message
             );
 
-            await this.refresh();
-
-            this.showFullEventLog();
+            await this.showFullEventLog();
         }
         catch (error)
         {
@@ -148,7 +165,7 @@ export class EventLogPanel
             eventLog.replaceChildren();
 
             const recentEntries =
-                this._entries.slice(
+                this._recentEntries.slice(
                     -8
                 ).reverse();
 

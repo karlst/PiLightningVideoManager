@@ -491,6 +491,7 @@ class CamConfig:
     preview_frame_rate_fps: int = 5
     preview_width_pixels: int = 1280
     preview_height_pixels: int = 720
+    preview_timeout_seconds: float = 300.0
 
     hls_time_seconds: float = 0.5
     hls_list_size: int = 2
@@ -498,8 +499,16 @@ class CamConfig:
     health_log_interval_seconds: float = 300.0
 
     brightness_average_frames: int = 100
-    metric_history_seconds: int = 36000
+
+    # PLCC graph history.  Raw one-second samples are retained for one hour;
+    # longer views use averaged 10-second and 60-second samples.
+    metric_history_seconds: int = 86400
     metric_history_sample_seconds: float = 1.0
+    metric_history_recent_seconds: int = 3600
+    metric_history_medium_seconds: int = 21600
+    metric_history_medium_bucket_seconds: float = 10.0
+    metric_history_long_bucket_seconds: float = 60.0
+
     motion_changed_pixel_threshold: int = 25
 
     camera_name: str = "ELP USB Camera"

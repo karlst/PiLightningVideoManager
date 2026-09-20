@@ -93,9 +93,19 @@ class BufferManager:
             config.buffer_seconds
         )
 
-        self._metric_history_capacity = int(
-            config.metric_history_seconds /
+        self._metric_history_recent_capacity = int(
+            config.metric_history_recent_seconds /
             config.metric_history_sample_seconds
+        )
+
+        self._metric_history_medium_capacity = int(
+            config.metric_history_medium_seconds /
+            config.metric_history_medium_bucket_seconds
+        )
+
+        self._metric_history_long_capacity = int(
+            config.metric_history_seconds /
+            config.metric_history_long_bucket_seconds
         )
 
         self._ring_buffer = RingBuffer(
@@ -103,7 +113,15 @@ class BufferManager:
         )
 
         self._metric_history = MetricHistory(
-            capacity=self._metric_history_capacity
+            recent_capacity=self._metric_history_recent_capacity,
+            medium_capacity=self._metric_history_medium_capacity,
+            long_capacity=self._metric_history_long_capacity,
+            medium_bucket_seconds=(
+                config.metric_history_medium_bucket_seconds
+            ),
+            long_bucket_seconds=(
+                config.metric_history_long_bucket_seconds
+            ),
         )
 
         self._frame_analyzer = FrameAnalyzer()
@@ -186,13 +204,14 @@ class BufferManager:
             bucket_seconds=5 * 60,
             window_hours=24,
         )
-        # Fine-grained activity for the 5-minute PLCC graph: ten
-        # 30-second buckets. This is live state only and resets with pcm.
+        # Fine-grained activity for the 1-minute and 5-minute PLCC graphs.
+        # Five-second buckets give 12 bars at 1 minute and 60 bars at 5
+        # minutes without bloating the status payload.
         self._runtime_telemetry_recent = RollingEventCounts(
             ("candidates", "captures", "automatic_captures", "manual_captures"),
-            bucket_seconds=30,
+            bucket_seconds=5,
             window_hours=1,
-            max_buckets=10,
+            max_buckets=60,
         )
         self._runtime_status_path = Path(
             "/run/picam/capture_status.json"
@@ -752,8 +771,17 @@ class BufferManager:
         return self._camera_reader.is_running()
 
     # ## Return sampled metric history for graphing.
-    def get_metrics_history(self) -> list[dict]:
-        return self._metric_history.snapshot()
+    def get_metrics_history(
+        self,
+        window_seconds: float | None = None
+    ) -> list[dict]:
+        return self._metric_history.snapshot(
+            window_seconds=window_seconds
+        )
+
+    # ## Return the newest one-second graph sample.
+    def get_latest_metric(self) -> dict | None:
+        return self._metric_history.latest()
 
     # ## Increment both long-window and fine-grained runtime counters.
     def _increment_runtime_telemetry(
@@ -815,7 +843,10 @@ class BufferManager:
             "running": reader_status["running"],
             "frame_count": reader_status["frame_count"],
             "failed_read_count": reader_status["failed_read_count"],
-            "estimated_fps": reader_status["estimated_fps"],
+            "recent_fps": reader_status["recent_fps"],
+            "baseline_fps": reader_status["baseline_fps"],
+            "baseline_ready": reader_status["baseline_ready"],
+            "baseline_samples": reader_status["baseline_samples"],
             "elapsed_seconds": reader_status["elapsed_seconds"],
             "seconds_since_last_frame": reader_status["seconds_since_last_frame"],
             "last_error": reader_status["last_error"],
@@ -956,6 +987,13 @@ class BufferManager:
             # intentionally not used to decide lightning triggers.
             metric = self._frame_analyzer.analyze(
                 camera_frame
+            )
+
+            # Recent FPS is calculated independently by CameraReader over an
+            # approximately one-second window.  Store that value alongside
+            # brightness so the FPS graph uses the same graph timeline.
+            metric["recent_fps"] = (
+                self._camera_reader.get_status()["recent_fps"]
             )
 
             self._metric_history.push(

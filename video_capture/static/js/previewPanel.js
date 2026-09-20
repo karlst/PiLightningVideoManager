@@ -1,20 +1,13 @@
 "use strict";
 
-import
-{
-    postJson,
-    getJson
-}
-from "./httpClient.js";
+import { postJson } from "./httpClient.js";
 
 
 /*
- * Manages only the P Site's live camera preview and the transition into/out of
- * the shared <capture-viewer> component.
+ * Modeless live preview plus transition into/out of the shared capture viewer.
  *
- * Capture playback itself intentionally no longer lives here.  That logic is
- * isolated in captureViewer.js so the exact same viewer can be used on the Pi
- * and on soloran.com.
+ * The dashboard itself does not poll /preview.jpg.  Preview traffic exists only
+ * while the user explicitly opens the floating preview window.
  */
 export class PreviewPanel
 {
@@ -23,21 +16,35 @@ export class PreviewPanel
         this._statusPanel = statusPanel;
         this._eventLogPanel = eventLogPanel;
         this._metricsGraphPanel = metricsGraphPanel;
+
         this._previewTimerId = null;
+        this._countdownTimerId = null;
         this._lastImageLoadTimeMs = null;
-        this._previewRefreshMs = 1000;
-        this._mode = "preview";
+        this._previewRefreshMs = 200;
+        this._previewTimeoutMs = 5 * 60 * 1000;
+        this._previewDeadlineMs = null;
+        this._previewOpen = false;
+        this._mode = "dashboard";
         this._captureViewer = null;
 
         document.body.classList.remove("capturePlaybackMode");
     }
 
 
-    // Bind live-preview controls and locate the shared capture viewer.
     initialize()
     {
         this._captureViewer =
             document.getElementById("capture-viewer");
+
+        this._bindClick(
+            "show-preview-button",
+            () => this.openPreview()
+        );
+
+        this._bindClick(
+            "close-preview-button",
+            () => this.closePreview()
+        );
 
         this._bindClick(
             "capture-button",
@@ -49,34 +56,37 @@ export class PreviewPanel
             () => this.closePlayback()
         );
 
-        this._loadPreviewConfig();
+        this.closePreview();
     }
 
 
-    // Read preview refresh timing and start live preview mode.
-    async _loadPreviewConfig()
+    // The regular /system_status heartbeat carries preview configuration, so
+    // PreviewPanel never needs its own status request.
+    updateConfiguration(result)
     {
-        try
-        {
-            const result =
-                await getJson("/system_status");
+        const refreshSeconds = Number(
+            result?.camera_preview_refresh_seconds ?? 0.2
+        );
 
-            this._previewRefreshMs =
-                Math.max(
-                    100,
-                    Number(result.camera_preview_refresh_seconds ?? 1.0) * 1000
-                );
-        }
-        catch (error)
+        const timeoutSeconds = Number(
+            result?.camera_preview_timeout_seconds ?? 300
+        );
+
+        if (Number.isFinite(refreshSeconds) && refreshSeconds > 0)
         {
-            console.error(error);
+            this._previewRefreshMs = Math.max(
+                100,
+                refreshSeconds * 1000
+            );
         }
 
-        this.showPreviewMode();
+        if (Number.isFinite(timeoutSeconds) && timeoutSeconds > 0)
+        {
+            this._previewTimeoutMs = timeoutSeconds * 1000;
+        }
     }
 
 
-    // Request a single legacy camera capture from the server.
     async captureOnce()
     {
         this._statusPanel.setStatus("Capturing...");
@@ -88,8 +98,6 @@ export class PreviewPanel
             this._statusPanel.setStatus(
                 result.success ? "Capture Complete" : "Capture Failed"
             );
-
-            this._eventLogPanel.refresh();
         }
         catch (error)
         {
@@ -99,27 +107,50 @@ export class PreviewPanel
     }
 
 
-    // Restore the normal Pi live-camera page.
-    showPreviewMode()
+    openPreview()
     {
-        this._mode = "preview";
-        document.body.classList.remove("capturePlaybackMode");
-
-        if (this._captureViewer !== null)
+        if (this._mode === "playback")
         {
-            this._captureViewer.clearCapture();
+            return;
         }
 
-        this._showImageShell();
-        this._startPreviewPolling();
+        this._previewOpen = true;
+        this._previewDeadlineMs = Date.now() + this._previewTimeoutMs;
+        this._lastImageLoadTimeMs = null;
+
+        const panel = document.getElementById("preview-window");
+        panel?.classList.remove("previewWindowHidden");
+
+        const placeholder = document.getElementById("camera-image-placeholder");
+        if (placeholder !== null)
+        {
+            placeholder.textContent = "Waiting for preview frame";
+            placeholder.classList.remove("cameraImageHidden");
+        }
+
+        document.getElementById("camera-preview-image")?.classList.add(
+            "cameraImageHidden"
+        );
+
+        this._stopPreviewPolling();
+        this._loadPreviewImage();
+        this._startCountdown();
     }
 
 
-    /*
-     * Enter shared capture playback.  DialogPanel deliberately keeps calling
-     * this method, so Browse Captures does not need to know anything about the
-     * Web Component refactor.
-     */
+    closePreview()
+    {
+        this._previewOpen = false;
+        this._previewDeadlineMs = null;
+        this._stopPreviewPolling();
+        this._stopCountdown();
+
+        document.getElementById("preview-window")?.classList.add(
+            "previewWindowHidden"
+        );
+    }
+
+
     async showPlaybackMode(videoUrl, captureFile = null)
     {
         let resolvedVideoUrl = videoUrl;
@@ -137,9 +168,8 @@ export class PreviewPanel
             return;
         }
 
+        this.closePreview();
         this._mode = "playback";
-        this._stopPreviewPolling();
-        this._hideImage();
 
         try
         {
@@ -156,53 +186,43 @@ export class PreviewPanel
         {
             console.error(error);
             this._statusPanel.setStatus("Capture Load Failed");
-            this.showPreviewMode();
+            this._mode = "dashboard";
         }
     }
 
 
-    // Return from the shared viewer to the live Pi camera page.
     closePlayback()
     {
-        this.showPreviewMode();
-    }
+        this._mode = "dashboard";
+        document.body.classList.remove("capturePlaybackMode");
 
-
-    // Start polling for live preview JPEG frames.
-    _startPreviewPolling()
-    {
-        this._stopPreviewPolling();
-        this._loadPreviewImage();
-
-        this._previewTimerId =
-            setInterval(
-                () => this._loadPreviewImage(),
-                this._previewRefreshMs
-            );
-    }
-
-
-    // Stop live preview polling.
-    _stopPreviewPolling()
-    {
-        if (this._previewTimerId !== null)
+        if (this._captureViewer !== null)
         {
-            clearInterval(this._previewTimerId);
-            this._previewTimerId = null;
+            this._captureViewer.clearCapture();
         }
     }
 
 
-    // Load one live preview JPEG frame.
+    // Completion-driven preview loop: the next request is scheduled only after
+    // the current image has loaded or failed.  Requests can never overlap.
     _loadPreviewImage()
     {
-        if (this._mode !== "preview")
+        if (!this._previewOpen || this._mode === "playback")
         {
             return;
         }
 
-        const image = document.getElementById("camera-image");
-        const placeholder = document.getElementById("preview-placeholder");
+        if (
+            this._previewDeadlineMs !== null &&
+            Date.now() >= this._previewDeadlineMs
+        )
+        {
+            this.closePreview();
+            return;
+        }
+
+        const image = document.getElementById("camera-preview-image");
+        const placeholder = document.getElementById("camera-image-placeholder");
 
         if (image === null)
         {
@@ -212,16 +232,21 @@ export class PreviewPanel
         image.onload =
             () =>
             {
+                if (!this._previewOpen)
+                {
+                    return;
+                }
+
                 this._lastImageLoadTimeMs = Date.now();
                 image.classList.remove("cameraImageHidden");
                 placeholder?.classList.add("cameraImageHidden");
-                this._updateImageAge();
+                this._scheduleNextPreview();
             };
 
         image.onerror =
             () =>
             {
-                if (this._mode !== "preview")
+                if (!this._previewOpen)
                 {
                     return;
                 }
@@ -234,64 +259,88 @@ export class PreviewPanel
 
                 image.classList.add("cameraImageHidden");
                 this._lastImageLoadTimeMs = null;
-                this._updateImageAge();
+                this._scheduleNextPreview();
             };
 
         image.src = "/preview.jpg?ts=" + Date.now();
     }
 
 
-    // Show the live preview placeholder shell.
-    _showImageShell()
+    _scheduleNextPreview()
     {
-        const placeholder = document.getElementById("preview-placeholder");
-        const imageAge = document.getElementById("image-age");
+        this._stopPreviewPolling();
 
-        if (placeholder !== null)
-        {
-            placeholder.textContent = "Waiting for preview frame";
-            placeholder.classList.remove("cameraImageHidden");
-        }
-
-        imageAge?.classList.remove("cameraImageHidden");
-    }
-
-
-    // Hide live preview image and placeholder while the capture viewer is open.
-    _hideImage()
-    {
-        document.getElementById("camera-image")?.classList.add("cameraImageHidden");
-        document.getElementById("preview-placeholder")?.classList.add("cameraImageHidden");
-        document.getElementById("image-age")?.classList.add("cameraImageHidden");
-    }
-
-
-    // Update the displayed live preview image age.
-    _updateImageAge()
-    {
-        const imageAge = document.getElementById("image-age");
-
-        if (imageAge === null)
+        if (!this._previewOpen)
         {
             return;
         }
 
-        if (this._lastImageLoadTimeMs === null)
-        {
-            imageAge.textContent = "Age: --";
-        }
-        else
-        {
-            const ageSeconds = Math.floor(
-                (Date.now() - this._lastImageLoadTimeMs) / 1000
-            );
+        this._previewTimerId = window.setTimeout(
+            () => this._loadPreviewImage(),
+            this._previewRefreshMs
+        );
+    }
 
-            imageAge.textContent = `Age: ${ageSeconds}s`;
+
+    _stopPreviewPolling()
+    {
+        if (this._previewTimerId !== null)
+        {
+            window.clearTimeout(this._previewTimerId);
+            this._previewTimerId = null;
         }
     }
 
 
-    // Bind a click handler if the P Site element exists.
+    _startCountdown()
+    {
+        this._stopCountdown();
+        this._updateCountdown();
+
+        this._countdownTimerId = window.setInterval(
+            () => this._updateCountdown(),
+            1000
+        );
+    }
+
+
+    _stopCountdown()
+    {
+        if (this._countdownTimerId !== null)
+        {
+            window.clearInterval(this._countdownTimerId);
+            this._countdownTimerId = null;
+        }
+    }
+
+
+    _updateCountdown()
+    {
+        const element = document.getElementById("preview-time-remaining");
+
+        if (element === null || this._previewDeadlineMs === null)
+        {
+            return;
+        }
+
+        const remainingSeconds = Math.max(
+            0,
+            Math.ceil((this._previewDeadlineMs - Date.now()) / 1000)
+        );
+
+        if (remainingSeconds <= 0)
+        {
+            this.closePreview();
+            return;
+        }
+
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        element.textContent =
+            `Closes in ${minutes}:${String(seconds).padStart(2, "0")}`;
+    }
+
+
     _bindClick(elementId, handler)
     {
         const element = document.getElementById(elementId);
