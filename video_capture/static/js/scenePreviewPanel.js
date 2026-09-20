@@ -1,7 +1,8 @@
 "use strict";
 
 
-// Low-rate identification still. Independent of the modeless live PreviewPanel.
+// Low-rate dashboard still preview.  This is intentionally independent of the
+// modeless live PreviewPanel so it cannot change live-preview behavior.
 const SCENE_PREVIEW_REFRESH_MS = 120 * 1000;
 
 

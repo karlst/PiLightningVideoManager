@@ -55,13 +55,29 @@
                 </div>
             </section>
 
+            <section class="subPanel scenePreviewPanel">
+                <h2>Camera Scene</h2>
+
+                <div class="scenePreviewViewport">
+                    <div
+                        class="scenePreviewPlaceholder"
+                        id="scene-preview-placeholder">
+                        Waiting for camera scene
+                    </div>
+
+                    <img
+                        class="scenePreviewImage scenePreviewImageHidden"
+                        id="scene-preview-image"
+                        alt="Camera scene">
+                </div>
+            </section>
+
             <section class="subPanel contextPanel">
                 <h2 id="context-panel-title">Status</h2>
 
-                <div class="statusContent">
-                    <div
-                        class="contextGrid"
-                        id="system-summary-panel">
+                <div
+                    class="contextGrid"
+                    id="system-summary-panel">
 
                     <div>Version</div><div id="summary-version-value">--</div>
                     <div>Started UTC</div><div id="summary-started-value">--</div>
@@ -78,17 +94,6 @@
                     <div>Last S3 Upload</div><div id="summary-s3-last-value">--</div>
                     <div>Web Requests/sec</div><div id="summary-web-rps-value">--</div>
 <div>Last Error</div><div id="summary-error-value">--</div>
-                    </div>
-
-                    <div class="scenePreviewBox" id="scene-preview-box">
-                        <div class="scenePreviewPlaceholder" id="scene-preview-placeholder">
-                            No camera scene
-                        </div>
-                        <img
-                            class="scenePreviewImage scenePreviewImageHidden"
-                            id="scene-preview-image"
-                            alt="Camera scene">
-                    </div>
                 </div>
 
                 <div
@@ -255,7 +260,7 @@
 
     <script
         type="module"
-        src="/static/js/app.js?v=55">
+        src="/static/js/app.js?v=54">
     </script>
 </body>
 </html>
