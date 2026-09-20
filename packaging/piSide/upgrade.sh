@@ -36,6 +36,33 @@ if [ ! -d "$PROGRAM_ROOT" ]; then
     exit 1
 fi
 
+echo "Checking upgrade package..."
+
+REQUIRED_PATHS=(
+    "$PACKAGE_ROOT/app"
+    "$PACKAGE_ROOT/network/wifiStartup.py"
+    "$PACKAGE_ROOT/bin"
+    "$PACKAGE_ROOT/pcm.service"
+    "$PACKAGE_ROOT/psf.service"
+)
+
+for required_path in "${REQUIRED_PATHS[@]}"; do
+    if [ ! -e "$required_path" ]; then
+        echo "ERROR: upgrade package is incomplete."
+        echo "Missing:"
+        echo "  $required_path"
+        exit 1
+    fi
+done
+
+if [ ! -d "$PROGRAM_ROOT/config" ]; then
+    echo "ERROR: existing installation has no config directory:"
+    echo "  $PROGRAM_ROOT/config"
+    exit 1
+fi
+
+echo "Upgrade package check passed."
+
 echo "Stopping services..."
 systemctl stop psf.service 2>/dev/null || true
 systemctl stop pcm.service 2>/dev/null || true
