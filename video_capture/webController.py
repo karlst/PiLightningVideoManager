@@ -140,35 +140,24 @@ def register_routes(
     services: WebServices
 ) -> None:
 
-    # Lightweight web-load telemetry.  Count request starts over a one-second
-    # rolling window and requests currently executing.
+    # Lightweight web-load telemetry. Count request starts over a one-second
+    # rolling window. This intentionally reports load, not "connected browsers"
+    # or instantaneous active-request count.
     web_load_lock = Lock()
     web_request_times = deque()
-    web_active_requests = 0
 
     @app.before_request
     def track_web_request_start():
-        nonlocal web_active_requests
-
         now = time.monotonic()
+
         with web_load_lock:
-            web_active_requests += 1
             web_request_times.append(now)
 
             cutoff = now - 1.0
             while web_request_times and web_request_times[0] < cutoff:
                 web_request_times.popleft()
 
-    @app.after_request
-    def track_web_request_end(response):
-        nonlocal web_active_requests
-
-        with web_load_lock:
-            web_active_requests = max(0, web_active_requests - 1)
-
-        return response
-
-    def get_web_load() -> tuple[float, int]:
+    def get_web_requests_per_second() -> float:
         now = time.monotonic()
 
         with web_load_lock:
@@ -176,11 +165,7 @@ def register_routes(
             while web_request_times and web_request_times[0] < cutoff:
                 web_request_times.popleft()
 
-            requests_per_second = float(len(web_request_times))
-            # The /system_status request collecting this sample is itself active.
-            other_active_requests = max(0, web_active_requests - 1)
-
-        return requests_per_second, other_active_requests
+            return float(len(web_request_times))
 
     @app.route("/")
     def index() -> str:
@@ -1068,7 +1053,7 @@ def register_routes(
         else:
             camera_health = "HEALTHY"
 
-        web_requests_per_second, web_active = get_web_load()
+        web_requests_per_second = get_web_requests_per_second()
 
         recent_events = []
         for entry in services.event_log.recent(10):
@@ -1200,11 +1185,7 @@ def register_routes(
 
                 "web_requests_per_second":
                     web_requests_per_second,
-
-                "web_active_requests":
-                    web_active,
-
-                "last_error":
+"last_error":
                     buffer_status["last_error"]
             }
         )

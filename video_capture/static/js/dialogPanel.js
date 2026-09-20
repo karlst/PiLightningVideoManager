@@ -71,8 +71,20 @@ export class DialogPanel
     }
 
     // ## Show the About dialog.
-    showAbout()
+    async showAbout()
     {
+        let appVersion = "--";
+
+        try
+        {
+            const result = await getJson("/system_status");
+            appVersion = result.app_version ?? "--";
+        }
+        catch (error)
+        {
+            console.error(error);
+        }
+
         this._showHtml(
             "About",
             `
@@ -80,7 +92,7 @@ export class DialogPanel
                 <h3>Pi Camera Control</h3>
 
                 <p>
-                    <strong>Version 1.0.0</strong><br>
+                    <strong>Version ${appVersion}</strong><br>
                     Copyright &copy; 2026 Karl Stock<br>
                     All rights reserved.
                 </p>

@@ -571,13 +571,7 @@ export class StatusPanel
                 "--"
             )
         );
-
-        setElementText(
-            "summary-web-active-value",
-            result.web_active_requests ?? "--"
-        );
-
-        setElementText(
+setElementText(
             "summary-error-value",
             result.last_error ||
             psfTelemetry.last_error ||
