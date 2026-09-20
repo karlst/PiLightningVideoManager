@@ -43,8 +43,11 @@ from video_analyzer.solution_filter import failed_candidate_result
 
 from datetime import datetime
 from datetime import timezone
+from collections import deque
+from threading import Lock
 import os
 import psutil
+import time
 
 from pathlib import Path
 
@@ -136,6 +139,48 @@ def register_routes(
     app: Flask,
     services: WebServices
 ) -> None:
+
+    # Lightweight web-load telemetry.  Count request starts over a one-second
+    # rolling window and requests currently executing.
+    web_load_lock = Lock()
+    web_request_times = deque()
+    web_active_requests = 0
+
+    @app.before_request
+    def track_web_request_start():
+        nonlocal web_active_requests
+
+        now = time.monotonic()
+        with web_load_lock:
+            web_active_requests += 1
+            web_request_times.append(now)
+
+            cutoff = now - 1.0
+            while web_request_times and web_request_times[0] < cutoff:
+                web_request_times.popleft()
+
+    @app.after_request
+    def track_web_request_end(response):
+        nonlocal web_active_requests
+
+        with web_load_lock:
+            web_active_requests = max(0, web_active_requests - 1)
+
+        return response
+
+    def get_web_load() -> tuple[float, int]:
+        now = time.monotonic()
+
+        with web_load_lock:
+            cutoff = now - 1.0
+            while web_request_times and web_request_times[0] < cutoff:
+                web_request_times.popleft()
+
+            requests_per_second = float(len(web_request_times))
+            # The /system_status request collecting this sample is itself active.
+            other_active_requests = max(0, web_active_requests - 1)
+
+        return requests_per_second, other_active_requests
 
     @app.route("/")
     def index() -> str:
@@ -1023,6 +1068,8 @@ def register_routes(
         else:
             camera_health = "HEALTHY"
 
+        web_requests_per_second, web_active = get_web_load()
+
         recent_events = []
         for entry in services.event_log.recent(10):
             recent_events.append(
@@ -1150,6 +1197,12 @@ def register_routes(
 
                 "recent_events":
                     recent_events,
+
+                "web_requests_per_second":
+                    web_requests_per_second,
+
+                "web_active_requests":
+                    web_active,
 
                 "last_error":
                     buffer_status["last_error"]

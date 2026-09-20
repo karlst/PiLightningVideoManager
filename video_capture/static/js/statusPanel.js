@@ -23,27 +23,6 @@ function setElementText(elementId, text)
 }
 
 
-// ## Update one prominent health indicator.
-function setHealthIndicator(elementId, text, state)
-{
-    const element = document.getElementById(elementId);
-
-    if (element === null)
-    {
-        return;
-    }
-
-    element.textContent = text;
-    element.classList.remove(
-        "healthOk",
-        "healthWarn",
-        "healthFault",
-        "healthNeutral"
-    );
-    element.classList.add(state);
-}
-
-
 // ## Format a numeric value with a fixed number of decimal places.
 function formatNumber(value, digits, fallback)
 {
@@ -246,21 +225,7 @@ export class StatusPanel
                 "System status failed"
             );
 
-            setHealthIndicator(
-                "health-camera-value",
-                "CONNECTION LOST",
-                "healthFault"
-            );
-            setHealthIndicator(
-                "health-psf-value",
-                "UNKNOWN",
-                "healthNeutral"
-            );
-            setHealthIndicator(
-                "health-s3-value",
-                "UNKNOWN",
-                "healthNeutral"
-            );
+            this._setTopHealth("CONNECTION LOST");
         }
     }
 
@@ -328,10 +293,51 @@ export class StatusPanel
     }
 
 
-    // ## Header no longer shows operational status; keep method as a no-op.
+    // ## Use the header top bar as the camera-health indicator.
     _updateHeartbeat(result)
     {
-        void result;
+        this._setTopHealth(
+            String(result.camera_health ?? "UNKNOWN").toUpperCase()
+        );
+    }
+
+
+    _setTopHealth(health)
+    {
+        const panel = document.querySelector(".topPanel");
+
+        if (panel === null)
+        {
+            return;
+        }
+
+        panel.classList.remove(
+            "systemOk",
+            "systemWarn",
+            "systemFault"
+        );
+
+        let stateClass = "systemOk";
+        let label = "";
+
+        if (health === "DEGRADED")
+        {
+            stateClass = "systemWarn";
+            label = "DEGRADED";
+        }
+        else if (health === "STALLED" || health === "STOPPED")
+        {
+            stateClass = "systemFault";
+            label = "STALLED";
+        }
+        else if (health === "CONNECTION LOST")
+        {
+            stateClass = "systemFault";
+            label = "CONNECTION LOST";
+        }
+
+        panel.classList.add(stateClass);
+        panel.dataset.healthLabel = label;
     }
 
 
@@ -436,40 +442,6 @@ export class StatusPanel
         const psfTelemetry =
             result.psf_telemetry || {};
 
-        const cameraHealth = String(
-            result.camera_health ?? "UNKNOWN"
-        ).toUpperCase();
-
-        let cameraHealthClass = "healthNeutral";
-        if (cameraHealth === "HEALTHY")
-        {
-            cameraHealthClass = "healthOk";
-        }
-        else if (cameraHealth === "STARTING" || cameraHealth === "DEGRADED")
-        {
-            cameraHealthClass = "healthWarn";
-        }
-        else if (cameraHealth === "STALLED" || cameraHealth === "STOPPED")
-        {
-            cameraHealthClass = "healthFault";
-        }
-
-        setHealthIndicator(
-            "health-camera-value",
-            cameraHealth,
-            cameraHealthClass
-        );
-
-        const psfHealthy =
-            psfTelemetry.available === true &&
-            psfTelemetry.running === true;
-
-        setHealthIndicator(
-            "health-psf-value",
-            psfHealthy ? "RUNNING" : "NOT RUNNING",
-            psfHealthy ? "healthOk" : "healthFault"
-        );
-
         let psfText =
             "Not running";
 
@@ -512,41 +484,6 @@ export class StatusPanel
                 ]
             );
 
-        let s3HealthText = "UNKNOWN";
-        let s3HealthClass = "healthNeutral";
-
-        if (psfTelemetry.ap_active === true)
-        {
-            s3HealthText = "OFFLINE";
-            s3HealthClass = "healthNeutral";
-        }
-        else if (psfTelemetry.configured_upload_to_s3 === false)
-        {
-            s3HealthText = "DISABLED";
-            s3HealthClass = "healthNeutral";
-        }
-        else if (!psfHealthy)
-        {
-            s3HealthText = "UNKNOWN";
-            s3HealthClass = "healthWarn";
-        }
-        else if (Number(psfHour.s3_failure ?? 0) > 0)
-        {
-            s3HealthText = "WARN";
-            s3HealthClass = "healthWarn";
-        }
-        else
-        {
-            s3HealthText = "OK";
-            s3HealthClass = "healthOk";
-        }
-
-        setHealthIndicator(
-            "health-s3-value",
-            s3HealthText,
-            s3HealthClass
-        );
-
         setElementText(
             "summary-classifications-hour-value",
             psfTelemetry.available
@@ -559,6 +496,34 @@ export class StatusPanel
 
         const fieldPi =
             psfTelemetry.ap_active === true;
+
+        let s3StatusText = "Unknown";
+
+        if (fieldPi)
+        {
+            s3StatusText = "Offline";
+        }
+        else if (psfTelemetry.configured_upload_to_s3 === false)
+        {
+            s3StatusText = "Disabled";
+        }
+        else if (!psfTelemetry.available || !psfTelemetry.running)
+        {
+            s3StatusText = "Unknown";
+        }
+        else if (Number(psfHour.s3_failure ?? 0) > 0)
+        {
+            s3StatusText = "Upload failures";
+        }
+        else
+        {
+            s3StatusText = "Enabled";
+        }
+
+        setElementText(
+            "summary-s3-status-value",
+            s3StatusText
+        );
 
         let s3HourText = "--";
         let s3LastText = "--";
@@ -596,6 +561,20 @@ export class StatusPanel
         setElementText(
             "summary-s3-last-value",
             s3LastText
+        );
+
+        setElementText(
+            "summary-web-rps-value",
+            formatNumber(
+                result.web_requests_per_second,
+                1,
+                "--"
+            )
+        );
+
+        setElementText(
+            "summary-web-active-value",
+            result.web_active_requests ?? "--"
         );
 
         setElementText(

@@ -8,4 +8,4 @@ History
 11 September 2026 1.0.0  V8 sidecars, logistic-v1, S3/PSF integration
 """
 
-VERSION = "1.0.0"
+VERSION = "2.0"

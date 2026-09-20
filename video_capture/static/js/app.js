@@ -6,7 +6,7 @@ import
 {
     StatusPanel
 }
-from "./statusPanel.js?v=33";
+from "./statusPanel.js?v=34";
 
 import
 {
@@ -24,7 +24,7 @@ import
 {
     PreviewPanel
 }
-from "./previewPanel.js?v=41";
+from "./previewPanel.js?v=42";
 
 import
 {

@@ -56,6 +56,7 @@ export class PreviewPanel
             () => this.closePlayback()
         );
 
+        this._initializeDragging();
         this.closePreview();
     }
 
@@ -338,6 +339,98 @@ export class PreviewPanel
         const seconds = remainingSeconds % 60;
         element.textContent =
             `Closes in ${minutes}:${String(seconds).padStart(2, "0")}`;
+    }
+
+
+    // Make the modeless preview behave like a small movable window.
+    _initializeDragging()
+    {
+        const panel = document.getElementById("preview-window");
+        const handle = panel?.querySelector(".previewWindowHeader");
+
+        if (panel === null || panel === undefined || handle === null)
+        {
+            return;
+        }
+
+        let dragging = false;
+        let startPointerX = 0;
+        let startPointerY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+
+        handle.addEventListener(
+            "pointerdown",
+            (event) =>
+            {
+                if (event.button !== 0 || event.target.closest("button") !== null)
+                {
+                    return;
+                }
+
+                const rect = panel.getBoundingClientRect();
+                dragging = true;
+                startPointerX = event.clientX;
+                startPointerY = event.clientY;
+                startLeft = rect.left;
+                startTop = rect.top;
+
+                handle.setPointerCapture(event.pointerId);
+                event.preventDefault();
+            }
+        );
+
+        handle.addEventListener(
+            "pointermove",
+            (event) =>
+            {
+                if (!dragging)
+                {
+                    return;
+                }
+
+                const maxLeft = Math.max(0, window.innerWidth - panel.offsetWidth);
+                const maxTop = Math.max(0, window.innerHeight - panel.offsetHeight);
+
+                const left = Math.max(
+                    0,
+                    Math.min(
+                        maxLeft,
+                        startLeft + event.clientX - startPointerX
+                    )
+                );
+
+                const top = Math.max(
+                    0,
+                    Math.min(
+                        maxTop,
+                        startTop + event.clientY - startPointerY
+                    )
+                );
+
+                panel.style.left = `${left}px`;
+                panel.style.top = `${top}px`;
+            }
+        );
+
+        const stopDragging =
+            (event) =>
+            {
+                if (!dragging)
+                {
+                    return;
+                }
+
+                dragging = false;
+
+                if (handle.hasPointerCapture(event.pointerId))
+                {
+                    handle.releasePointerCapture(event.pointerId);
+                }
+            };
+
+        handle.addEventListener("pointerup", stopDragging);
+        handle.addEventListener("pointercancel", stopDragging);
     }
 
 

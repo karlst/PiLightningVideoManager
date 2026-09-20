@@ -16,6 +16,7 @@
 
     padding: 8px 8px 8px 8px;
 
+    position: relative;
     border: 1px solid #777;
     border-top: 8px solid #777;
 }
@@ -27,12 +28,41 @@
 
 .topPanel.systemWarn
 {
+    border-top-width: 22px;
     border-top-color: #d99a00;
 }
 
 .topPanel.systemFault
 {
+    border-top-width: 22px;
     border-top-color: #c00020;
+}
+
+.topPanel.systemWarn::before,
+.topPanel.systemFault::before
+{
+    content: attr(data-health-label);
+    position: absolute;
+    top: -22px;
+    left: 0;
+    right: 0;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    pointer-events: none;
+}
+
+.topPanel.systemWarn::before
+{
+    color: #302000;
+}
+
+.topPanel.systemFault::before
+{
+    color: white;
 }
 
 .titleBlock h1
@@ -201,10 +231,6 @@ body
         grid-template-columns: repeat(5, 1fr);
     }
 
-    .healthIndicators
-    {
-        grid-template-columns: 1fr;
-    }
 
     .ccButton
     {
@@ -239,51 +265,6 @@ body
 }
 
 
-.healthIndicators
-{
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 6px;
-    margin: 0 0 10px 0;
-}
-
-.healthIndicator
-{
-    display: grid;
-    gap: 2px;
-    padding: 6px;
-    border: 1px solid #bbb;
-    border-radius: 4px;
-    background: #fafafa;
-    text-align: center;
-    font-size: 11px;
-}
-
-.healthIndicator strong
-{
-    font-size: 12px;
-}
-
-.healthOk
-{
-    color: #16723d;
-}
-
-.healthWarn
-{
-    color: #9a6900;
-}
-
-.healthFault
-{
-    color: #b00020;
-}
-
-.healthNeutral
-{
-    color: #555;
-}
-
 /* Modeless, on-demand live preview. */
 .previewWindow
 {
@@ -312,6 +293,9 @@ body
     padding: 7px 9px;
     border-bottom: 1px solid #999;
     background: #f3f4f6;
+    cursor: move;
+    user-select: none;
+    touch-action: none;
 }
 
 .previewWindowHeader h2
@@ -398,4 +382,9 @@ body.capturePlaybackMode .captureViewerHost
     {
         height: auto;
     }
+}
+
+.previewWindowHeader button
+{
+    cursor: pointer;
 }
