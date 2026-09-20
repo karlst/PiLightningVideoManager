@@ -28,12 +28,6 @@ from "./previewPanel.js?v=42";
 
 import
 {
-    ScenePreviewPanel
-}
-from "./scenePreviewPanel.js?v=1";
-
-import
-{
     BufferPanel
 }
 from "./bufferPanel.js?v=32";
@@ -56,6 +50,12 @@ import
 }
 from "./triggerManager.js?v=34";
 
+import
+{
+    ScenePreviewPanel
+}
+from "./scenePreviewPanel.js?v=1";
+
 
 function initializePage()
 {
@@ -76,9 +76,6 @@ function initializePage()
             eventLogPanel,
             metricsGraphPanel
         );
-
-    const scenePreviewPanel =
-        new ScenePreviewPanel();
 
     const dialogPanel =
         new DialogPanel(
@@ -110,9 +107,12 @@ function initializePage()
 
     const triggerManager =
         new TriggerManager();
-        
-            
+
+    const scenePreviewPanel =
+        new ScenePreviewPanel();
+
     triggerManager.initialize();
+    scenePreviewPanel.initialize();
 
     statusPanel.setSystemSampleHandler(
         (result) => metricsGraphPanel.addSystemSample(
@@ -143,7 +143,6 @@ function initializePage()
 
     eventLogPanel.initialize();
     previewPanel.initialize();
-    scenePreviewPanel.initialize();
     bufferPanel.initialize();
     metricsGraphPanel.initialize();
 
